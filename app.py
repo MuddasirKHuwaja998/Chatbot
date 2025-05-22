@@ -7,13 +7,11 @@ import random
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 
-# If chatbot.py is not in the same directory, you may need to adjust your import path!
 import chatbot
 
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-# Use environment variable for corpus path, fallback to local "corpus" for cloud deployment (Render etc)
 CORPUS_PATH = os.environ.get("CORPUS_PATH", os.path.join(os.path.dirname(__file__), "corpus"))
 
 # --- LOAD ALL YAML FILES (Q/A PAIRS) ---
@@ -32,7 +30,6 @@ for yml_file in glob.glob(os.path.join(CORPUS_PATH, "*.yml")):
                     ))
 
 # --- NLP Normalization + Spelling Correction ---
-# On Render, spellchecker might not be available or slow; wrap with try/except
 try:
     from spellchecker import SpellChecker
     spellchecker_available = True
@@ -68,41 +65,47 @@ def extract_keywords(text):
     return set(words)
 
 def is_probably_italian(text):
-    """Heuristic: Check if most words are Italian stopwords or have Italian structure."""
     italian_keywords = [
         "ciao", "come", "puoi", "aiutarmi", "grazie", "prenotare", "test", "udito", "orari", "info", "salve", "quanto", "dove", "chi", "cosa", "quale", "azienda"
     ]
     text_lc = text.lower()
     matches = sum(kw in text_lc for kw in italian_keywords)
-    # If less than 2 matches and not many Italian stopwords, probably not Italian
     if matches == 0 and len(extract_keywords(text)) >= 2:
-        # Check for non-latin script as a stronger signal
-        if re.search(r"[а-яёΑ-ωЀ-ӿ]", text):  # Cyrillic or Greek
+        if re.search(r"[а-яёΑ-ωЀ-ӿ]", text):
             return False
-        # If mostly English question words and no Italian keywords
         english_starters = ["what", "who", "how", "when", "where", "why", "can you", "could you", "please", "help"]
         if any(text_lc.strip().startswith(st) for st in english_starters):
             return False
     return True
 
-# --- TIME/DATE DETECTION & ANSWER (ONLY IN ITALIAN) ---
+# --- TIME/DATE DETECTION & ANSWER (IMPROVED) ---
 def detect_time_or_date_question(msg):
     msg_lc = msg.strip().lower()
-    # Time-related Italian phrases
+
+    # Time-related phrases, expanded
     time_phrases = [
-        "che ore sono", "che ora è", "mi dici l'ora", "mi puoi dire l'ora", "orario attuale", "orario corrente", "mi dici l’orario", "puoi dirmi che ore sono"
+        "che ore sono", "che ora è", "mi dici l'ora", "mi puoi dire l'ora", "orario attuale",
+        "orario corrente", "mi dici l’orario", "puoi dirmi che ore sono", "ora attuale", "adesso che ore sono"
     ]
-    # Date-related Italian phrases
+    # Date-related phrases, expanded
     date_phrases = [
-        "che giorno è", "che giorno è oggi", "data di oggi", "qual è la data", "qual è la data di oggi", "oggi che giorno è", "mi dici la data di oggi"
+        "che giorno è", "che giorno è oggi", "data di oggi", "qual è la data", "qual è la data di oggi",
+        "oggi che giorno è", "mi dici la data di oggi", "che giorno", "giorno di oggi", "oggi che giorno",
+        "giorno mercato azionario", "giorno", "oggi"
     ]
-    # Use substring matching for flexibility
+    # Expand: If "giorno" and "oggi" both appear (even if not together), treat as a date query
+    if "giorno" in msg_lc and "oggi" in msg_lc:
+        return "date"
+    # Classic phrase matching
     for p in time_phrases:
         if p in msg_lc:
             return "time"
     for p in date_phrases:
         if p in msg_lc:
             return "date"
+    # If single word "oggi" or "giorno" in a short message
+    if msg_lc.strip() in ["oggi", "giorno"]:
+        return "date"
     return None
 
 def get_time_answer():
@@ -121,7 +124,7 @@ def get_date_answer():
     days_it = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]
     months_it = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
     weekday = days_it[now.weekday()]
-    month = months_it[now.month-1]
+    month = months_it[now.month - 1]
     date_formats = [
         f"Oggi è {weekday} {now.day} {month} {now.year}.",
         f"La data di oggi è {now.day} {month} {now.year}.",
@@ -131,22 +134,18 @@ def get_date_answer():
     ]
     return random.choice(date_formats)
 
-# --- YAML QA ADVANCED MATCHING ---
 def match_yaml_qa(user_msg):
     msg_norm = normalize(user_msg)
-
-    # 1. Direct full-string match (normalized, highest priority)
+    # 1. Direct full-string match
     for q, a in all_qa_pairs:
         if normalize(q) == msg_norm:
             return a
-
-    # 2. Fuzzy full-string match (very strict threshold)
+    # 2. Fuzzy full-string match
     questions = [normalize(q) for q, _ in all_qa_pairs]
     best_match = difflib.get_close_matches(msg_norm, questions, n=1, cutoff=0.95)
     if best_match:
         idx = questions.index(best_match[0])
         return all_qa_pairs[idx][1]
-
     # 3. Keyword overlap (at least 2 keywords, >70% overlap)
     msg_keywords = extract_keywords(user_msg)
     if not msg_keywords:
@@ -162,11 +161,8 @@ def match_yaml_qa(user_msg):
             best_answer = a
     if best_answer:
         return best_answer
-
-    # 4. No single-keyword fallback (prevents confusion from generic answers)
     return None
 
-# --- FALLBACK ANSWERS ---
 FALLBACK_MESSAGES = [
     "Mi dispiace, non ho una risposta precisa a questa domanda. Puoi riformulare la domanda oppure contattare il nostro servizio clienti al +39 081 1234567 o via email info@otofarmaspa.com.",
     "Al momento non dispongo di informazioni sufficienti per rispondere. Ti consiglio di consultare il nostro sito ufficiale www.otofarmaspa.com o chiamare il servizio clienti.",
@@ -214,7 +210,6 @@ def chat():
     try:
         bot_response = chatbot.taylorchatbot.get_response(user_message)
         reply = str(bot_response).strip()
-        # If ChatterBot doesn't know or gives a blank/irrelevant answer, use a professional fallback
         if not reply or reply.lower() in ["non lo so", "non posso rispondere", "non capisco", ""]:
             reply = random.choice(FALLBACK_MESSAGES)
     except Exception as e:
@@ -223,7 +218,6 @@ def chat():
 
     return jsonify({"reply": reply, "voice": voice_mode})
 
-# For Render: use PORT env variable, default to 10000 for local
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
