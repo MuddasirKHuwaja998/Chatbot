@@ -6,21 +6,12 @@ import random
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 
-# Optional: pip install rapidfuzz sentence-transformers
+# --- Optional: for best fuzzy matching, use rapidfuzz if available ---
 try:
     from rapidfuzz import process, fuzz
     rapidfuzz_available = True
 except ImportError:
     rapidfuzz_available = False
-
-try:
-    from sentence_transformers import SentenceTransformer, util as st_util
-    sentencetr_available = True
-    # You can use a small Italian-capable model, e.g., 'paraphrase-multilingual-MiniLM-L12-v2'
-    st_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-except Exception:
-    sentencetr_available = False
-    st_model = None
 
 # --- Spellchecker: Italian dictionary from root ---
 try:
@@ -28,8 +19,8 @@ try:
     spell = SpellChecker(language=None, local_dictionary="it.json.gz")
     spellchecker_available = True
 except Exception:
-    spell = None
     spellchecker_available = False
+    spell = None
 
 app = Flask(__name__)
 
@@ -39,16 +30,23 @@ CORPUS_PATH = os.environ.get("CORPUS_PATH", os.path.join(os.path.dirname(__file_
 all_qa_pairs = []
 for yml_file in glob.glob(os.path.join(CORPUS_PATH, "*.yml")):
     with open(yml_file, encoding='utf-8') as f:
-        data = yaml.safe_load(f)
-        conversations = data.get('conversations', [])
-        for conv in conversations:
-            if isinstance(conv, list) and len(conv) >= 2:
-                q, *a = conv
-                if q is not None:
-                    all_qa_pairs.append((
-                        q.strip(),
-                        " ".join([str(x) for x in a if x is not None])
-                    ))
+        try:
+            data = yaml.safe_load(f)
+            conversations = data.get('conversations', [])
+            for conv in conversations:
+                if isinstance(conv, list) and len(conv) >= 2:
+                    q, *a = conv
+                    if q is not None:
+                        all_qa_pairs.append((
+                            q.strip(),
+                            " ".join([str(x) for x in a if x is not None])
+                        ))
+        except Exception as e:
+            print(f"Failed to parse {yml_file}: {e}")
+
+print(f"Loaded {len(all_qa_pairs)} total questions from corpus.")
+for q, _ in all_qa_pairs:
+    print("-", q)
 
 # --- Text normalization ---
 def normalize(text):
@@ -167,44 +165,33 @@ def get_date_answer():
 # --- ADVANCED YAML QA MATCHING ---
 def match_yaml_qa(user_msg):
     msg_norm = normalize(user_msg)
-    corr_msg = correct_spelling(msg_norm)
+    corr_msg = normalize(correct_spelling(user_msg))
     questions = [normalize(q) for q, _ in all_qa_pairs]
 
-    # 1. Exact match (corrected and raw)
-    for q, a in all_qa_pairs:
-        if normalize(q) == msg_norm or normalize(q) == corr_msg:
+    # 1. Exact match (original, normalized, and corrected)
+    for idx, (q, a) in enumerate(all_qa_pairs):
+        nq = normalize(q)
+        if nq == msg_norm or nq == corr_msg:
             return a
 
-    # 2. Semantic similarity (if available)
-    if sentencetr_available and st_model:
-        corpus_questions = [q for q, _ in all_qa_pairs]
-        embeddings_corpus = st_model.encode(corpus_questions, convert_to_tensor=True)
-        embedding_input = st_model.encode(user_msg, convert_to_tensor=True)
-        cos_scores = st_util.pytorch_cos_sim(embedding_input, embeddings_corpus)[0]
-        best_idx = int(cos_scores.argmax())
-        if cos_scores[best_idx] > 0.70:
-            return all_qa_pairs[best_idx][1]
-
-    # 3. Fuzzy full-string match (RapidFuzz preferred, falls back to difflib)
+    # 2. Fuzzy match (RapidFuzz preferred, else difflib)
     if rapidfuzz_available:
         best = process.extractOne(msg_norm, questions, scorer=fuzz.token_set_ratio)
         if best and best[1] >= 80:
             return all_qa_pairs[best[2]][1]
-        # Try spelling-corrected
         if corr_msg != msg_norm:
             best = process.extractOne(corr_msg, questions, scorer=fuzz.token_set_ratio)
             if best and best[1] >= 80:
                 return all_qa_pairs[best[2]][1]
     else:
         import difflib
-        best_match = difflib.get_close_matches(msg_norm, questions, n=1, cutoff=0.80)
-        if not best_match and corr_msg != msg_norm:
-            best_match = difflib.get_close_matches(corr_msg, questions, n=1, cutoff=0.80)
-        if best_match:
-            idx = questions.index(best_match[0])
-            return all_qa_pairs[idx][1]
+        for msg in [msg_norm, corr_msg]:
+            best_match = difflib.get_close_matches(msg, questions, n=1, cutoff=0.8)
+            if best_match:
+                idx = questions.index(best_match[0])
+                return all_qa_pairs[idx][1]
 
-    # 4. Keyword overlap (at least 1 keyword, >60% overlap)
+    # 3. Keyword overlap (at least 1 keyword, >60% overlap)
     msg_keywords = extract_keywords(user_msg)
     if not msg_keywords:
         return None
