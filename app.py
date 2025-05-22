@@ -7,9 +7,6 @@ import random
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 
-# Import your chatbot engine (e.g. from chatbot.py)
-import chatbot
-
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
@@ -34,17 +31,18 @@ for yml_file in glob.glob(os.path.join(CORPUS_PATH, "*.yml")):
 try:
     from spellchecker import SpellChecker
     spellchecker_available = True
+    spell = SpellChecker(language='it')
 except ImportError:
     spellchecker_available = False
+    spell = None
 
 def normalize(text):
     return re.sub(r'[^\w\s]', '', text.strip().lower())
 
 def correct_spelling(text):
-    if not spellchecker_available:
+    if not spellchecker_available or not text:
         return text
     try:
-        spell = SpellChecker(language='it')
         words = text.split()
         corrected_words = [spell.correction(w) or w for w in words]
         return ' '.join(corrected_words)
@@ -135,7 +133,6 @@ def detect_time_or_date_question(msg):
 
 def get_time_answer():
     now = datetime.now()
-    # Italian time phrasing
     time_formats = [
         f"L'orario attuale è {now.strftime('%H:%M')}.",
         f"Sono le {now.strftime('%H:%M')}.",
@@ -163,17 +160,20 @@ def get_date_answer():
 # --- YAML QA ADVANCED MATCHING ---
 def match_yaml_qa(user_msg):
     msg_norm = normalize(user_msg)
-    # 1. Direct full-string match
+    corr_msg = correct_spelling(msg_norm)
+    # 1. Direct full-string match (including corrected spelling)
     for q, a in all_qa_pairs:
-        if normalize(q) == msg_norm:
+        if normalize(q) == msg_norm or normalize(q) == corr_msg:
             return a
-    # 2. Fuzzy full-string match
+    # 2. Fuzzy full-string match (including corrected spelling)
     questions = [normalize(q) for q, _ in all_qa_pairs]
-    best_match = difflib.get_close_matches(msg_norm, questions, n=1, cutoff=0.95)
+    best_match = difflib.get_close_matches(msg_norm, questions, n=1, cutoff=0.90)
+    if not best_match and corr_msg != msg_norm:
+        best_match = difflib.get_close_matches(corr_msg, questions, n=1, cutoff=0.90)
     if best_match:
         idx = questions.index(best_match[0])
         return all_qa_pairs[idx][1]
-    # 3. Keyword overlap (at least 2 keywords, >70% overlap)
+    # 3. Keyword overlap (at least 1 keyword, >60% overlap)
     msg_keywords = extract_keywords(user_msg)
     if not msg_keywords:
         return None
@@ -183,26 +183,29 @@ def match_yaml_qa(user_msg):
         q_keywords = extract_keywords(q)
         overlap = len(msg_keywords & q_keywords)
         score = overlap / (len(msg_keywords) + 1e-5)
-        if overlap >= 2 and score > best_score and score >= 0.7:
+        if overlap >= 1 and score > best_score and score >= 0.6:
             best_score = score
             best_answer = a
     if best_answer:
         return best_answer
     return None
 
-# --- FALLBACK ANSWERS ---
+# --- ADVANCED FALLBACK: AI-LIKE, ENGAGING RESPONSES ---
 FALLBACK_MESSAGES = [
-    "Mi dispiace, non ho una risposta precisa a questa domanda. Puoi riformulare la domanda oppure contattare il nostro servizio clienti al +39 081 1234567 o via email info@otofarmaspa.com.",
-    "Al momento non dispongo di informazioni sufficienti per rispondere. Ti consiglio di consultare il nostro sito ufficiale www.otofarmaspa.com o chiamare il servizio clienti.",
-    "Non sono sicura di poter aiutare con questa richiesta specifica. Puoi provare a chiedere in modo diverso o scrivere a info@otofarmaspa.com.",
-    "Questa domanda è molto interessante! Tuttavia, per una risposta dettagliata ti suggerisco di contattare direttamente Otofarma Spa.",
-    "Non ho la risposta pronta, ma puoi trovare molte informazioni utili sul nostro sito web o chiamando il nostro servizio clienti.",
+    "Mi dispiace, non ho ancora una risposta precisa a questa domanda. Vuoi chiedermi qualcos'altro?",
+    "Non sono sicura di aver capito. Puoi riformulare la domanda o chiedermene un'altra?",
+    "Ottima domanda! Al momento non ho una risposta specifica, ma posso aiutarti in altro?",
+    "Sto ancora imparando. Vuoi provare con una domanda diversa?",
+    "Non so rispondere a questo, ma possiamo parlare di qualcos'altro che ti interessa?",
+    "Scusami, non ho trovato una risposta. Prova a chiedere in modo diverso, oppure consulta il nostro sito ufficiale.",
+    "Posso aiutarti con informazioni su servizi, prenotazioni o orari. Chiedimi pure!",
+    "Mi piacerebbe aiutarti di più! Riprova con un'altra domanda o cerca nel nostro sito."
 ]
 
 FALLBACK_LANGUAGE_MESSAGES = [
-    "Gentile utente, il servizio è attualmente ottimizzato per domande in italiano. Ti invitiamo gentilmente a scrivere la tua richiesta in italiano per ricevere assistenza accurata. Se hai bisogno di supporto, puoi anche contattarci via email a info@otofarmaspa.com o telefonicamente al +39 081 1234567. Grazie per la comprensione.",
-    "Il nostro assistente virtuale funziona principalmente in italiano. Per favore, ripeti la domanda in italiano oppure scrivici a info@otofarmaspa.com per ricevere supporto nella tua lingua.",
-    "Questo servizio risponde principalmente a richieste in lingua italiana. Ti invitiamo a riformulare la domanda in italiano per ricevere risposte complete e dettagliate. Grazie!",
+    "Gentile utente, il servizio è ottimizzato per domande in italiano. Scrivi la tua richiesta in italiano per ricevere assistenza accurata. Grazie!",
+    "Il nostro assistente virtuale funziona principalmente in italiano. Ripeti la domanda in italiano per ricevere supporto.",
+    "Questo servizio risponde solo a richieste in lingua italiana. Prova di nuovo, grazie!"
 ]
 
 @app.route("/")
@@ -229,21 +232,13 @@ def chat():
     if reply:
         return jsonify({"reply": reply, "voice": voice_mode})
 
-    # --- Fallback: Language detection before ChatterBot or generic default
+    # --- Fallback: Language detection before generic default
     if not is_probably_italian(user_message):
         reply = random.choice(FALLBACK_LANGUAGE_MESSAGES)
         return jsonify({"reply": reply, "voice": voice_mode})
 
-    # Default fallback: ChatterBot or generic default
-    try:
-        bot_response = chatbot.taylorchatbot.get_response(user_message)
-        reply = str(bot_response).strip()
-        if not reply or reply.lower() in ["non lo so", "non posso rispondere", "non capisco", ""]:
-            reply = random.choice(FALLBACK_MESSAGES)
-    except Exception as e:
-        print("Error in /chat:", e)
-        reply = random.choice(FALLBACK_MESSAGES)
-
+    # AI-like, friendly fallback answer for unknown queries
+    reply = random.choice(FALLBACK_MESSAGES)
     return jsonify({"reply": reply, "voice": voice_mode})
 
 if __name__ == "__main__":
