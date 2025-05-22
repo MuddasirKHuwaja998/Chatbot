@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Otofarma AI Assistant</title>
     <link rel="icon" type="image/png" href="https://www.dropbox.com/scl/fi/ypb3su4estqakdj818ooo/chatbot.png?rlkey=8w18gem5ay8b8euikgkjvvunz&raw=1">
     <style>
@@ -26,7 +26,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: auto !important;
         }
         .chat-container {
             flex: 1;
@@ -78,7 +78,8 @@
         }
         .chat-box {
             flex: 1;
-            overflow-y: auto;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
             padding: 1.5rem 2rem;
             background: var(--secondary);
             margin-top: 120px;
@@ -126,10 +127,10 @@
             position: relative;
         }
         .bot-icon {
-            width: 38px;
-            height: 38px;
-            min-width: 38px;
-            min-height: 38px;
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            min-height: 34px;
             border-radius: 50%;
             display: inline-flex;
             align-items: center;
@@ -190,12 +191,14 @@
             height: 50px;
         }
         .mic-button, .sign-language-button, .animation-button {
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             border: 2px solid var(--primary);
             cursor: pointer;
             transition: box-shadow 0.2s;
+            background-size: 70% 70%;
+            background-position: center;
         }
         .mic-button {
             background: #fff url('https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color/254000/79-512.png') center/60% no-repeat;
@@ -233,54 +236,54 @@
                 font-size: 1.25rem;
             }
             .logo {
-                width: 80px;
-                min-width: 60px;
+                width: 70px;
+                min-width: 48px;
             }
             .header-content {
-                gap: 1rem;
+                gap: 0.6rem;
             }
             .chat-header p {
-                font-size: 0.98rem;
+                font-size: 0.97rem;
             }
             .chat-box {
-                padding: 0.7rem 0.2rem;
+                padding: 0.6rem 0.2rem;
                 margin-top: 70px;
-                gap: 0.6rem;
+                gap: 0.44rem;
                 font-size: 1rem;
-                height: calc(100vh - 160px);
+                height: calc(100vh - 140px);
             }
             .input-container {
-                height: 60px;
-                padding: 0.4rem 0.2rem;
-                gap: 0.4rem;
+                height: 56px;
+                padding: 0.3rem 0.1rem;
+                gap: 0.2rem;
             }
             .input-field {
-                padding: 0.7rem 1rem;
-                font-size: 0.98rem;
+                padding: 0.5rem 0.8rem;
+                font-size: 0.96rem;
             }
             .send-button, .mic-button, .sign-language-button, .animation-button {
-                width: 36px;
-                height: 36px;
-                font-size: 0.92rem;
+                width: 30px;
+                height: 30px;
+                font-size: 0.91rem;
                 padding: 0;
             }
             .message {
-                font-size: 0.98rem;
-                padding: 0.7rem 1rem;
+                font-size: 0.95rem;
+                padding: 0.55rem 0.8rem;
             }
             .bot-icon, .bot-icon-inner {
-                width: 28px;
-                height: 28px;
-                min-width: 28px;
-                min-height: 28px;
+                width: 22px;
+                height: 22px;
+                min-width: 22px;
+                min-height: 22px;
             }
         }
         @media (max-width: 410px) {
-            .chat-header h1 { font-size: 1.04rem; }
-            .chat-header p { font-size: 0.87rem; }
-            .logo { width: 50px; min-width: 35px; }
-            .bot-icon, .bot-icon-inner { width: 20px; height: 20px; }
-            .message, .input-field { font-size: 0.85rem; }
+            .chat-header h1 { font-size: 1.01rem; }
+            .chat-header p { font-size: 0.81rem; }
+            .logo { width: 34px; min-width: 24px; }
+            .bot-icon, .bot-icon-inner { width: 14px; height: 14px; }
+            .message, .input-field { font-size: 0.81rem; }
         }
     </style>
 </head>
@@ -319,15 +322,12 @@
         let recognitionActive = false;
         let recognitionInstance = null;
 
-        // Function to display messages
         const displayMessage = (message, isUser = false) => {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-            // For bot replies, add the icon with inner image
             if (!isUser) {
                 const botIcon = document.createElement('span');
                 botIcon.className = "bot-icon";
-                // Inner icon (your PNG, direct raw link)
                 const botImg = document.createElement('img');
                 botImg.src = "https://www.dropbox.com/scl/fi/ypb3su4estqakdj818ooo/chatbot.png?rlkey=8w18gem5ay8b8euikgkjvvunz&raw=1";
                 botImg.alt = "Otofarma Bot";
@@ -335,7 +335,6 @@
                 botIcon.appendChild(botImg);
                 messageDiv.appendChild(botIcon);
             }
-            // The message text
             const messageSpan = document.createElement('span');
             messageSpan.textContent = message;
             messageDiv.appendChild(messageSpan);
@@ -346,7 +345,6 @@
             }, 50);
         };
 
-        // Function to animate bot icon when user sends a message
         function animateBotIcon() {
             const lastBotMessages = document.querySelectorAll('.bot-message');
             if (lastBotMessages.length === 0) return;
@@ -358,19 +356,15 @@
             }
         }
 
-        // Function to speak a message with the best available Italian voice
         function speakMessage(message) {
             if (!('speechSynthesis' in window)) return;
             let synth = window.speechSynthesis;
 
             function speakWithVoices() {
                 let voices = synth.getVoices();
-
-                // 1. Try Google female Italian (best in Chrome)
                 let selectedVoice = voices.find(v =>
                     v.lang === 'it-IT' && v.name.toLowerCase().includes("google italiano")
                 );
-                // 2. Fallback: any female Italian
                 if (!selectedVoice) selectedVoice = voices.find(v =>
                     v.lang === 'it-IT' && (
                         (v.gender && v.gender.toLowerCase() === "female") ||
@@ -381,9 +375,7 @@
                         v.name.toLowerCase().includes("silvia")
                     )
                 );
-                // 3. Fallback: any Italian
                 if (!selectedVoice) selectedVoice = voices.find(v => v.lang === 'it-IT');
-                // 4. Fallback: default
                 const utterance = new SpeechSynthesisUtterance(message);
                 utterance.lang = 'it-IT';
                 if (selectedVoice) utterance.voice = selectedVoice;
@@ -397,7 +389,6 @@
             speakWithVoices();
         }
 
-        // Function to send a message (with optional TTS on reply)
         const sendMessage = (fromVoice=false) => {
             const message = userInput.value.trim();
             if (message) {
@@ -432,7 +423,6 @@
             }
         });
 
-        // Improved Mic Button
         function stopAllSpeech() {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
