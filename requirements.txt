@@ -1,0 +1,7 @@
+Flask==3.0.3
+PyYAML==6.0.1
+pyspellchecker==0.7.2
+chatterbot==1.1.0
+chatterbot_corpus==1.2.0
+python-telegram-bot==20.7
+gunicorn==22.0.0
