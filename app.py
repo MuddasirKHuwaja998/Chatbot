@@ -16,22 +16,12 @@ except Exception as e:
     spellchecker_available = False
     spell = None
 
-# Rapidfuzz
+# Rapidfuzz (for best fuzzy matching)
 try:
     from rapidfuzz import process, fuzz
     rapidfuzz_available = True
 except ImportError:
     rapidfuzz_available = False
-
-# Sentence Transformers (semantic similarity)
-try:
-    from sentence_transformers import SentenceTransformer, util as st_util
-    st_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-    sentencetr_available = True
-except Exception as e:
-    print("SentenceTransformer not available:", e)
-    sentencetr_available = False
-    st_model = None
 
 app = Flask(__name__)
 
@@ -56,13 +46,6 @@ for yml_file in glob.glob(os.path.join(CORPUS_PATH, "*.yml")):
             print(f"Failed to parse {yml_file}: {e}")
 
 print(f"Loaded {len(all_qa_pairs)} total questions from corpus.")
-
-# Precompute semantic embeddings for all questions
-if sentencetr_available and all_qa_pairs:
-    corpus_questions = [q for q, _ in all_qa_pairs]
-    corpus_embeddings = st_model.encode(corpus_questions, convert_to_tensor=True)
-else:
-    corpus_embeddings = None
 
 def normalize(text):
     return re.sub(r'[^\w\s]', '', text.strip().lower())
@@ -177,26 +160,17 @@ def get_date_answer():
     return random.choice(date_formats)
 
 def match_yaml_qa(user_msg):
-    # 1. Spell correction
     msg_corr = correct_spelling(user_msg)
-    # 2. Try exact normalized match
     msg_norm = normalize(user_msg)
     corr_norm = normalize(msg_corr)
     questions_norm = [normalize(q) for q, _ in all_qa_pairs]
 
+    # 1. Exact match (original and corrected)
     for idx, qn in enumerate(questions_norm):
         if qn == msg_norm or qn == corr_norm:
             return all_qa_pairs[idx][1]
 
-    # 3. Semantic match (use Sentence Transformers)
-    if sentencetr_available and st_model and corpus_embeddings is not None:
-        emb = st_model.encode([user_msg], convert_to_tensor=True)
-        cos_scores = st_util.pytorch_cos_sim(emb, corpus_embeddings)[0]
-        best_idx = int(cos_scores.argmax())
-        if float(cos_scores[best_idx]) > 0.7:
-            return all_qa_pairs[best_idx][1]
-
-    # 4. Fuzzy match (RapidFuzz/difflib)
+    # 2. Fuzzy match (RapidFuzz or difflib)
     if rapidfuzz_available:
         best = process.extractOne(corr_norm, questions_norm, scorer=fuzz.token_set_ratio)
         if best and best[1] >= 80:
@@ -208,7 +182,7 @@ def match_yaml_qa(user_msg):
             idx = questions_norm.index(best_match[0])
             return all_qa_pairs[idx][1]
 
-    # 5. Keyword overlap (at least 1 keyword, >60% overlap)
+    # 3. Keyword overlap (at least 1 keyword, >60% overlap)
     msg_keywords = extract_keywords(user_msg)
     if not msg_keywords:
         return None
