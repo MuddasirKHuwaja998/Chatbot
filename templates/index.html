@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Otofarma AI Assistant</title>
-    <!-- Favicon: Use your PNG from Dropbox as favicon (direct link, best for browser) -->
     <link rel="icon" type="image/png" href="https://www.dropbox.com/scl/fi/ypb3su4estqakdj818ooo/chatbot.png?rlkey=8w18gem5ay8b8euikgkjvvunz&raw=1">
     <style>
         :root {
@@ -16,12 +15,15 @@
             --scrollbar-track: #e8f5e9;
             --scrollbar-thumb: #7ac29a;
         }
-        body {
+        html, body {
+            height: 100%;
             margin: 0;
             padding: 0;
+        }
+        body {
             font-family: 'Roboto', 'Segoe UI', system-ui, sans-serif;
             background: #f5f9f7;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -55,6 +57,8 @@
         }
         .logo {
             width: 250px;
+            min-width: 120px;
+            max-width: 40vw;
         }
         .header-text {
             flex: 1;
@@ -83,7 +87,8 @@
             gap: 1rem;
             box-sizing: border-box;
             height: calc(100vh - 200px);
-            padding-bottom: 110px; /* 80px input + 30px buffer */
+            padding-bottom: 110px;
+            transition: padding 0.2s;
         }
         .chat-box::-webkit-scrollbar {
             width: 8px;
@@ -105,6 +110,7 @@
             display: flex;
             align-items: flex-end;
             gap: 0.7rem;
+            font-size: 1.11rem;
         }
         .user-message {
             align-self: flex-end;
@@ -130,9 +136,7 @@
             justify-content: center;
             margin-right: 0.5em;
             background: transparent;
-            /* No border for visibility */
             overflow: hidden;
-            /* No animation by default */
         }
         .bot-icon-inner {
             width: 100%;
@@ -191,6 +195,7 @@
             border-radius: 50%;
             border: 2px solid var(--primary);
             cursor: pointer;
+            transition: box-shadow 0.2s;
         }
         .mic-button {
             background: #fff url('https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color/254000/79-512.png') center/60% no-repeat;
@@ -202,6 +207,80 @@
             background: #fff url('https://img.freepik.com/premium-photo/audiologist-isolated-cartoon-character_934475-17340.jpg') center/cover no-repeat;
             background-size: 80% 80%;
             background-position: center;
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 900px) {
+            .logo {
+                width: 120px;
+            }
+            .chat-header {
+                padding: 0.7rem 1rem;
+            }
+            .chat-box {
+                padding: 1rem 1rem;
+                margin-top: 95px;
+                height: calc(100vh - 180px);
+            }
+            .input-container {
+                height: 70px;
+                padding: 0.7rem;
+                font-size: 1rem;
+            }
+        }
+        @media (max-width: 600px) {
+            .chat-header h1 {
+                font-size: 1.25rem;
+            }
+            .logo {
+                width: 80px;
+                min-width: 60px;
+            }
+            .header-content {
+                gap: 1rem;
+            }
+            .chat-header p {
+                font-size: 0.98rem;
+            }
+            .chat-box {
+                padding: 0.7rem 0.2rem;
+                margin-top: 70px;
+                gap: 0.6rem;
+                font-size: 1rem;
+                height: calc(100vh - 160px);
+            }
+            .input-container {
+                height: 60px;
+                padding: 0.4rem 0.2rem;
+                gap: 0.4rem;
+            }
+            .input-field {
+                padding: 0.7rem 1rem;
+                font-size: 0.98rem;
+            }
+            .send-button, .mic-button, .sign-language-button, .animation-button {
+                width: 36px;
+                height: 36px;
+                font-size: 0.92rem;
+                padding: 0;
+            }
+            .message {
+                font-size: 0.98rem;
+                padding: 0.7rem 1rem;
+            }
+            .bot-icon, .bot-icon-inner {
+                width: 28px;
+                height: 28px;
+                min-width: 28px;
+                min-height: 28px;
+            }
+        }
+        @media (max-width: 410px) {
+            .chat-header h1 { font-size: 1.04rem; }
+            .chat-header p { font-size: 0.87rem; }
+            .logo { width: 50px; min-width: 35px; }
+            .bot-icon, .bot-icon-inner { width: 20px; height: 20px; }
+            .message, .input-field { font-size: 0.85rem; }
         }
     </style>
 </head>
@@ -269,7 +348,6 @@
 
         // Function to animate bot icon when user sends a message
         function animateBotIcon() {
-            // Get all bot icons in the last message (could be more than one if you show multiple at once)
             const lastBotMessages = document.querySelectorAll('.bot-message');
             if (lastBotMessages.length === 0) return;
             const lastBot = lastBotMessages[lastBotMessages.length - 1];
@@ -323,7 +401,7 @@
         const sendMessage = (fromVoice=false) => {
             const message = userInput.value.trim();
             if (message) {
-                displayMessage(message, true); // Display user message
+                displayMessage(message, true);
                 lastSentWithMic = fromVoice;
                 fetch('/chat', {
                     method: 'POST',
@@ -334,8 +412,7 @@
                 .then(data => {
                     displayMessage(data.reply);
                     userInput.value = '';
-                    animateBotIcon(); // Animate only after sending a message
-                    // Speak only if it was sent from mic
+                    animateBotIcon();
                     if (data.voice && lastSentWithMic) {
                         speakMessage(data.reply);
                     }
@@ -347,10 +424,7 @@
             }
         };
 
-        // Handle Send Button
         sendButton.addEventListener('click', () => sendMessage(false));
-
-        // Allow "Enter" key to send message
         userInput.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
                 sendMessage(false);
@@ -358,7 +432,7 @@
             }
         });
 
-        // Improved Mic Button: prevents multiple triggers and disables mic button while listening
+        // Improved Mic Button
         function stopAllSpeech() {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -372,7 +446,6 @@
                 return;
             }
             if (recognitionActive) {
-                // If already listening, stop it
                 recognitionInstance && recognitionInstance.stop();
                 return;
             }
@@ -401,18 +474,16 @@
             recognitionInstance.onresult = event => {
                 const transcript = event.results[0][0].transcript;
                 userInput.value = transcript;
-                sendMessage(true); // send as soon as voice input is ready, voice mode
+                sendMessage(true);
             };
 
             recognitionInstance.start();
         });
 
-        // Handle Sign Language Button
         signLanguageButton.addEventListener('click', () => {
             window.location.href = '/sign-language';
         });
 
-        // Handle Animation Button
         animationButton.addEventListener('click', () => {
             window.open('https://otofarma-ai-diagnosis-nxyj.onrender.com/', '_blank', 'width=1000,height=800');
         });
