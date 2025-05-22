@@ -6,17 +6,17 @@ import random
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 
-# Spellchecker (Italian, using built-in dict)
+# Spellchecker (Italian only, no fallback)
 try:
     from spellchecker import SpellChecker
-    spell = SpellChecker(language="it")  # Use default Italian dictionary
+    spell = SpellChecker(language="it")
     spellchecker_available = True
 except Exception as e:
     print("SpellChecker not available:", e)
     spellchecker_available = False
     spell = None
 
-# Rapidfuzz (for best fuzzy matching)
+# Rapidfuzz (for fuzzy matching)
 try:
     from rapidfuzz import process, fuzz
     rapidfuzz_available = True
@@ -27,9 +27,9 @@ app = Flask(__name__)
 
 CORPUS_PATH = os.environ.get("CORPUS_PATH", os.path.join(os.path.dirname(__file__), "corpus"))
 
-# Load all YAML Q/A
+# Load all YAML Q/A from ALL files in 'corpus' (recursively)
 all_qa_pairs = []
-for yml_file in glob.glob(os.path.join(CORPUS_PATH, "*.yml")):
+for yml_file in glob.glob(os.path.join(CORPUS_PATH, "**", "*.yml"), recursive=True):
     with open(yml_file, encoding='utf-8') as f:
         try:
             data = yaml.safe_load(f)
@@ -79,14 +79,22 @@ def is_probably_italian(text):
         "ciao", "come", "puoi", "aiutarmi", "grazie", "prenotare", "test", "udito", "orari", "info", "salve", "quanto", "dove", "chi", "cosa", "quale", "azienda"
     ]
     text_lc = text.lower()
+    # If question contains Italian keywords, treat as Italian
     matches = sum(kw in text_lc for kw in italian_keywords)
-    if matches == 0 and len(extract_keywords(text)) >= 2:
+    if matches > 0:
+        return True
+    # If many keywords match Italian, treat as Italian
+    if len(extract_keywords(text)) >= 2:
+        # If contains Cyrillic/Greek, treat as not Italian
         if re.search(r"[а-яёΑ-ωЀ-ӿ]", text):
             return False
-        english_starters = ["what", "who", "how", "when", "where", "why", "can you", "could you", "please", "help"]
+        english_starters = [
+            "what", "who", "how", "when", "where", "why", "can you", "could you", "please", "help", "hi", "hello", "good morning", "good evening"
+        ]
         if any(text_lc.strip().startswith(st) for st in english_starters):
             return False
-    return True
+    # Otherwise, treat as non-Italian
+    return False
 
 def detect_time_or_date_question(msg):
     msg_lc = msg.strip().lower()
@@ -172,9 +180,13 @@ def match_yaml_qa(user_msg):
 
     # 2. Fuzzy match (RapidFuzz or difflib)
     if rapidfuzz_available:
+        # Try both original and corrected for best coverage
         best = process.extractOne(corr_norm, questions_norm, scorer=fuzz.token_set_ratio)
+        best2 = process.extractOne(msg_norm, questions_norm, scorer=fuzz.token_set_ratio)
         if best and best[1] >= 80:
             return all_qa_pairs[best[2]][1]
+        if best2 and best2[1] >= 80:
+            return all_qa_pairs[best2[2]][1]
     else:
         import difflib
         best_match = difflib.get_close_matches(corr_norm, questions_norm, n=1, cutoff=0.8)
@@ -209,10 +221,10 @@ FALLBACK_MESSAGES = [
     "Posso aiutarti con informazioni su servizi, prenotazioni o orari. Chiedimi pure!",
     "Mi piacerebbe aiutarti di più! Riprova con un'altra domanda o cerca nel nostro sito."
 ]
-FALLBACK_LANGUAGE_MESSAGES = [
-    "Gentile utente, il servizio è ottimizzato per domande in italiano. Scrivi la tua richiesta in italiano per ricevere assistenza accurata. Grazie!",
-    "Il nostro assistente virtuale funziona principalmente in italiano. Ripeti la domanda in italiano per ricevere supporto.",
-    "Questo servizio risponde solo a richieste in lingua italiana. Prova di nuovo, grazie!"
+ENGLISH_LANGUAGE_MESSAGES = [
+    "Gentile utente, sono stato progettato e addestrato esclusivamente per rispondere a domande in italiano, poiché il mio database e la mia conoscenza sono focalizzati sulla lingua italiana. Per favore, riformula la tua richiesta in italiano, così potrò aiutarti in modo più accurato e professionale. Grazie per la comprensione.",
+    "Il mio funzionamento e le informazioni che posso fornire sono ottimizzati solo per domande in lingua italiana. Ti invito cortesemente a scrivere la tua domanda in italiano.",
+    "Rispondo esclusivamente a domande in italiano perché sono stato sviluppato per quel contesto. Per favore, riprova in italiano per ricevere assistenza."
 ]
 used_fallbacks = set()
 
@@ -237,19 +249,18 @@ def chat():
     if not user_message:
         return jsonify({"reply": "Per favore, scrivi qualcosa.", "voice": False})
 
-    if is_probably_italian(user_message):
-        time_or_date = detect_time_or_date_question(user_message)
-        if time_or_date == "time":
-            return jsonify({"reply": get_time_answer(), "voice": voice_mode})
-        elif time_or_date == "date":
-            return jsonify({"reply": get_date_answer(), "voice": voice_mode})
+    if not is_probably_italian(user_message):
+        reply = random.choice(ENGLISH_LANGUAGE_MESSAGES)
+        return jsonify({"reply": reply, "voice": voice_mode})
+
+    time_or_date = detect_time_or_date_question(user_message)
+    if time_or_date == "time":
+        return jsonify({"reply": get_time_answer(), "voice": voice_mode})
+    elif time_or_date == "date":
+        return jsonify({"reply": get_date_answer(), "voice": voice_mode})
 
     reply = match_yaml_qa(user_message)
     if reply:
-        return jsonify({"reply": reply, "voice": voice_mode})
-
-    if not is_probably_italian(user_message):
-        reply = random.choice(FALLBACK_LANGUAGE_MESSAGES)
         return jsonify({"reply": reply, "voice": voice_mode})
 
     reply = get_fallback_msg()
