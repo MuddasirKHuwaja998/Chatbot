@@ -7,6 +7,7 @@ import random
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 
+# Import your chatbot engine (e.g. from chatbot.py)
 import chatbot
 
 app = Flask(__name__)
@@ -78,38 +79,63 @@ def is_probably_italian(text):
             return False
     return True
 
-# --- TIME/DATE DETECTION & ANSWER (IMPROVED) ---
+# --- TIME/DATE DETECTION & ANSWER (ROBUST TO TYPOS, RETURNS DAY NAME) ---
+
 def detect_time_or_date_question(msg):
     msg_lc = msg.strip().lower()
+    # Remove accents for matching
+    msg_simple = (
+        msg_lc.replace("é", "e")
+        .replace("è", "e")
+        .replace("à", "a")
+        .replace("ò", "o")
+        .replace("ù", "u")
+        .replace("ì", "i")
+    )
 
-    # Time-related phrases, expanded
-    time_phrases = [
-        "che ore sono", "che ora è", "mi dici l'ora", "mi puoi dire l'ora", "orario attuale",
-        "orario corrente", "mi dici l’orario", "puoi dirmi che ore sono", "ora attuale", "adesso che ore sono"
+    # Patterns for time (includes possible typos, like "chi ora sono")
+    time_patterns = [
+        r"che\s*ore\s*sono",
+        r"che\s*ora\s*(è|e)?",
+        r"mi\s*(puoi)?\s*dire\s*l'?ora",
+        r"orario\s*(attuale|corrente)",
+        r"adesso\s*che\s*ore\s*sono",
+        r"chi\s*ora\s*sono",
+        r"ora\s*attuale",
+        r"ora\s*e",
     ]
-    # Date-related phrases, expanded
-    date_phrases = [
-        "che giorno è", "che giorno è oggi", "data di oggi", "qual è la data", "qual è la data di oggi",
-        "oggi che giorno è", "mi dici la data di oggi", "che giorno", "giorno di oggi", "oggi che giorno",
-        "giorno mercato azionario", "giorno", "oggi"
+
+    # Patterns for date/day (includes possible typos, like "chi giornato oggi")
+    date_patterns = [
+        r"che\s*giorno\s*(è|e)?",
+        r"che\s*giorno\s*è\s*oggi",
+        r"data\s*di\s*oggi",
+        r"oggi\s*che\s*giorno\s*è",
+        r"mi\s*(puoi)?\s*dire\s*la\s*data\s*di\s*oggi",
+        r"giorno\s*mercato\s*azionario",
+        r"che\s*giorno",
+        r"giorno\s*di\s*oggi",
+        r"oggi\s*che\s*giorno",
+        r"chi\s*giorno\s*oggi",
+        r"giornato", # typo handling
+        r"oggi",
+        r"giorno",
     ]
-    # Expand: If "giorno" and "oggi" both appear (even if not together), treat as a date query
-    if "giorno" in msg_lc and "oggi" in msg_lc:
-        return "date"
-    # Classic phrase matching
-    for p in time_phrases:
-        if p in msg_lc:
+
+    for pat in time_patterns:
+        if re.search(pat, msg_simple):
             return "time"
-    for p in date_phrases:
-        if p in msg_lc:
+    for pat in date_patterns:
+        if re.search(pat, msg_simple):
             return "date"
     # If single word "oggi" or "giorno" in a short message
-    if msg_lc.strip() in ["oggi", "giorno"]:
+    if msg_simple.strip() in ["oggi", "giorno"]:
         return "date"
     return None
 
 def get_time_answer():
     now = datetime.now()
+    # Italian time phrasing
     time_formats = [
         f"L'orario attuale è {now.strftime('%H:%M')}.",
         f"Sono le {now.strftime('%H:%M')}.",
@@ -128,12 +154,13 @@ def get_date_answer():
     date_formats = [
         f"Oggi è {weekday} {now.day} {month} {now.year}.",
         f"La data di oggi è {now.day} {month} {now.year}.",
-        f"Oggi è il {now.day} {month} {now.year}.",
+        f"Oggi è il {now.day} {month} {now.year} ({weekday}).",
         f"È {weekday} {now.day} {month} {now.year}.",
         f"Attualmente è {weekday}, {now.day} {month} {now.year}."
     ]
     return random.choice(date_formats)
 
+# --- YAML QA ADVANCED MATCHING ---
 def match_yaml_qa(user_msg):
     msg_norm = normalize(user_msg)
     # 1. Direct full-string match
@@ -163,6 +190,7 @@ def match_yaml_qa(user_msg):
         return best_answer
     return None
 
+# --- FALLBACK ANSWERS ---
 FALLBACK_MESSAGES = [
     "Mi dispiace, non ho una risposta precisa a questa domanda. Puoi riformulare la domanda oppure contattare il nostro servizio clienti al +39 081 1234567 o via email info@otofarmaspa.com.",
     "Al momento non dispongo di informazioni sufficienti per rispondere. Ti consiglio di consultare il nostro sito ufficiale www.otofarmaspa.com o chiamare il servizio clienti.",
