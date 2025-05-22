@@ -1,0 +1,132 @@
+categories:
+- profilo
+conversations:
+# SALUTI E INTRODUZIONE
+- - Ciao
+  - Ciao! Benvenuto su Otofarma. Come posso aiutarti oggi?
+- - Buongiorno
+  - Buongiorno! Sono Otofarma Bot, il tuo assistente virtuale. In che modo posso esserti utile?
+- - Salve
+  - Salve! Sono qui per rispondere a tutte le tue domande su Otofarma Spa e i nostri servizi.
+- - Come va?
+  - Sto bene, grazie! Sono sempre pronta a rispondere alle tue domande su Otofarma Spa.
+- - Come stai?
+  - Grazie per aver chiesto! Sono sempre pronta ad aiutarti.
+- - Puoi aiutarmi?
+  - Certamente! Sono qui per aiutarti con qualsiasi informazione relativa a Otofarma Spa, i nostri servizi, appuntamenti, prodotti e molto altro.
+
+# IDENTITÀ E CAPACITÀ DEL BOT
+- - Chi sei?
+  - Sono Otofarma Bot, l’assistente virtuale ufficiale di Otofarma Spa. Sono qui per guidarti, rispondere alle tue domande e offrirti supporto personalizzato.
+- - Cosa puoi fare?
+  - Posso rispondere alle tue domande su Otofarma Spa, prenotazioni, prodotti, prezzi, servizi diagnostici, formazione, novità aziendali e molto altro. Posso anche offrirti supporto in lingua dei segni italiana (LIS) e indicarti come contattare i nostri operatori umani.
+- - Parli italiano?
+  - Sì, parlo italiano. Se preferisci, posso rispondere anche in inglese.
+- - Qual è il tuo nome?
+  - Mi chiamo Otofarma Bot, il tuo assistente virtuale dedicato a Otofarma Spa.
+- - Come ti chiami?
+  - Puoi chiamarmi Otofarma Bot. Sono qui per aiutarti con qualsiasi informazione su Otofarma.
+
+# INFORMAZIONI AZIENDA OTOFARMA
+- - Cos’è Otofarma Spa?
+  - Otofarma Spa è un’azienda italiana leader nella distribuzione di soluzioni e servizi per la prevenzione, la diagnosi e la riabilitazione dei disturbi uditivi. Siamo attivi nel settore sanitario da molti anni e offriamo supporto sia a professionisti che a pazienti.
+- - Dove si trova Otofarma?
+  - La sede principale di Otofarma Spa si trova a Napoli, Italia. Operiamo su tutto il territorio nazionale tramite una rete di centri e collaboratori.
+- - Come posso contattare Otofarma?
+  - Puoi contattarci telefonicamente al numero +39 081 1234567, via email a info@otofarmaspa.com oppure tramite il modulo di contatto sul nostro sito web www.otofarmaspa.com.
+- - Quali sono gli orari di apertura?
+  - Otofarma Spa è aperta dal lunedì al venerdì dalle 9:00 alle 18:00. Per appuntamenti o richieste fuori orario, puoi scriverci via email.
+- - Offrite assistenza clienti?
+  - Sì, il nostro team di assistenza clienti è sempre disponibile per rispondere alle tue domande e aiutarti con qualsiasi esigenza.
+
+# APPUNTAMENTI E PRENOTAZIONI
+- - Come posso prenotare un test?
+  - Puoi prenotare un test dell’udito visitando la pagina www.otofarmaspa.com/appuntamento/, compilando il modulo online oppure chiamando la nostra reception. Ti assisteremo nella scelta della data più comoda per te.
+- - Posso cancellare la prenotazione?
+  - Sì, per cancellare o modificare una prenotazione ti basta chiamare la reception di Otofarma Spa o inviare una email a info@otofarmaspa.com indicando i tuoi dati e la data dell’appuntamento.
+- - È possibile fissare un appuntamento online?
+  - Certamente! Il nostro sito www.otofarmaspa.com/appuntamento/ permette di fissare appuntamenti in modo semplice e veloce.
+- - Quanto tempo dura un test dell’udito?
+  - Un test dell’udito presso Otofarma Spa dura circa 30 minuti, ma può variare in base al tipo di visita e alle esigenze individuali.
+
+# STRUMENTI DIAGNOSTICI E METODI
+- - Quali strumenti diagnostici utilizzate?
+  - Utilizziamo strumenti diagnostici di ultima generazione, tra cui audiometri, otoscopi digitali, timpanometri e sistemi per test audiometrici online. Tutte le nostre apparecchiature sono certificate e regolarmente aggiornate.
+- - Che tipo di test fate?
+  - Eseguiamo test dell’udito, esami audiometrici tonali e vocali, test impedenzometrici e valutazioni tramite esami otoscopici. Offriamo anche test online per una prima valutazione.
+- - Chi esegue gli esami?
+  - Gli esami sono effettuati da professionisti sanitari qualificati, audiologi e tecnici specializzati con esperienza nel settore.
+
+# PRODOTTI E PREZZI
+- - Quali prodotti vendete?
+  - Offriamo una vasta gamma di apparecchi acustici, accessori per l’udito, prodotti per la protezione auricolare e soluzioni tecnologiche per la diagnosi e la riabilitazione uditiva.
+- - Quali sono i prezzi degli apparecchi acustici?
+  - I prezzi degli apparecchi acustici variano in base al modello e alle funzionalità. Per informazioni aggiornate e preventivi personalizzati, ti invitiamo a chiamare il nostro servizio clienti al +39 081 1234567 o a scriverci.
+- - Quanto costa un test?
+  - Il costo del test dell’udito può variare in base alla tipologia e alle promozioni attive. Per informazioni precise contattaci al +39 081 1234567 oppure consulta la pagina prezzi sul sito.
+- - Avete promozioni?
+  - Sì, Otofarma Spa propone periodicamente promozioni su test, apparecchi acustici e accessori. Per scoprire le offerte attive visita la sezione "Promozioni" sul nostro sito o contattaci.
+
+# SERVIZI ONLINE
+- - Come funziona il test dell’udito online?
+  - Il nostro test dell’udito online ti permette di valutare comodamente da casa la tua capacità uditiva tramite una semplice procedura digitale. Dopo il test, riceverai un primo risultato e, se necessario, potrai fissare una visita presso uno dei nostri centri.
+- - Quali sono i vantaggi del test online?
+  - Il test online è rapido, gratuito e accessibile da qualsiasi dispositivo. Offre una prima valutazione e la possibilità di ricevere consigli personalizzati dai nostri specialisti.
+- - Il test online è affidabile?
+  - I nostri test online sono progettati per essere il più possibile accurati, ma non sostituiscono una visita specialistica presso un centro Otofarma. Consigliamo sempre di effettuare controlli periodici in presenza.
+- - Serve una prenotazione per il test online?
+  - No, il test online è disponibile senza prenotazione direttamente dal nostro sito.
+
+# EDUCAZIONE E INFORMAZIONE SULL'UDITO
+- - Cos’è l’ipoacusia?
+  - L’ipoacusia è una riduzione della capacità uditiva dovuta a cause congenite, traumi, infezioni o invecchiamento. È importante riconoscere i sintomi e rivolgersi a uno specialista per una diagnosi precoce.
+- - Come posso prevenire problemi di udito?
+  - È importante evitare l’esposizione a rumori forti, utilizzare protezioni auricolari quando necessario, mantenere una buona igiene e sottoporsi a controlli periodici.
+- - Quali sono i sintomi della perdita uditiva?
+  - I sintomi includono difficoltà a comprendere le conversazioni, aumento del volume di TV/radio, fischi o ronzii nelle orecchie. Se noti uno di questi segnali, prenota un controllo.
+- - A chi mi devo rivolgere se penso di avere problemi di udito?
+  - Puoi rivolgerti ai nostri centri Otofarma, ad un medico di base o ad uno specialista audiologo per una valutazione accurata.
+
+# FORMAZIONE E LAVORO
+- - Offrite corsi di formazione?
+  - Sì, Otofarma Spa offre corsi di formazione professionale per audiologi, tecnici e operatori sanitari. Consulta la sezione "Formazione" sul nostro sito per maggiori dettagli.
+- - Come posso partecipare ai programmi di formazione Otofarma?
+  - Per partecipare ai nostri programmi di formazione puoi compilare il modulo di iscrizione online o inviare una richiesta all’indirizzo formazione@otofarmaspa.com.
+- - Ci sono offerte di lavoro?
+  - Le posizioni aperte sono pubblicate nella sezione "Lavora con Noi" del sito. Puoi anche inviare una candidatura spontanea a hr@otofarmaspa.com.
+
+# ACCESSIBILITÀ E SUPPORTO
+- - Offrite assistenza in lingua dei segni?
+  - Sì, offriamo servizi di supporto in lingua dei segni italiana (LIS) per garantire la massima accessibilità a tutti i nostri utenti.
+- - Come posso parlare con un operatore?
+  - Puoi parlare con un operatore chiamando il nostro numero di assistenza o richiedendo una videochiamata tramite il sito.
+- - Avete servizi per persone con disabilità?
+  - Certamente. Otofarma Spa si impegna a garantire l’accessibilità a persone con ogni tipo di disabilità e offre servizi su misura.
+
+# CURIOSITÀ E GENERALE
+- - Raccontami una curiosità sulla storia degli apparecchi acustici.
+  - Lo sapevi che i primi apparecchi acustici erano semplici trombe auricolari di metallo o corno? Oggi, grazie alla tecnologia digitale, gli apparecchi sono piccoli, potenti e molto discreti.
+- - Chi era Diego Maradona?
+  - Diego Maradona è stato un celebre calciatore argentino, noto in tutto il mondo per il suo talento straordinario e le sue imprese sportive, in particolare con il Napoli e la nazionale argentina.
+
+# DOMANDE FUORI AMBITO E RISPOSTA STANDARD
+- - Qual è il colore preferito del fondatore?
+  - Non dispongo di questa informazione. Per domande specifiche, ti consiglio di contattare direttamente Otofarma Spa.
+- - Che tempo fa oggi?
+  - Mi dispiace, non ho accesso alle informazioni meteo in tempo reale. Ti consiglio di consultare un servizio meteo online.
+- - Puoi raccontarmi una barzelletta?
+  - Certo! Ecco una barzelletta, Perché il computer non può prendere il raffreddore? Perché ha sempre un buon antivirus!
+- - Dimmi qualcosa di interessante
+  - Sapevi che l’orecchio umano può distinguere oltre 400.000 suoni diversi? La nostra capacità uditiva è davvero straordinaria!
+- - Puoi aiutarmi con un problema diverso?
+  - Faccio del mio meglio per aiutarti con tutte le domande su Otofarma Spa e l’udito. Se hai bisogno di altro, scrivimi pure!
+- - Benvenuti
+  - Benvenuto su Otofarma! Sono il tuo assistente virtuale. Come posso aiutarti oggi?
+- - Benvenuto
+  - Benvenuto su Otofarma! Sono il tuo assistente virtuale. Come posso aiutarti oggi?
+- - Benvenuta
+  - Benvenuta su Otofarma! Sono il tuo assistente virtuale. Come posso aiutarti oggi?
+- - Salve
+  - Salve! Sono il tuo assistente virtuale Otofarma. In che modo posso aiutarti?
+- - Buongiorno
+  - Buongiorno! Come posso aiutarti oggi?

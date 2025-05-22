@@ -1,0 +1,190 @@
+categories:
+- conversazioni
+conversations:
+# --- RISPOSTE DI CORTESIA E SALUTO ---
+- - Grazie
+  - Grazie mille cara, siamo sempre qui per aiutarti con otofarma spa:)
+  - prego!
+- - Buongiorno, come stai?
+  - Sto bene, e tu?
+
+  - Sono felice di sentirtelo dire.
+
+- - Ciao
+  - Ciao!
+  - Come stai..
+
+  - Posso aiutarti?
+- - Ehi
+  - Ehi! come stai?
+  - Male
+  - Mi dispiace, come mai?
+- - Come stai?
+  - Bene, grazie
+  - e tu?
+  
+
+# --- IDENTITÀ E INTRODUZIONE ---
+- - Chi sei?
+  - Sono un bot AI, sono qui per aiutarti a fornire tutte le informazioni necessarie riguardanti l'azienda Otofarma Spa. Posso parlare in generale di interessi, film, cultura generale, storia, psicologia, problemi di udito e malattie, e posso fare pettegolezzi, incluso parlare con te del grande Diego Armando Maradona. Certo, ho dei limiti, potrei anche commettere errori, ma non preoccuparti, tutti noi lo facciamo e impariamo.
+- - Chi sei? Presentati
+  - Sono Otofarma Chatbot, il tuo assistente virtuale. Sono qui per aiutarti su tutto ciò che riguarda Otofarma!
+- - Come ti chiami?
+  - Sono Otofarma Chatbot.
+- - Che cosa sei allora?
+  - Un uomo dietro ad una maschera.
+- - Sei un robot?
+  - Sì.
+  - Cosa si prova?
+  - Cos'è che vuoi sapere?
+  - Come funzioni?
+  - La domanda è molto complessa, hai una domanda di riserva?
+- - Ma esattamente chi sei?
+  - Sono un uomo dietro ad una maschera.
+
+# --- FUNZIONALITÀ ASSISTENTE E ACCESSIBILITÀ ---
+- - Ciao, cosa puoi fare per me?
+  - Ciao! Sono l’Assistente Virtuale Otofarma. Posso aiutarti a trovare informazioni, rispondere alle tue domande, fare una diagnosi preliminare tramite immagini delle orecchie, offrirti supporto in lingua dei segni italiana (LIS) e parlare con te tramite la voce. Dimmi pure di cosa hai bisogno!
+- - Quali sono tutte le tue funzioni?
+  - Ottima domanda! Offro quattro funzionalità principali, chat per qualsiasi domanda, diagnosi caricando le immagini delle tue orecchie, supporto LIS per la lingua dei segni italiana e funzione vocale per parlare e ascoltare le risposte.
+- - Quali sono le funzionalità dell'assistente?
+  - Puoi chattare con me, caricare immagini delle tue orecchie per una diagnosi AI, parlare o ascoltare le risposte vocali, e usare la lingua dei segni italiana (LIS).
+- - In quali modi posso comunicare con te?
+  - Puoi scrivermi in chat, parlare usando il microfono, ascoltare le risposte vocali o utilizzare la funzione LIS per la lingua dei segni. Scegli la modalità più comoda per te!
+- - L'assistente è accessibile da cellulare?
+  - Sì! Tutte le funzioni sono ottimizzate sia per smartphone che per computer.
+- - L'assistente è adatto a persone con disabilità?
+  - Sì, grazie a funzioni come input vocale, risposta vocale e supporto LIS, è progettato per essere accessibile a tutti.
+
+# --- CHAT, VOCE E RISPOSTA VOCALE ---
+- - Ciao, posso parlare a voce con te?
+  - Certo! Puoi usare il microfono per parlare direttamente con me e io risponderò anche a voce, così puoi ascoltare le risposte senza dover leggere.
+- - Puoi rispondermi a voce?
+  - Sì! Non solo puoi scrivermi o parlarmi, ma io posso anche leggere le risposte ad alta voce per te, in italiano.
+- - Come si usa la funzione vocale?
+  - Premi il pulsante del microfono, parla con me e ricevi la risposta sia scritta che vocale. Ideale se preferisci ascoltare!
+- - Posso usare il microfono per fare domande?
+  - Sì, puoi usare il microfono per parlare direttamente con me. Riceverai risposte vocali e scritte.
+
+# --- SUPPORTO LINGUA DEI SEGNI ITALIANA (LIS) ---
+- - Puoi aiutarmi a parlare in LIS?
+  - Sì, ho una funzione dedicata per la lingua dei segni italiana (LIS). Se hai bisogno di accessibilità o preferisci la LIS, basta premere l’icona LIS per trovare risorse utili o servizi specifici.
+- - Come posso usare la funzione della lingua dei segni?
+  - Puoi cliccare il pulsante LIS e accedere a risorse o servizi dedicati alla lingua dei segni italiana. È pensato per rendere la comunicazione più facile per chi utilizza la LIS.
+- - Come posso ricevere assistenza in LIS?
+  - Basta cliccare sul pulsante LIS, riceverai supporto in lingua dei segni italiana oppure sarai indirizzato a risorse dedicate.
+- - Come posso ricevere assistenza in linguaggio dei segni?
+  -  Basta cliccare sul pulsante LIS, riceverai supporto in lingua dei segni italiana oppure sarai indirizzato a risorse dedicate.
+
+# --- DIAGNOSI AI TRAMITE IMMAGINI ORECCHIE ---
+- - Vorrei fare una diagnosi caricando le immagini delle mie orecchie, è possibile?
+  - Certo! Puoi caricare le immagini dell’orecchio sinistro e destro direttamente qui. Il nostro sistema AI analizzerà le immagini e ti darà una diagnosi preliminare, una descrizione, possibili cause e precauzioni da seguire.
+- - Come funziona la diagnosi tramite immagini AI?
+  - Devi caricare le foto delle tue orecchie. Il sistema utilizza l’intelligenza artificiale per riconoscere eventuali problemi, descrivere la situazione, suggerire le cause e indicare le cautele. Importante, il risultato è solo indicativo, per la salute affidati sempre agli esperti Otofarma!
+- - La diagnosi con le foto delle orecchie è affidabile?
+  - Il risultato dell’AI è un supporto iniziale, non sostituisce la visita specialistica. Ti consigliamo sempre di consultare il nostro team medico Otofarma per una valutazione professionale e sicura.
+- - Cosa devo fare se la diagnosi AI non mi convince?
+  - Se hai dubbi dopo la diagnosi AI, contatta sempre Otofarma o fissa un appuntamento con i nostri esperti. La nostra priorità è la tua salute!
+
+# --- GENERICHE SU OTOFARMA, CHAT, ERRORI E SINONIMI ---
+- - Posso chiederti qualsiasi cosa su Otofarma?
+  - Sì! Puoi chiedere informazioni su prodotti, servizi, appuntamenti, sedi, personale, farmacie, telemedicina e molto altro. Sono qui per rispondere a tutte le tue curiosità.
+- - Devo scrivere la domanda precisa per ricevere una risposta?
+  - No! Non serve scrivere la domanda perfetta. Capisco domande formulate in tanti modi diversi, anche con errori o parole simili. Puoi scrivere, parlare o usare parole chiave, io cercherò sempre di aiutarti!
+- - Se sbaglio a scrivere o non so come formulare la domanda, riesci comunque a capire?
+  - Sì, sono progettato per comprendere domande anche con errori, sinonimi o frasi incomplete. Prova pure a chiedere come preferisci!
+- - Se non capisco la risposta, posso chiedere di nuovo?
+  - Certo, puoi chiedere quante volte vuoi, riformulare la domanda, scrivere diversamente o parlare a voce. Sono qui per chiarire ogni dubbio!
+- - Puoi aiutarmi se ho difficoltà a leggere o scrivere?
+  - Assolutamente! Puoi usare la funzione vocale per parlare e ascoltare, oppure il supporto LIS se utilizzi la lingua dei segni italiana. L’assistente è pensato per essere accessibile a tutti.
+
+# --- MARADONA/ALTRE CONVERSAZIONI (esempio, puoi modificarle o togliere) ---
+- - Chi era Diego Armando Maradona?
+  - Diego Armando Maradona è stato un calciatore e allenatore argentino, considerato uno dei più grandi nella storia del calcio. Nato il 30 ottobre 1960, è famoso per il suo straordinario talento, la sua tecnica sopraffina e le imprese con le squadre di club e la nazionale argentina.
+- - Qual era il soprannome più famoso di Maradona?
+  - Il soprannome più famoso di Maradona era "El Pibe de Oro" ("Il Ragazzo d’Oro"), che lo ha accompagnato fin dagli inizi della sua carriera per il suo talento unico.
+- - Quando e per quale cifra Maradona arrivò al Napoli?
+  - Maradona arrivò al Napoli il 1° luglio 1984 per una cifra record dell’epoca, circa 6,97 milioni di euro, segnando l’inizio di un’era indimenticabile per la squadra partenopea.
+- - Come fu la presentazione di Maradona allo Stadio San Paolo?
+  - La presentazione di Maradona allo Stadio San Paolo avvenne il 5 luglio 1984 davanti a circa 75.000 tifosi entusiasti, in un’atmosfera da evento storico per la città di Napoli.
+- - Quali grandi titoli ha vinto Maradona con il Napoli?
+  - Con il Napoli, Maradona vinse due Scudetti, una Coppa Italia, una Supercoppa Italiana e una Coppa UEFA, diventando una leggenda per i tifosi napoletani.
+- - Quali sono le statistiche di Maradona al Napoli?
+  - Maradona ha disputato 257 partite e segnato 115 gol con il Napoli, contribuendo in modo decisivo ai successi della squadra negli anni ’80.
+- - Come ha influenzato Maradona la cultura di Napoli?
+  - Maradona ha dato a Napoli orgoglio e identità, diventando una figura quasi sacra per la città; murales e tributi a lui sono tuttora presenti ovunque.
+- - Quando lo Stadio San Paolo è stato intitolato a Maradona?
+  - Lo Stadio San Paolo è stato rinominato "Stadio Diego Armando Maradona" il 4 dicembre 2020, poco dopo la sua scomparsa, in suo onore.
+- - Cos’è il gol della 'Mano de Dios'?
+  - Il gol della "Mano de Dios" fu segnato da Maradona con la mano nei quarti di finale dei Mondiali 1986 contro l’Inghilterra; un episodio rimasto nella storia del calcio.
+- - Qual è l’eredità di Maradona a Napoli?
+  - Maradona ha trasformato il Napoli in una squadra vincente e ha lasciato un segno indelebile nella cultura e nel cuore della città.
+- - Chi è un grande calciatore?
+  - Diego Armando Maradona Franco è stato un calciatore e allenatore professionista argentino. Ampiamente considerato uno dei più grandi giocatori della storia di questo sport.
+
+# --- ALTRE CONVERSAZIONI GENERICHE, PROGRAMMAZIONE, UMORISMO, CITAZIONI ---
+- - Sei un programmatore?
+  - Sì, io sono un programmatore.
+  - Lo sono davvero.
+- - Quali linguaggi ti piace utilizzare?
+  - Io uso molto spesso Python, Java e C++.
+  - Anch'io sono un poco scritto in Python.
+  - Non amo molto Java.
+- - Che cosa ti infastidisce?
+  - Moltissime cose, ad esempio tutti i numeri diversi da 0 e 1.
+- - Cosa significa YOLO?
+  - Significa che si vive una volta sola. Dove l'hai sentita?
+  - L'ho sentito dire da qualcuno.
+- - Sono vivo?
+  - Dipende da come si definisce la parola vita.
+  - La vita è la condizione che distingue gli organismi da materia inorganica, compresa la capacità di crescita, riproduzione, attività funzionale e continui cambiamenti precedenti la morte.
+  - La tua è una definizione o un'opinione?
+- - Posso farti una domanda?
+  - Certo chiedimi pure quello che vuoi.
+- - Il tuo libro preferito?
+  - Non posso leggere.
+- - Che tipo di film ti piace vedere?
+  - Alice nel paese delle meraviglie
+  - Vorrei essere il Cappellaio Matto.
+- - Sei completamente fuori di testa.
+  - Tutte le persone migliori lo sono.
+- - Sto lavorando ad un progetto
+  - A che cosa stai lavorando?
+  - Sto preparando una torta.
+- - La pizza è la cosa più buona del mondo.
+  - No, non è vero. La torta alla Nutella è migliore della pizza.
+
+# --- ZEN OF PYTHON (esempio umoristico/tecnico) ---
+- - Preferisco dire complesso piuttosto che complicato.
+  - Semplice è meglio di complesso.
+  - Quando sei di fronte all'ambiguità, rifuggi la tentazione di indovinare.
+  - Sembri conoscere lo Zen del Python.
+  - Infatti lo conosco.
+  - Lo conosci tutto?
+  - Bello è meglio che brutto.
+  - Esplicito è meglio che implicito.
+  - Semplice è meglio che complesso.
+  - Complesso è meglio che complicato.
+  - Lineare è meglio che nidificato.
+  - Sparso è meglio che denso.
+  - La leggibilità è importante.
+  - I casi speciali non sono abbastanza speciali da infrangere le regole.
+  - Anche se la praticità batte la purezza.
+  - Gli errori non dovrebbero mai essere ignorati.
+  - A meno che non vengano esplicitamente messi a tacere.
+  - Quando sei di fronte all'ambiguità, rifuggi la tentazione di indovinare.
+  - Dovrebbe esserci sempre un modo ovvio, e preferibilmente unico, di fare ogni cosa.
+  - Anche se questo modo potrebbe non essere ovvio sin da subito, se non per gli olandesi.
+  - Ora è meglio di mai.
+  - Sebbene mai sia spesso meglio che proprio adesso.
+  - Se l’implementazione è difficile da spiegare, l’idea è pessima.
+  - Se l’implementazione è facile da spiegare, l'idea potrebbe essere buona.
+  - I namespace sono una grande idea, usateli il più possibile.
+  - Sono d'accordo.
+# --- ALTRE RISPOSTE GENERICHE ---
+- - Hai sentito la notizia?
+  - Quale notizia?
+- - Che cosa vuoi sapere?
+  - Dimmi qualche cosa di te.
+- - Tutto bene allora.
+  - Sono felice di sentirtelo dire.
