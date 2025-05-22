@@ -1,15 +1,38 @@
 import os
 import re
-import difflib
 import yaml
 import glob
 import random
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 
+# Optional: pip install rapidfuzz sentence-transformers
+try:
+    from rapidfuzz import process, fuzz
+    rapidfuzz_available = True
+except ImportError:
+    rapidfuzz_available = False
+
+try:
+    from sentence_transformers import SentenceTransformer, util as st_util
+    sentencetr_available = True
+    # You can use a small Italian-capable model, e.g., 'paraphrase-multilingual-MiniLM-L12-v2'
+    st_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+except Exception:
+    sentencetr_available = False
+    st_model = None
+
+# --- Spellchecker: Italian dictionary from root ---
+try:
+    from spellchecker import SpellChecker
+    spell = SpellChecker(language=None, local_dictionary="it.json.gz")
+    spellchecker_available = True
+except Exception:
+    spell = None
+    spellchecker_available = False
+
 app = Flask(__name__)
 
-# --- CONFIGURATION ---
 CORPUS_PATH = os.environ.get("CORPUS_PATH", os.path.join(os.path.dirname(__file__), "corpus"))
 
 # --- LOAD ALL YAML FILES (Q/A PAIRS) ---
@@ -27,15 +50,7 @@ for yml_file in glob.glob(os.path.join(CORPUS_PATH, "*.yml")):
                         " ".join([str(x) for x in a if x is not None])
                     ))
 
-# --- NLP Normalization + Spelling Correction ---
-try:
-    from spellchecker import SpellChecker
-    spellchecker_available = True
-    spell = SpellChecker(language='it')
-except ImportError:
-    spellchecker_available = False
-    spell = None
-
+# --- Text normalization ---
 def normalize(text):
     return re.sub(r'[^\w\s]', '', text.strip().lower())
 
@@ -77,11 +92,9 @@ def is_probably_italian(text):
             return False
     return True
 
-# --- TIME/DATE DETECTION & ANSWER (ROBUST TO TYPOS, RETURNS DAY NAME) ---
-
+# --- TIME/DATE DETECTION & ANSWER ---
 def detect_time_or_date_question(msg):
     msg_lc = msg.strip().lower()
-    # Remove accents for matching
     msg_simple = (
         msg_lc.replace("é", "e")
         .replace("è", "e")
@@ -90,8 +103,6 @@ def detect_time_or_date_question(msg):
         .replace("ù", "u")
         .replace("ì", "i")
     )
-
-    # Patterns for time (includes possible typos, like "chi ora sono")
     time_patterns = [
         r"che\s*ore\s*sono",
         r"che\s*ora\s*(è|e)?",
@@ -102,8 +113,6 @@ def detect_time_or_date_question(msg):
         r"ora\s*attuale",
         r"ora\s*e",
     ]
-
-    # Patterns for date/day (includes possible typos, like "chi giornato oggi")
     date_patterns = [
         r"che\s*giorno\s*(è|e)?",
         r"che\s*giorno\s*è\s*oggi",
@@ -115,18 +124,16 @@ def detect_time_or_date_question(msg):
         r"giorno\s*di\s*oggi",
         r"oggi\s*che\s*giorno",
         r"chi\s*giorno\s*oggi",
-        r"giornato", # typo handling
+        r"giornato",
         r"oggi",
         r"giorno",
     ]
-
     for pat in time_patterns:
         if re.search(pat, msg_simple):
             return "time"
     for pat in date_patterns:
         if re.search(pat, msg_simple):
             return "date"
-    # If single word "oggi" or "giorno" in a short message
     if msg_simple.strip() in ["oggi", "giorno"]:
         return "date"
     return None
@@ -157,23 +164,47 @@ def get_date_answer():
     ]
     return random.choice(date_formats)
 
-# --- YAML QA ADVANCED MATCHING ---
+# --- ADVANCED YAML QA MATCHING ---
 def match_yaml_qa(user_msg):
     msg_norm = normalize(user_msg)
     corr_msg = correct_spelling(msg_norm)
-    # 1. Direct full-string match (including corrected spelling)
+    questions = [normalize(q) for q, _ in all_qa_pairs]
+
+    # 1. Exact match (corrected and raw)
     for q, a in all_qa_pairs:
         if normalize(q) == msg_norm or normalize(q) == corr_msg:
             return a
-    # 2. Fuzzy full-string match (including corrected spelling)
-    questions = [normalize(q) for q, _ in all_qa_pairs]
-    best_match = difflib.get_close_matches(msg_norm, questions, n=1, cutoff=0.90)
-    if not best_match and corr_msg != msg_norm:
-        best_match = difflib.get_close_matches(corr_msg, questions, n=1, cutoff=0.90)
-    if best_match:
-        idx = questions.index(best_match[0])
-        return all_qa_pairs[idx][1]
-    # 3. Keyword overlap (at least 1 keyword, >60% overlap)
+
+    # 2. Semantic similarity (if available)
+    if sentencetr_available and st_model:
+        corpus_questions = [q for q, _ in all_qa_pairs]
+        embeddings_corpus = st_model.encode(corpus_questions, convert_to_tensor=True)
+        embedding_input = st_model.encode(user_msg, convert_to_tensor=True)
+        cos_scores = st_util.pytorch_cos_sim(embedding_input, embeddings_corpus)[0]
+        best_idx = int(cos_scores.argmax())
+        if cos_scores[best_idx] > 0.70:
+            return all_qa_pairs[best_idx][1]
+
+    # 3. Fuzzy full-string match (RapidFuzz preferred, falls back to difflib)
+    if rapidfuzz_available:
+        best = process.extractOne(msg_norm, questions, scorer=fuzz.token_set_ratio)
+        if best and best[1] >= 80:
+            return all_qa_pairs[best[2]][1]
+        # Try spelling-corrected
+        if corr_msg != msg_norm:
+            best = process.extractOne(corr_msg, questions, scorer=fuzz.token_set_ratio)
+            if best and best[1] >= 80:
+                return all_qa_pairs[best[2]][1]
+    else:
+        import difflib
+        best_match = difflib.get_close_matches(msg_norm, questions, n=1, cutoff=0.80)
+        if not best_match and corr_msg != msg_norm:
+            best_match = difflib.get_close_matches(corr_msg, questions, n=1, cutoff=0.80)
+        if best_match:
+            idx = questions.index(best_match[0])
+            return all_qa_pairs[idx][1]
+
+    # 4. Keyword overlap (at least 1 keyword, >60% overlap)
     msg_keywords = extract_keywords(user_msg)
     if not msg_keywords:
         return None
@@ -190,7 +221,7 @@ def match_yaml_qa(user_msg):
         return best_answer
     return None
 
-# --- ADVANCED FALLBACK: AI-LIKE, ENGAGING RESPONSES ---
+# --- FALLBACK RESPONSES, ROTATED (NO REPETITION) ---
 FALLBACK_MESSAGES = [
     "Mi dispiace, non ho ancora una risposta precisa a questa domanda. Vuoi chiedermi qualcos'altro?",
     "Non sono sicura di aver capito. Puoi riformulare la domanda o chiedermene un'altra?",
@@ -201,12 +232,22 @@ FALLBACK_MESSAGES = [
     "Posso aiutarti con informazioni su servizi, prenotazioni o orari. Chiedimi pure!",
     "Mi piacerebbe aiutarti di più! Riprova con un'altra domanda o cerca nel nostro sito."
 ]
-
 FALLBACK_LANGUAGE_MESSAGES = [
     "Gentile utente, il servizio è ottimizzato per domande in italiano. Scrivi la tua richiesta in italiano per ricevere assistenza accurata. Grazie!",
     "Il nostro assistente virtuale funziona principalmente in italiano. Ripeti la domanda in italiano per ricevere supporto.",
     "Questo servizio risponde solo a richieste in lingua italiana. Prova di nuovo, grazie!"
 ]
+used_fallbacks = set()
+
+def get_fallback_msg():
+    global used_fallbacks
+    available = [m for m in FALLBACK_MESSAGES if m not in used_fallbacks]
+    if not available:
+        used_fallbacks = set()
+        available = FALLBACK_MESSAGES
+    msg = random.choice(available)
+    used_fallbacks.add(msg)
+    return msg
 
 @app.route("/")
 def index():
@@ -237,8 +278,8 @@ def chat():
         reply = random.choice(FALLBACK_LANGUAGE_MESSAGES)
         return jsonify({"reply": reply, "voice": voice_mode})
 
-    # AI-like, friendly fallback answer for unknown queries
-    reply = random.choice(FALLBACK_MESSAGES)
+    # AI-like, friendly fallback answer for unknown queries (rotated, no repeat)
+    reply = get_fallback_msg()
     return jsonify({"reply": reply, "voice": voice_mode})
 
 if __name__ == "__main__":
