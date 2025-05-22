@@ -6,10 +6,10 @@ import random
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 
-# Spellchecker (Italian)
+# Spellchecker (Italian, using built-in dict)
 try:
     from spellchecker import SpellChecker
-    spell = SpellChecker(language=None, local_dictionary="it.json.gz")
+    spell = SpellChecker(language="it")  # Use default Italian dictionary
     spellchecker_available = True
 except Exception as e:
     print("SpellChecker not available:", e)
