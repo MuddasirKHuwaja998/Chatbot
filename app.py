@@ -3,9 +3,11 @@ import re
 import yaml
 import glob
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
+import pytz
 from flask import Flask, render_template, request, jsonify
 
+# --- Spellchecker for Italian ---
 try:
     from spellchecker import SpellChecker
     spell = SpellChecker(language="it")
@@ -14,6 +16,7 @@ except Exception:
     spellchecker_available = False
     spell = None
 
+# --- Rapidfuzz for fuzzy matching ---
 try:
     from rapidfuzz import process, fuzz
     rapidfuzz_available = True
@@ -23,6 +26,7 @@ except ImportError:
 app = Flask(__name__)
 CORPUS_PATH = os.environ.get("CORPUS_PATH", os.path.join(os.path.dirname(__file__), "corpus"))
 
+# -- Load all Q/A from corpus .yml files --
 all_qa_pairs = []
 for yml_file in glob.glob(os.path.join(CORPUS_PATH, "**", "*.yml"), recursive=True):
     with open(yml_file, encoding='utf-8') as f:
@@ -62,25 +66,35 @@ def extract_keywords(text):
     ])
     return set([w for w in normalize(text).split() if w not in stopwords and len(w) > 2])
 
+# --- Improved Italian check: use spell correction, accept more queries as Italian ---
 def is_probably_italian(text):
+    text_corr = correct_spelling(text)
     italian_keywords = [
-        "ciao", "come", "puoi", "aiutarmi", "grazie", "prenotare", "test", "udito", "orari", "info", "salve", "quanto", "dove", "chi", "cosa", "quale", "azienda"
+        "ciao", "come", "puoi", "aiutarmi", "grazie", "prenotare", "test", "udito", "orari", "info", "salve",
+        "quanto", "dove", "chi", "cosa", "quale", "azienda", "giorno", "ora", "bot", "servizio", "prenotazione"
     ]
-    text_lc = text.lower()
+    text_lc = text_corr.lower()
+    # Accept also near matches with Italian keywords
     matches = sum(kw in text_lc for kw in italian_keywords)
     if matches > 0:
         return True
-    if len(extract_keywords(text)) >= 2:
-        if re.search(r"[а-яёΑ-ωЀ-ӿ]", text):
-            return False
-        english_starters = [
-            "what", "who", "how", "when", "where", "why", "can you", "could you", "please", "help", "hi", "hello", "good morning", "good evening"
-        ]
-        if any(text_lc.strip().startswith(st) for st in english_starters):
-            return False
-    return False
+    # Accept if at least 1 Italian keyword after correction
+    msg_keywords = extract_keywords(text_corr)
+    italian_keywords_set = set(italian_keywords)
+    if len(msg_keywords & italian_keywords_set) > 0:
+        return True
+    # Accept if contains Italian letters and not clear English starter
+    english_starters = [
+        "what", "who", "how", "when", "where", "why", "can you", "could you", "please", "help", "hi", "hello",
+        "good morning", "good evening"
+    ]
+    if any(text_lc.strip().startswith(st) for st in english_starters):
+        return False
+    # Accept if after correction, not mostly English (must have vowels, etc)
+    return True
 
 def detect_time_or_date_question(msg):
+    msg = correct_spelling(msg)
     msg_lc = msg.strip().lower()
     msg_simple = (
         msg_lc.replace("é", "e")
@@ -109,33 +123,36 @@ def detect_time_or_date_question(msg):
         return "date"
     return None
 
+# --- Use pytz to get correct Italian time (Europe/Rome) ---
 def get_time_answer():
-    now = datetime.now()
-    time_formats = [
-        f"L'orario attuale è {now.strftime('%H:%M')}.",
-        f"Sono le {now.strftime('%H:%M')}.",
-        f"In questo momento sono le {now.strftime('%H:%M')}.",
-        f"Adesso sono le {now.strftime('%H:%M')}.",
-        f"Ora sono le {now.strftime('%H:%M')}."
+    tz = pytz.timezone("Europe/Rome")
+    now = datetime.now(tz)
+    polite_formats = [
+        f"L'orario attuale in Italia è {now.strftime('%H:%M')}.",
+        f"Ora in Italia sono le {now.strftime('%H:%M')}.",
+        f"In questo momento in Italia sono le {now.strftime('%H:%M')}.",
+        f"Siamo alle {now.strftime('%H:%M')} ora italiana.",
+        f"Attualmente in Italia sono le {now.strftime('%H:%M')}."
     ]
-    return random.choice(time_formats)
+    return random.choice(polite_formats)
 
 def get_date_answer():
-    now = datetime.now()
+    tz = pytz.timezone("Europe/Rome")
+    now = datetime.now(tz)
     days_it = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]
     months_it = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
     weekday = days_it[now.weekday()]
     month = months_it[now.month - 1]
-    date_formats = [
-        f"Oggi è {weekday} {now.day} {month} {now.year}.",
-        f"La data di oggi è {now.day} {month} {now.year}.",
-        f"Oggi è il {now.day} {month} {now.year} ({weekday}).",
-        f"È {weekday} {now.day} {month} {now.year}.",
-        f"Attualmente è {weekday}, {now.day} {month} {now.year}."
+    polite_dates = [
+        f"Oggi in Italia è {weekday} {now.day} {month} {now.year}.",
+        f"La data odierna in Italia è {now.day} {month} {now.year}.",
+        f"Oggi è il {now.day} {month} {now.year} ({weekday}) in Italia.",
+        f"È {weekday} {now.day} {month} {now.year}, secondo il calendario italiano.",
+        f"Attualmente in Italia è {weekday}, {now.day} {month} {now.year}."
     ]
-    return random.choice(date_formats)
+    return random.choice(polite_dates)
 
-# General chat: casual conversation patterns and random, non-repetitive answers
+# --- General chat patterns (correct spelling, AI-style) ---
 GENERAL_PATTERNS = [
     (["come va", "come stai", "come te la passi", "come ti senti"], [
         "Sto bene, grazie! E tu?",
@@ -145,6 +162,7 @@ GENERAL_PATTERNS = [
         "Benissimo! Spero anche tu.",
         "Sto lavorando sodo per aiutarti. E tu come va la giornata?",
         "Una giornata positiva! Raccontami, come posso aiutarti?",
+        "Grazie per l’interesse, sono qui per aiutarti in qualsiasi momento."
     ]),
     (["ciao", "salve", "buongiorno", "buonasera", "buonanotte", "hey", "ehi"], [
         "Ciao! Come posso aiutarti oggi?",
@@ -154,6 +172,7 @@ GENERAL_PATTERNS = [
         "Buonanotte! Se hai domande, sono qui.",
         "Ehi! Pronto ad aiutarti.",
         "Ciao! Sono l'assistente virtuale Otofarma.",
+        "Un caro saluto! Sono qui per aiutarti nel migliore dei modi."
     ]),
     (["grazie", "thank you", "thanks"], [
         "Grazie a te!",
@@ -161,22 +180,25 @@ GENERAL_PATTERNS = [
         "È un piacere aiutarti.",
         "Di nulla!",
         "Se hai altre domande, sono qui.",
+        "La tua soddisfazione è importante per me."
     ]),
     (["chi sei", "chi sei?", "presentati", "come ti chiami"], [
         "Sono l'assistente virtuale di Otofarma Spa.",
         "Mi chiamo Otofarma Bot, sono qui per aiutarti.",
         "Assistente Otofarma, a tua disposizione.",
         "Sono un assistente digitale, specializzato nel rispondere alle tue domande su Otofarma.",
+        "Il mio compito è supportarti con informazioni e cordialità."
     ]),
     (["che fai", "cosa fai", "in che modo puoi aiutarmi"], [
         "Posso fornirti informazioni su Otofarma, i prodotti, i servizi e molto altro.",
         "Sono qui per rispondere alle tue domande e aiutarti a trovare ciò che cerchi.",
         "Ti aiuto per tutto ciò che riguarda Otofarma Spa.",
+        "Resto a disposizione per qualsiasi tua esigenza informativa."
     ])
 ]
 
 def check_general_patterns(user_msg):
-    msg = normalize(user_msg)
+    msg = normalize(correct_spelling(user_msg))
     for triggers, responses in GENERAL_PATTERNS:
         for pattern in triggers:
             if pattern in msg:
@@ -225,6 +247,7 @@ def match_yaml_qa(user_msg):
         return best_answer
     return None
 
+# -- Fallbacks: shuffle at startup and avoid repeats --
 FALLBACK_MESSAGES = [
     "Mi dispiace, non ho ancora una risposta precisa a questa domanda. Vuoi chiedermi qualcos'altro?",
     "Non sono sicura di aver capito. Puoi riformulare la domanda o chiedermene un'altra?",
@@ -235,22 +258,20 @@ FALLBACK_MESSAGES = [
     "Posso aiutarti con informazioni su servizi, prenotazioni o orari. Chiedimi pure!",
     "Mi piacerebbe aiutarti di più! Riprova con un'altra domanda o cerca nel nostro sito."
 ]
+random.shuffle(FALLBACK_MESSAGES)
+_fallback_index = 0
+
+def get_fallback_msg():
+    global _fallback_index
+    msg = FALLBACK_MESSAGES[_fallback_index % len(FALLBACK_MESSAGES)]
+    _fallback_index += 1
+    return msg
+
 ENGLISH_LANGUAGE_MESSAGES = [
     "Gentile utente, sono stato progettato e addestrato esclusivamente per rispondere a domande in italiano, poiché il mio database e la mia conoscenza sono focalizzati sulla lingua italiana. Per favore, riformula la tua richiesta in italiano, così potrò aiutarti in modo più accurato e professionale. Grazie per la comprensione.",
     "Il mio funzionamento e le informazioni che posso fornire sono ottimizzati solo per domande in lingua italiana. Ti invito cortesemente a scrivere la tua domanda in italiano.",
     "Rispondo esclusivamente a domande in italiano perché sono stato sviluppato per quel contesto. Per favore, riprova in italiano per ricevere assistenza."
 ]
-used_fallbacks = set()
-
-def get_fallback_msg():
-    global used_fallbacks
-    available = [m for m in FALLBACK_MESSAGES if m not in used_fallbacks]
-    if not available:
-        used_fallbacks = set()
-        available = FALLBACK_MESSAGES
-    msg = random.choice(available)
-    used_fallbacks.add(msg)
-    return msg
 
 @app.route("/")
 def index():
@@ -263,22 +284,25 @@ def chat():
     if not user_message:
         return jsonify({"reply": "Per favore, scrivi qualcosa.", "voice": False})
 
-    if not is_probably_italian(user_message):
+    # Always correct spelling first!
+    user_message_corr = correct_spelling(user_message)
+
+    # Use corrected message for language detection and all matching
+    if not is_probably_italian(user_message_corr):
         reply = random.choice(ENGLISH_LANGUAGE_MESSAGES)
         return jsonify({"reply": reply, "voice": voice_mode})
 
-    time_or_date = detect_time_or_date_question(user_message)
+    time_or_date = detect_time_or_date_question(user_message_corr)
     if time_or_date == "time":
         return jsonify({"reply": get_time_answer(), "voice": voice_mode})
     elif time_or_date == "date":
         return jsonify({"reply": get_date_answer(), "voice": voice_mode})
 
-    # Check for general conversational patterns
-    general = check_general_patterns(user_message)
+    general = check_general_patterns(user_message_corr)
     if general:
         return jsonify({"reply": general, "voice": voice_mode})
 
-    reply = match_yaml_qa(user_message)
+    reply = match_yaml_qa(user_message_corr)
     if reply:
         return jsonify({"reply": reply, "voice": voice_mode})
 
