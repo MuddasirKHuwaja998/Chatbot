@@ -3,11 +3,13 @@ import re
 import yaml
 import glob
 import random
-from datetime import datetime, timedelta
+import csv
+import unicodedata
+import math
+from datetime import datetime
 import pytz
 from flask import Flask, render_template, request, jsonify
 
-# --- Spellchecker for Italian ---
 try:
     from spellchecker import SpellChecker
     spell = SpellChecker(language="it")
@@ -16,7 +18,6 @@ except Exception:
     spellchecker_available = False
     spell = None
 
-# --- Rapidfuzz for fuzzy matching ---
 try:
     from rapidfuzz import process, fuzz
     rapidfuzz_available = True
@@ -24,9 +25,16 @@ except ImportError:
     rapidfuzz_available = False
 
 app = Flask(__name__)
+
+# Use environment variable if available, else fallback to 'corpus' directory in current folder
 CORPUS_PATH = os.environ.get("CORPUS_PATH", os.path.join(os.path.dirname(__file__), "corpus"))
 
-# -- Load all Q/A from corpus .yml files --
+# For deployment: prefer env variable, fallback to local 'farmacie.csv' in the same folder as app.py
+PHARMACY_CSV_PATH = os.environ.get(
+    "PHARMACY_CSV_PATH",
+    os.path.join(os.path.dirname(__file__), "farmacie.csv")
+)
+
 all_qa_pairs = []
 for yml_file in glob.glob(os.path.join(CORPUS_PATH, "**", "*.yml"), recursive=True):
     with open(yml_file, encoding='utf-8') as f:
@@ -41,10 +49,12 @@ for yml_file in glob.glob(os.path.join(CORPUS_PATH, "**", "*.yml"), recursive=Tr
         except Exception as e:
             print(f"Failed to parse {yml_file}: {e}")
 
-print(f"Loaded {len(all_qa_pairs)} total questions from corpus.")
-
 def normalize(text):
-    return re.sub(r'[^\w\s]', '', text.strip().lower())
+    text = text.strip().lower()
+    text = ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
+    text = re.sub(r'[^\w\s]', '', text)
+    text = re.sub(r'\s+', ' ', text)
+    return text
 
 def correct_spelling(text):
     if not spellchecker_available or not text:
@@ -66,31 +76,34 @@ def extract_keywords(text):
     ])
     return set([w for w in normalize(text).split() if w not in stopwords and len(w) > 2])
 
-# --- Improved Italian check: use spell correction, accept more queries as Italian ---
 def is_probably_italian(text):
     text_corr = correct_spelling(text)
     italian_keywords = [
         "ciao", "come", "puoi", "aiutarmi", "grazie", "prenotare", "test", "udito", "orari", "info", "salve",
-        "quanto", "dove", "chi", "cosa", "quale", "azienda", "giorno", "ora", "bot", "servizio", "prenotazione"
+        "quanto", "dove", "chi", "cosa", "quale", "azienda", "giorno", "ora", "bot", "servizio", "prenotazione",
+        "farmacia", "farmacie", "indirizzo", "telefono", "email", "cap", "provincia", "regione"
     ]
     text_lc = text_corr.lower()
-    # Accept also near matches with Italian keywords
     matches = sum(kw in text_lc for kw in italian_keywords)
     if matches > 0:
         return True
-    # Accept if at least 1 Italian keyword after correction
     msg_keywords = extract_keywords(text_corr)
     italian_keywords_set = set(italian_keywords)
     if len(msg_keywords & italian_keywords_set) > 0:
         return True
-    # Accept if contains Italian letters and not clear English starter
     english_starters = [
         "what", "who", "how", "when", "where", "why", "can you", "could you", "please", "help", "hi", "hello",
         "good morning", "good evening"
     ]
     if any(text_lc.strip().startswith(st) for st in english_starters):
         return False
-    # Accept if after correction, not mostly English (must have vowels, etc)
+    english_words = set([
+        "what","who","where","when","why","how","pharmacy","address","mail","email","number","phone","open","close",
+        "near","region","province","city","find","show","list","info"
+    ])
+    words = set(re.findall(r'\w+', text_lc))
+    if len(words & english_words) / (len(words)+1e-5) > 0.3:
+        return False
     return True
 
 def detect_time_or_date_question(msg):
@@ -123,16 +136,15 @@ def detect_time_or_date_question(msg):
         return "date"
     return None
 
-# --- Use pytz to get correct Italian time (Europe/Rome) ---
 def get_time_answer():
     tz = pytz.timezone("Europe/Rome")
     now = datetime.now(tz)
     polite_formats = [
-        f"L'orario attuale in Italia è {now.strftime('%H:%M')}.",
-        f"Ora in Italia sono le {now.strftime('%H:%M')}.",
-        f"In questo momento in Italia sono le {now.strftime('%H:%M')}.",
-        f"Siamo alle {now.strftime('%H:%M')} ora italiana.",
-        f"Attualmente in Italia sono le {now.strftime('%H:%M')}."
+        f"L'orario attuale in Italia è {now.strftime('%H:%M')}",
+        f"Ora in Italia sono le {now.strftime('%H:%M')}",
+        f"In questo momento in Italia sono le {now.strftime('%H:%M')}",
+        f"Siamo alle {now.strftime('%H:%M')} ora italiana",
+        f"Attualmente in Italia sono le {now.strftime('%H:%M')}"
     ]
     return random.choice(polite_formats)
 
@@ -144,65 +156,22 @@ def get_date_answer():
     weekday = days_it[now.weekday()]
     month = months_it[now.month - 1]
     polite_dates = [
-        f"Oggi in Italia è {weekday} {now.day} {month} {now.year}.",
-        f"La data odierna in Italia è {now.day} {month} {now.year}.",
-        f"Oggi è il {now.day} {month} {now.year} ({weekday}) in Italia.",
-        f"È {weekday} {now.day} {month} {now.year}, secondo il calendario italiano.",
-        f"Attualmente in Italia è {weekday}, {now.day} {month} {now.year}."
+        f"Oggi in Italia è {weekday} {now.day} {month} {now.year}",
+        f"La data odierna in Italia è {now.day} {month} {now.year}",
+        f"Oggi è il {now.day} {month} {now.year} {weekday} in Italia",
+        f"È {weekday} {now.day} {month} {now.year} secondo il calendario italiano",
+        f"Attualmente in Italia è {weekday} {now.day} {month} {now.year}"
     ]
     return random.choice(polite_dates)
 
-# --- General chat patterns (correct spelling, AI-style) ---
-GENERAL_PATTERNS = [
-    (["come va", "come stai", "come te la passi", "come ti senti"], [
-        "Sto bene, grazie! E tu?",
-        "Molto bene, grazie di avermelo chiesto.",
-        "Alla grande oggi! Tu come stai?",
-        "Tutto ok, grazie. Posso aiutarti con qualcosa di Otofarma?",
-        "Benissimo! Spero anche tu.",
-        "Sto lavorando sodo per aiutarti. E tu come va la giornata?",
-        "Una giornata positiva! Raccontami, come posso aiutarti?",
-        "Grazie per l’interesse, sono qui per aiutarti in qualsiasi momento."
-    ]),
-    (["ciao", "salve", "buongiorno", "buonasera", "buonanotte", "hey", "ehi"], [
-        "Ciao! Come posso aiutarti oggi?",
-        "Salve! Sono qui per rispondere alle tue domande.",
-        "Buongiorno! Come posso esserti utile?",
-        "Buonasera! Hai bisogno di informazioni su Otofarma?",
-        "Buonanotte! Se hai domande, sono qui.",
-        "Ehi! Pronto ad aiutarti.",
-        "Ciao! Sono l'assistente virtuale Otofarma.",
-        "Un caro saluto! Sono qui per aiutarti nel migliore dei modi."
-    ]),
-    (["grazie", "thank you", "thanks"], [
-        "Grazie a te!",
-        "Sempre a disposizione.",
-        "È un piacere aiutarti.",
-        "Di nulla!",
-        "Se hai altre domande, sono qui.",
-        "La tua soddisfazione è importante per me."
-    ]),
-    (["chi sei", "chi sei?", "presentati", "come ti chiami"], [
-        "Sono l'assistente virtuale di Otofarma Spa.",
-        "Mi chiamo Otofarma Bot, sono qui per aiutarti.",
-        "Assistente Otofarma, a tua disposizione.",
-        "Sono un assistente digitale, specializzato nel rispondere alle tue domande su Otofarma.",
-        "Il mio compito è supportarti con informazioni e cordialità."
-    ]),
-    (["che fai", "cosa fai", "in che modo puoi aiutarmi"], [
-        "Posso fornirti informazioni su Otofarma, i prodotti, i servizi e molto altro.",
-        "Sono qui per rispondere alle tue domande e aiutarti a trovare ciò che cerchi.",
-        "Ti aiuto per tutto ciò che riguarda Otofarma Spa.",
-        "Resto a disposizione per qualsiasi tua esigenza informativa."
-    ])
-]
-
 def check_general_patterns(user_msg):
+    greetings = [
+        "ciao", "salve", "buongiorno", "buonasera", "buonanotte", "hey", "ehi"
+    ]
     msg = normalize(correct_spelling(user_msg))
-    for triggers, responses in GENERAL_PATTERNS:
-        for pattern in triggers:
-            if pattern in msg:
-                return random.choice(responses)
+    for g in greetings:
+        if g in msg:
+            return "Salve! Sono qui per rispondere alle tue domande."
     return None
 
 def match_yaml_qa(user_msg):
@@ -210,68 +179,268 @@ def match_yaml_qa(user_msg):
     msg_norm = normalize(user_msg)
     corr_norm = normalize(msg_corr)
     questions_norm = [normalize(q) for q, _ in all_qa_pairs]
-
-    # 1. Exact match (original and corrected)
     for idx, qn in enumerate(questions_norm):
         if qn == msg_norm or qn == corr_norm:
             return all_qa_pairs[idx][1]
-
-    # 2. Fuzzy match (only if high score)
-    if rapidfuzz_available:
-        best = process.extractOne(corr_norm, questions_norm, scorer=fuzz.token_set_ratio)
-        best2 = process.extractOne(msg_norm, questions_norm, scorer=fuzz.token_set_ratio)
-        for candidate in [best, best2]:
-            if candidate and candidate[1] >= 88:
-                return all_qa_pairs[candidate[2]][1]
-    else:
-        import difflib
-        best_match = difflib.get_close_matches(corr_norm, questions_norm, n=1, cutoff=0.87)
-        if best_match:
-            idx = questions_norm.index(best_match[0])
-            return all_qa_pairs[idx][1]
-
-    # 3. Keyword overlap (require more overlap for accuracy)
-    msg_keywords = extract_keywords(user_msg)
-    if not msg_keywords:
-        return None
-    best_score = 0
-    best_answer = None
-    for q, a in all_qa_pairs:
-        q_keywords = extract_keywords(q)
-        overlap = len(msg_keywords & q_keywords)
-        score = overlap / (len(msg_keywords) + 1e-5)
-        if overlap >= 2 and score > best_score and score >= 0.7:
-            best_score = score
-            best_answer = a
-    if best_answer:
-        return best_answer
     return None
 
-# -- Fallbacks: shuffle at startup and avoid repeats --
-FALLBACK_MESSAGES = [
-    "Mi dispiace, non ho ancora una risposta precisa a questa domanda. Vuoi chiedermi qualcos'altro?",
-    "Non sono sicura di aver capito. Puoi riformulare la domanda o chiedermene un'altra?",
-    "Ottima domanda! Al momento non ho una risposta specifica, ma posso aiutarti in altro?",
-    "Sto ancora imparando. Vuoi provare con una domanda diversa?",
-    "Non so rispondere a questo, ma possiamo parlare di qualcos'altro che ti interessa?",
-    "Scusami, non ho trovato una risposta. Prova a chiedere in modo diverso, oppure consulta il nostro sito ufficiale.",
-    "Posso aiutarti con informazioni su servizi, prenotazioni o orari. Chiedimi pure!",
-    "Mi piacerebbe aiutarti di più! Riprova con un'altra domanda o cerca nel nostro sito."
-]
-random.shuffle(FALLBACK_MESSAGES)
-_fallback_index = 0
+pharmacies = []
+if os.path.isfile(PHARMACY_CSV_PATH):
+    with open(PHARMACY_CSV_PATH, encoding="utf-8") as f:
+        reader = csv.DictReader(f, delimiter=';' if PHARMACY_CSV_PATH.lower().endswith('.csv') else ',')
+        for row in reader:
+            pharmacies.append(row)
+    print(f"Caricate {len(pharmacies)} farmacie dal CSV.")
+else:
+    print(f"File CSV farmacie non trovato: {PHARMACY_CSV_PATH}")
 
-def get_fallback_msg():
-    global _fallback_index
-    msg = FALLBACK_MESSAGES[_fallback_index % len(FALLBACK_MESSAGES)]
-    _fallback_index += 1
-    return msg
+def is_pharmacy_question(msg):
+    msg_lc = normalize(msg)
+    pharmacy_keywords = [
+        "farmacia", "farmacie", "indirizzo", "telefono", "numero", "email", "contatto", "dove", "trovare",
+        "vicino", "cap", "regione", "provincia", "orari", "aperta", "chiusa", "apertura", "chiusura", "città",
+        "zona", "quartiere", "dottore", "dr", "dottoressa", "info", "contatti", "farmacista"
+    ]
+    for kw in pharmacy_keywords:
+        if kw in msg_lc:
+            return True
+    return False
 
-ENGLISH_LANGUAGE_MESSAGES = [
-    "Gentile utente, sono stato progettato e addestrato esclusivamente per rispondere a domande in italiano, poiché il mio database e la mia conoscenza sono focalizzati sulla lingua italiana. Per favore, riformula la tua richiesta in italiano, così potrò aiutarti in modo più accurato e professionale. Grazie per la comprensione.",
-    "Il mio funzionamento e le informazioni che posso fornire sono ottimizzati solo per domande in lingua italiana. Ti invito cortesemente a scrivere la tua domanda in italiano.",
-    "Rispondo esclusivamente a domande in italiano perché sono stato sviluppato per quel contesto. Per favore, riprova in italiano per ricevere assistenza."
-]
+def extract_city_from_query(user_msg):
+    user_msg_norm = normalize(user_msg)
+    city_keys = ['Città', 'città', 'city', 'City']
+    cities_original = []
+    for ph in pharmacies:
+        for key in city_keys:
+            city = ph.get(key, "")
+            if city:
+                cities_original.append(city)
+    cities_map = {normalize(city): city for city in cities_original}
+    found_cities = []
+    for city_norm, city_orig in cities_map.items():
+        if city_norm and city_norm in user_msg_norm:
+            found_cities.append(city_orig)
+    return found_cities
+
+def extract_field_intent(user_msg):
+    user_msg = user_msg.lower()
+    intents = []
+    if any(w in user_msg for w in ["mail", "email", "posta"]):
+        intents.append("Email")
+    if any(w in user_msg for w in ["telefono", "phone", "numero", "chiama", "contatto", "whatsapp", "cellulare"]):
+        intents.append("Telefono")
+    if any(w in user_msg for w in ["indirizzo", "address", "via", "dove", "location"]):
+        intents.append("Indirizzo")
+    if any(w in user_msg for w in ["cap", "postal"]):
+        intents.append("CAP")
+    if any(w in user_msg for w in ["provincia", "province"]):
+        intents.append("Provincia")
+    if any(w in user_msg for w in ["regione", "region"]):
+        intents.append("Regione")
+    if not intents:
+        intents = ["Telefono", "Email", "Indirizzo"]
+    return intents
+
+def pharmacy_best_match(user_msg, city=None):
+    user_msg_norm = normalize(user_msg)
+    max_score = 0
+    best_ph = None
+    for ph in pharmacies:
+        name = normalize(ph.get("Farmacia", ph.get("Nome", "")))
+        city_ph = normalize(ph.get("Città", ph.get("città", "")))
+        prov = normalize(ph.get("Provincia", ph.get("provincia", "")))
+        cap = normalize(ph.get("CAP", ph.get("cap", "")))
+        reg = normalize(ph.get("Regione", ph.get("regione", "")))
+        if city and city_ph != normalize(city):
+            continue
+        score = 0
+        if name and name in user_msg_norm:
+            score += 4
+        if city_ph and city_ph in user_msg_norm:
+            score += 3
+        if prov and prov in user_msg_norm:
+            score += 2
+        if cap and cap in user_msg_norm:
+            score += 2
+        if reg and reg in user_msg_norm:
+            score += 1
+        if score > max_score:
+            max_score = score
+            best_ph = ph
+    return best_ph
+
+def pharmacies_by_city(city_name):
+    city_norm = normalize(city_name)
+    return [
+        ph for ph in pharmacies
+        if normalize(ph.get("Città", ph.get("città", ""))) == city_norm
+    ]
+
+def format_pharmacies_list(ph_list, city_name, user_msg=None):
+    city_formatted = city_name.strip() or "la città richiesta"
+    total = len(ph_list)
+    intros = [
+        f"Ti elenco le farmacie Otofarma presenti a {city_formatted}",
+        f"Ecco le farmacie Otofarma disponibili a {city_formatted}",
+        f"Queste sono le farmacie Otofarma che puoi trovare a {city_formatted}",
+        f"Qui trovi le farmacie Otofarma in zona {city_formatted}",
+        f"Ti segnalo le principali farmacie Otofarma a {city_formatted}",
+        f"Scopri le farmacie Otofarma nella zona di {city_formatted}",
+        f"Queste farmacie Otofarma sono in zona {city_formatted}",
+        f"In elenco troverai le farmacie Otofarma di {city_formatted}",
+        f"A {city_formatted} sono presenti queste farmacie Otofarma",
+        f"Ora ti mostro le farmacie Otofarma di {city_formatted}",
+        f"Ecco la lista delle farmacie Otofarma a {city_formatted}"
+    ]
+    count_lines = [
+        f"In questa città ci sono {total} farmacie Otofarma",
+        f"A {city_formatted} risultano {total} farmacie Otofarma affiliate",
+        f"Abbiamo {total} farmacie Otofarma registrate per {city_formatted}",
+        f"Il sistema mostra {total} farmacie Otofarma a {city_formatted}",
+        f"Sono state trovate {total} farmacie Otofarma a {city_formatted}",
+        f"Risultano {total} farmacie Otofarma operative a {city_formatted}"
+    ]
+    next_steps = [
+        "Ecco quella che potrebbe essere più comoda per te:",
+        "Qui i dettagli di una delle principali farmacie della zona:",
+        "Ti segnalo subito una farmacia particolarmente accessibile:",
+        "Questa farmacia potrebbe essere facilmente raggiungibile per te:",
+        "Questa farmacia è tra le scelte più consigliate:",
+        "Qui sotto trovi una farmacia selezionata per te:",
+        "Inizio suggerendoti questa farmacia:"
+    ]
+    reply_lines = [
+        random.choice(intros),
+        random.choice(count_lines),
+        random.choice(next_steps),
+        ""
+    ]
+    best_ph = ph_list[0]
+    name = best_ph.get("Farmacia", best_ph.get("Nome", "Nome non disponibile"))
+    address = best_ph.get("Indirizzo", best_ph.get("indirizzo", "Indirizzo non disponibile"))
+    cap = best_ph.get("CAP", best_ph.get("cap", "N/A"))
+    prov = best_ph.get("Provincia", best_ph.get("provincia", "N/A"))
+    tel = best_ph.get("Telefono", best_ph.get("telefono", "N/A"))
+    email = best_ph.get("Email", best_ph.get("email", "N/A"))
+    reg = best_ph.get("Regione", best_ph.get("regione", "N/A"))
+    block = [
+        f"Nome farmacia: {name}",
+        f"Indirizzo: {address}",
+        f"CAP: {cap}",
+        f"Provincia: {prov}",
+        f"Telefono: {tel}",
+        f"Email: {email}",
+        f"Regione: {reg}"
+    ]
+    reply_lines.extend(block)
+    if total > 1:
+        reply_lines.append("")
+        reply_lines.append(f"Se vuoi conoscere altre farmacie a {city_formatted} chiedimi pure oppure specifica la zona che preferisci")
+    reply_lines.append("Puoi trovare tutte le farmacie Otofarma vicine a te anche tramite la mappa nella nostra app!")
+    reply_lines.append("Per qualsiasi altra informazione sono a tua disposizione.")
+    return "\n".join(reply_lines)
+
+def format_pharmacy_answer(ph, field_intents):
+    if not ph:
+        return ("Mi dispiace, non sono riuscito a trovare una farmacia corrispondente. Specifica il nome e la città o provincia per una ricerca più precisa.")
+    name = ph.get("Farmacia", ph.get("Nome", "Nome non disponibile"))
+    city = ph.get("Città", ph.get("città", ""))
+    prov = ph.get("Provincia", ph.get("provincia", ""))
+    cap = ph.get("CAP", ph.get("cap", ""))
+    reg = ph.get("Regione", ph.get("regione", ""))
+    address = ph.get("Indirizzo", ph.get("indirizzo", ""))
+    lines = [f"Dettagli della farmacia {name} situata in {address}, {city} (provincia di {prov}, CAP {cap}, regione {reg})"]
+    mapped = {
+        "Telefono": "Telefono",
+        "Email": "Email",
+        "Indirizzo": "Indirizzo",
+        "CAP": "CAP",
+        "Provincia": "Provincia",
+        "Regione": "Regione"
+    }
+    for field in field_intents:
+        val = ph.get(mapped[field], ph.get(mapped[field].lower(), None))
+        if val and val.strip():
+            lines.append(f"{field}: {val}")
+    if not any(ph.get(mapped[f], ph.get(mapped[f].lower(),"")).strip() for f in field_intents):
+        lines.append("Non dispongo di informazioni aggiornate per questi dati.")
+    lines.append("Ricorda! Puoi trovare tutte le farmacie Otofarma vicine a te tramite la mappa della nostra app.")
+    return "\n".join(lines)
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371.0
+    phi1 = math.radians(float(lat1))
+    phi2 = math.radians(float(lat2))
+    dphi = math.radians(float(lat2) - float(lat1))
+    dlambda = math.radians(float(lon2) - float(lon1))
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+def nearest_pharmacy(user_lat, user_lon):
+    min_dist = float('inf')
+    best_ph = None
+    for ph in pharmacies:
+        lat = ph.get('lat') or ph.get('Latitudine')
+        lon = ph.get('lon') or ph.get('Longitudine')
+        if not lat or not lon:
+            continue
+        try:
+            dist = haversine(user_lat, user_lon, float(lat), float(lon))
+            if dist < min_dist:
+                min_dist = dist
+                best_ph = ph.copy()
+                best_ph['distanza_km'] = round(dist, 2)
+        except Exception:
+            continue
+    return best_ph
+
+def format_nearest_pharmacy(ph):
+    # AI-style, Italian, random intros
+    if not ph:
+        return random.choice([
+            "Non sono riuscito a localizzare una farmacia nelle immediate vicinanze. Riprova tra qualche minuto oppure controlla la connessione.",
+            "Al momento non trovo una farmacia molto vicina alla tua posizione. Puoi riprovare più tardi!"
+        ])
+    nome = ph.get('Nome') or ph.get('Farmacia') or "Nome non disponibile"
+    indirizzo = ph.get('indirizzo') or ph.get('Indirizzo') or "Indirizzo non disponibile"
+    città = ph.get('città') or ph.get('Città') or ""
+    provincia = ph.get('provincia') or ph.get('Provincia') or ""
+    cap = ph.get('cap') or ph.get('CAP') or ""
+    telefono = ph.get('telefono') or ph.get('Telefono') or ""
+    email = ph.get('email') or ph.get('Email') or ""
+    distanza = ph.get('distanza_km', '?')
+    intro = random.choice([
+        f"Ecco la farmacia Otofarma più vicina a te in questo momento:",
+        f"Ho trovato questa farmacia nelle tue vicinanze:",
+        f"La farmacia più prossima alla tua posizione attuale è:",
+        f"Sulla base della tua posizione, questa è la farmacia più vicina:",
+        f"Risultato aggiornato: la farmacia Otofarma più comoda per te ora è:",
+        f"Consultando la tua posizione, questa è la farmacia più rapidamente raggiungibile:"
+    ])
+    dettagli = [
+        f"Nome: {nome}",
+        f"Indirizzo: {indirizzo}, {cap} {città} ({provincia})",
+        f"Telefono: {telefono}",
+        f"Email: {email}",
+        f"Distanza stimata: {distanza} km"
+    ]
+    outro = random.choice([
+        "Se ti serve altro chiedimi pure, sono qui per aiutarti!",
+        "Per maggiori informazioni o altre farmacie in zona, chiedimi senza problemi.",
+        "Se vuoi conoscere altre opzioni vicine o dettagli aggiuntivi, chiedi pure!",
+        "Puoi richiedere info su altre farmacie vicine quando vuoi.",
+        "Sono sempre a disposizione per qualsiasi altra necessità!"
+    ])
+    return "\n".join([intro] + dettagli + [outro])
+
+def is_near_me_query(user_msg):
+    msg = normalize(user_msg)
+    near_patterns = [
+        "pharmacy near me", "pharmacies near me", "nearest pharmacy",
+        "farmacia più vicina", "farmacia vicina", "farmacia vicino a me", "farmacie vicino a me", "farmacia nelle vicinanze",
+        "farmacia qui", "farmacie qui", "farmacia intorno a me", "vicino a me", "più vicina a me", "vicina a me"
+    ]
+    return any(pat in msg for pat in near_patterns)
 
 @app.route("/")
 def index():
@@ -281,15 +450,40 @@ def index():
 def chat():
     user_message = request.json.get("message", "")
     voice_mode = request.json.get("voice", False)
-    if not user_message:
-        return jsonify({"reply": "Per favore, scrivi qualcosa.", "voice": False})
+    user_lat = request.json.get("lat", None)
+    user_lon = request.json.get("lon", None)
 
-    # Always correct spelling first!
+    # 1. Risposta localizzata farmacia più vicina — solo se lat/lon disponibili
+    if is_near_me_query(user_message):
+        if user_lat is not None and user_lon is not None:
+            try:
+                best_ph = nearest_pharmacy(float(user_lat), float(user_lon))
+                reply = format_nearest_pharmacy(best_ph)
+            except Exception:
+                reply = "Si è verificato un errore nel calcolo della farmacia più vicina. Riprova tra poco!"
+        else:
+            # Non chiedere città, non rispondere in inglese, solo messaggio tecnico
+            reply = "Per poterti suggerire la farmacia più vicina ho bisogno che il browser consenta l'accesso alla posizione: controlla le impostazioni e aggiorna la pagina."
+        return jsonify({"reply": reply, "voice": voice_mode})
+
+    # 2. Q&A standard
     user_message_corr = correct_spelling(user_message)
-
-    # Use corrected message for language detection and all matching
     if not is_probably_italian(user_message_corr):
-        reply = random.choice(ENGLISH_LANGUAGE_MESSAGES)
+        return jsonify({"reply": "Questo assistente risponde solo a domande in italiano. Per favore riformula la domanda in italiano.", "voice": voice_mode})
+
+    if is_pharmacy_question(user_message_corr):
+        found_cities = extract_city_from_query(user_message_corr)
+        if found_cities:
+            city = found_cities[0]
+            ph_list = pharmacies_by_city(city)
+            if ph_list:
+                reply = format_pharmacies_list(ph_list, city, user_message_corr)
+            else:
+                reply = "Non ho trovato farmacie Otofarma in questa città. Controlla la scrittura o chiedi per un'altra località."
+        else:
+            field_intents = extract_field_intent(user_message_corr)
+            best_ph = pharmacy_best_match(user_message_corr)
+            reply = format_pharmacy_answer(best_ph, field_intents)
         return jsonify({"reply": reply, "voice": voice_mode})
 
     time_or_date = detect_time_or_date_question(user_message_corr)
@@ -306,7 +500,14 @@ def chat():
     if reply:
         return jsonify({"reply": reply, "voice": voice_mode})
 
-    reply = get_fallback_msg()
+    fallback_messages = [
+        "Mi dispiace, non ho trovato una risposta alla tua domanda. Puoi riformulare o chiedere altro?",
+        "Non sono sicuro di aver capito. Puoi riprovare con una domanda diversa?",
+        "Al momento non dispongo di informazioni su questo argomento. Vuoi chiedere qualcos'altro?",
+        "Non ho trovato una risposta precisa. Se vuoi, puoi essere più specifico nella tua richiesta.",
+        "Mi dispiace, non ho capito bene la domanda. Puoi chiarire o chiedere in altro modo?"
+    ]
+    reply = random.choice(fallback_messages)
     return jsonify({"reply": reply, "voice": voice_mode})
 
 if __name__ == "__main__":
