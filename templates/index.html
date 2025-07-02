@@ -190,7 +190,7 @@
             font-size: 1.16rem;
             height: 65px;
         }
-        .mic-button, .sign-language-button, .animation-button {
+        .mic-button, .sign-language-button, .animation-button, .location-button {
             width: 60px;
             height: 60px;
             border-radius: 50%;
@@ -198,17 +198,29 @@
             cursor: pointer;
             background-size: 70% 70%;
             background-position: center;
+            background-repeat: no-repeat;
+            background-color: #fff;
+            font-size: 1.35rem;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .mic-button {
-            background: #fff url('https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color/254000/79-512.png') center/60% no-repeat;
+            background-image: url('https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color/254000/79-512.png');
         }
         .sign-language-button {
-            background: #fff url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz46BQMTWloOPjYbTrrYx0cV8u-FYrTS_2lQ&s') center/60% no-repeat;
+            background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz46BQMTWloOPjYbTrrYx0cV8u-FYrTS_2lQ&s');
         }
         .animation-button {
-            background: #fff url('https://img.freepik.com/premium-photo/audiologist-isolated-cartoon-character_934475-17340.jpg') center/cover no-repeat;
+            background-image: url('https://img.freepik.com/premium-photo/audiologist-isolated-cartoon-character_934475-17340.jpg');
             background-size: 80% 80%;
-            background-position: center;
+        }
+        .location-button {
+            background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHtnWsXeTXObrNhhSd7Lh9auk6iq3O4LNttQ&s');
+        }
+        .location-button span {
+            display: none;
         }
         /* --- Responsive Design --- */
         @media (max-width: 900px) {
@@ -225,7 +237,7 @@
             .chat-box { padding: 0.7rem 0.22rem; margin-top: 70px; gap: 0.54rem; font-size: 1.07rem; height: calc(100vh - 140px);}
             .input-container { height: 59px; padding: 0.33rem 0.13rem; gap: 0.3rem;}
             .input-field { padding: 0.65rem 0.9rem; font-size: 0.97rem;}
-            .send-button, .mic-button, .sign-language-button, .animation-button { width: 36px; height: 36px; font-size: 0.96rem; padding: 0;}
+            .send-button, .mic-button, .sign-language-button, .animation-button, .location-button { width: 36px; height: 36px; font-size: 0.96rem; padding: 0;}
             .message { font-size: 1.01rem; padding: 0.65rem 1rem;}
             .bot-icon, .bot-icon-inner { width: 23px; height: 23px; min-width: 23px; min-height: 23px;}
         }
@@ -258,6 +270,8 @@
             <button class="sign-language-button" id="signLanguageButton"></button>
             <button class="animation-button" id="animationButton"></button>
             <button class="mic-button" id="micButton"></button>
+            <button class="location-button" id="locationButton" title="Condividi posizione" aria-label="Posizione"><span>📍</span></button>
+            <span id="locStatus" style="margin-left:10px; color: green; display:none;">Posizione rilevata!</span>
         </div>
     </div>
     <script>
@@ -266,8 +280,10 @@
         const micButton = document.getElementById('micButton');
         const signLanguageButton = document.getElementById('signLanguageButton');
         const animationButton = document.getElementById('animationButton');
+        const locationButton = document.getElementById('locationButton');
         const chatBox = document.getElementById('chatBox');
-
+        let userLat = null;
+        let userLon = null;
         let lastSentWithMic = false;
         let recognitionActive = false;
         let recognitionInstance = null;
@@ -347,7 +363,12 @@
                 fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message, voice: fromVoice })
+                    body: JSON.stringify({
+                        message,
+                        voice: fromVoice,
+                        lat: userLat,
+                        lon: userLon
+                    })
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -426,6 +447,38 @@
 
         animationButton.addEventListener('click', () => {
             window.open('https://otofarma-ai-diagnosis-nxyj.onrender.com/', '_blank', 'width=1000,height=800');
+        });
+
+        // Location button logic
+        locationButton.addEventListener('click', function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        userLat = pos.coords.latitude;
+                        userLon = pos.coords.longitude;
+                        const locStatus = document.getElementById("locStatus");
+                        locStatus.style.display = "inline";
+                        locStatus.style.color = "green";
+                        locStatus.innerText = "Posizione rilevata!";
+                    },
+                    function(error) {
+                        let msg = "Per favore consenti l'accesso alla posizione per trovare la farmacia più vicina.";
+                        if(error.code === error.PERMISSION_DENIED) {
+                            msg = "Devi consentire l'accesso alla posizione dalle impostazioni del browser.";
+                        } else if(error.code === error.POSITION_UNAVAILABLE) {
+                            msg = "La posizione non è disponibile sul tuo dispositivo.";
+                        } else if(error.code === error.TIMEOUT) {
+                            msg = "Timeout nel recupero della posizione.";
+                        }
+                        const locStatus = document.getElementById("locStatus");
+                        locStatus.style.display = "inline";
+                        locStatus.style.color = "red";
+                        locStatus.innerText = msg;
+                    }
+                );
+            } else {
+                alert("Il tuo browser non supporta la geolocalizzazione.");
+            }
         });
 
         // Preload voices for best experience
