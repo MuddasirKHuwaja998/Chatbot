@@ -9,24 +9,16 @@
         :root {
             --primary: #2d9c6a;
             --secondary: #f0faf5;
-            --accent: #7ac29a;
             --header-green: #e8f5f0;
-            --input-bg: #ffffff;
-            --scrollbar-track: #e8f5e9;
-            --scrollbar-thumb: #7ac29a;
+            --input-bg: #fff;
         }
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
+        html, body { height: 100%; margin: 0; padding: 0; }
         body {
             font-family: 'Roboto', 'Segoe UI', system-ui, sans-serif;
             background: #f5f9f7;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: auto !important;
         }
         .chat-container {
             flex: 1;
@@ -38,6 +30,29 @@
             background: white;
             position: relative;
             overflow: hidden;
+        }
+        .avatar-widget {
+            position: fixed;
+            top: 28px;
+            right: 28px;
+            z-index: 900;
+            width: 310px;
+            min-width: 160px;
+            height: 390px;
+            border-radius: 18px;
+            background: #16181b;
+            box-shadow: 0 6px 36px #0005, 0 1.5px 10px #0077ff22;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: box-shadow 0.2s;
+        }
+        .avatar-widget:hover {
+            box-shadow: 0 10px 60px #0077ff66, 0 2px 18px #0077ff11;
+        }
+        #avatar-container {
+            width: 100%;
+            height: 100%;
         }
         .chat-header {
             background: var(--header-green);
@@ -60,22 +75,9 @@
             min-width: 120px;
             max-width: 42vw;
         }
-        .header-text {
-            flex: 1;
-            text-align: left;
-        }
-        .chat-header h1 {
-            color: #1a4d3a;
-            margin: 0;
-            font-size: 2.1rem;
-            font-weight: 700;
-        }
-        .chat-header p {
-            color: #2d9c6a;
-            margin: 0.8rem 0 0;
-            font-size: 1.15rem;
-            font-style: italic;
-        }
+        .header-text { flex: 1; text-align: left; }
+        .chat-header h1 { color: #1a4d3a; margin: 0; font-size: 2.1rem; font-weight: 700; }
+        .chat-header p { color: #2d9c6a; margin: 0.8rem 0 0; font-size: 1.15rem; font-style: italic; }
         .chat-box {
             flex: 1;
             overflow-y: auto !important;
@@ -90,72 +92,6 @@
             height: calc(100vh - 210px);
             padding-bottom: 120px;
             transition: padding 0.2s;
-        }
-        .chat-box::-webkit-scrollbar {
-            width: 10px;
-        }
-        .chat-box::-webkit-scrollbar-track {
-            background: var(--scrollbar-track);
-            border-radius: 14px;
-        }
-        .chat-box::-webkit-scrollbar-thumb {
-            background: var(--scrollbar-thumb);
-            border-radius: 14px;
-        }
-        .message {
-            max-width: 70%;
-            padding: 1.3rem 2.1rem;
-            border-radius: 1.8rem;
-            line-height: 1.6;
-            word-wrap: break-word;
-            display: flex;
-            align-items: flex-end;
-            gap: 0.85rem;
-            font-size: 1.18rem;
-        }
-        .user-message {
-            align-self: flex-end;
-            background: var(--primary);
-            color: white;
-            border-bottom-right-radius: 0.66rem;
-        }
-        .bot-message {
-            align-self: flex-start;
-            background: var(--input-bg);
-            border: 1.7px solid #2d9c6a22;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.07);
-            position: relative;
-        }
-        .bot-icon {
-            width: 42px;
-            height: 42px;
-            min-width: 42px;
-            min-height: 42px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 0.55em;
-            background: transparent;
-            overflow: hidden;
-        }
-        .bot-icon-inner {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: contain;
-            display: block;
-            background: transparent;
-            box-shadow: 0 0 3px #6662;
-        }
-        .bot-icon.animate {
-            animation: bot-bounce 0.7s cubic-bezier(.2, .7, .6, 1);
-        }
-        @keyframes bot-bounce {
-            0% { transform: translateY(0) scale(1);}
-            40% { transform: translateY(-7px) scale(1.08);}
-            80% { transform: translateY(0) scale(1);}
-            100% { transform: translateY(0) scale(1);}
         }
         .input-container {
             position: fixed;
@@ -206,51 +142,31 @@
             align-items: center;
             justify-content: center;
         }
-        .mic-button {
-            background-image: url('https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color/254000/79-512.png');
-        }
-        .sign-language-button {
-            background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz46BQMTWloOPjYbTrrYx0cV8u-FYrTS_2lQ&s');
-        }
-        .animation-button {
-            background-image: url('https://img.freepik.com/premium-photo/audiologist-isolated-cartoon-character_934475-17340.jpg');
-            background-size: 80% 80%;
-        }
-        .location-button {
-            background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHtnWsXeTXObrNhhSd7Lh9auk6iq3O4LNttQ&s');
-        }
-        .location-button span {
-            display: none;
-        }
-        /* --- Responsive Design --- */
-        @media (max-width: 900px) {
-            .logo { width: 120px; }
-            .chat-header { padding: 0.8rem 1rem;}
-            .chat-box { padding: 1.2rem 1.2rem; margin-top: 95px; height: calc(100vh - 180px);}
-            .input-container { height: 74px; padding: 0.7rem; font-size: 1rem; }
-        }
-        @media (max-width: 600px) {
-            .chat-header h1 { font-size: 1.3rem; }
-            .logo { width: 74px; min-width: 48px; }
-            .header-content { gap: 0.7rem; }
-            .chat-header p { font-size: 1.07rem; }
-            .chat-box { padding: 0.7rem 0.22rem; margin-top: 70px; gap: 0.54rem; font-size: 1.07rem; height: calc(100vh - 140px);}
-            .input-container { height: 59px; padding: 0.33rem 0.13rem; gap: 0.3rem;}
-            .input-field { padding: 0.65rem 0.9rem; font-size: 0.97rem;}
-            .send-button, .mic-button, .sign-language-button, .animation-button, .location-button { width: 36px; height: 36px; font-size: 0.96rem; padding: 0;}
-            .message { font-size: 1.01rem; padding: 0.65rem 1rem;}
-            .bot-icon, .bot-icon-inner { width: 23px; height: 23px; min-width: 23px; min-height: 23px;}
-        }
-        @media (max-width: 410px) {
-            .chat-header h1 { font-size: 1.01rem;}
-            .chat-header p { font-size: 0.81rem;}
-            .logo { width: 34px; min-width: 24px;}
-            .bot-icon, .bot-icon-inner { width: 14px; height: 14px;}
-            .message, .input-field { font-size: 0.83rem;}
+        .mic-button { background-image: url('https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color/254000/79-512.png'); }
+        .sign-language-button { background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz46BQMTWloOPjYbTrrYx0cV8u-FYrTS_2lQ&s'); }
+        .animation-button { background-image: url('https://img.freepik.com/premium-photo/audiologist-isolated-cartoon-character_934475-17340.jpg'); background-size: 80% 80%; }
+        .location-button { background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHtnWsXeTXObrNhhSd7Lh9auk6iq3O4LNttQ&s'); }
+        .location-button span { display: none; }
+        @media (max-width: 700px) {
+            .avatar-widget { width: 99vw; min-width: 0; height: 270px; left: 0; right: 0; top: 0; border-radius: 0 0 14px 14px; }
+            #avatar-container { width: 100%; height: 100%; }
         }
     </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three":       "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js",
+          "three-gltf":  "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/loaders/GLTFLoader.js",
+          "three-ctrl":  "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/controls/OrbitControls.js"
+        }
+      }
+    </script>
+    <script type="module" src="{{ url_for('static', filename='index.js') }}"></script>
 </head>
 <body>
+    <div class="avatar-widget">
+      <div id="avatar-container"></div>
+    </div>
     <div class="chat-container">
         <div class="chat-header">
             <div class="header-content">
@@ -261,9 +177,7 @@
                 </div>
             </div>
         </div>
-
         <div class="chat-box" id="chatBox"></div>
-
         <div class="input-container">
             <input type="text" class="input-field" id="userInput" placeholder="Scrivi il tuo messaggio...">
             <button class="send-button" id="sendButton">Invia</button>
@@ -275,215 +189,30 @@
         </div>
     </div>
     <script>
-        const userInput = document.getElementById('userInput');
-        const sendButton = document.getElementById('sendButton');
-        const micButton = document.getElementById('micButton');
-        const signLanguageButton = document.getElementById('signLanguageButton');
-        const animationButton = document.getElementById('animationButton');
-        const locationButton = document.getElementById('locationButton');
-        const chatBox = document.getElementById('chatBox');
-        let userLat = null;
-        let userLon = null;
-        let lastSentWithMic = false;
-        let recognitionActive = false;
-        let recognitionInstance = null;
-
-        const displayMessage = (message, isUser = false) => {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-            if (!isUser) {
-                const botIcon = document.createElement('span');
-                botIcon.className = "bot-icon";
-                const botImg = document.createElement('img');
-                botImg.src = "https://www.dropbox.com/scl/fi/ypb3su4estqakdj818ooo/chatbot.png?rlkey=8w18gem5ay8b8euikgkjvvunz&raw=1";
-                botImg.alt = "Otofarma Bot";
-                botImg.className = "bot-icon-inner";
-                botIcon.appendChild(botImg);
-                messageDiv.appendChild(botIcon);
-            }
-            const messageSpan = document.createElement('span');
-            messageSpan.textContent = message;
-            messageDiv.appendChild(messageSpan);
-
-            chatBox.appendChild(messageDiv);
-            setTimeout(() => {
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }, 50);
-        };
-
-        function animateBotIcon() {
-            const lastBotMessages = document.querySelectorAll('.bot-message');
-            if (lastBotMessages.length === 0) return;
-            const lastBot = lastBotMessages[lastBotMessages.length - 1];
-            const botIcon = lastBot.querySelector('.bot-icon');
-            if (botIcon) {
-                botIcon.classList.add('animate');
-                setTimeout(() => botIcon.classList.remove('animate'), 800);
-            }
-        }
-
-        function speakMessage(message) {
-            if (!('speechSynthesis' in window)) return;
-            let synth = window.speechSynthesis;
-
-            function speakWithVoices() {
-                let voices = synth.getVoices();
-                let selectedVoice = voices.find(v =>
-                    v.lang === 'it-IT' && v.name.toLowerCase().includes("google italiano")
-                );
-                if (!selectedVoice) selectedVoice = voices.find(v =>
-                    v.lang === 'it-IT' && (
-                        (v.gender && v.gender.toLowerCase() === "female") ||
-                        v.name.toLowerCase().includes("alice") ||
-                        v.name.toLowerCase().includes("lucia") ||
-                        v.name.toLowerCase().includes("chiara") ||
-                        v.name.toLowerCase().includes("bianca") ||
-                        v.name.toLowerCase().includes("silvia")
-                    )
-                );
-                if (!selectedVoice) selectedVoice = voices.find(v => v.lang === 'it-IT');
-                const utterance = new SpeechSynthesisUtterance(message);
-                utterance.lang = 'it-IT';
-                if (selectedVoice) utterance.voice = selectedVoice;
-                utterance.pitch = 1.05;
-                utterance.rate = 0.97;
-                synth.speak(utterance);
-            }
-            if (synth.onvoiceschanged !== undefined) {
-                synth.onvoiceschanged = speakWithVoices;
-            }
-            speakWithVoices();
-        }
-
-        const sendMessage = (fromVoice=false) => {
+        document.getElementById('sendButton').onclick = function() {
+            const userInput = document.getElementById('userInput');
             const message = userInput.value.trim();
-            if (message) {
-                displayMessage(message, true);
-                lastSentWithMic = fromVoice;
-                fetch('/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message,
-                        voice: fromVoice,
-                        lat: userLat,
-                        lon: userLon
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    displayMessage(data.reply);
-                    userInput.value = '';
-                    animateBotIcon();
-                    if (data.voice && lastSentWithMic) {
-                        speakMessage(data.reply);
-                    }
-                })
-                .catch(error => {
-                    displayMessage('Errore di rete.', false);
-                    console.error('Error:', error);
-                });
-            }
+            if(!message) return;
+            userInput.value = '';
+            appendMessage('user', message);
+            fetch('/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ message: message, voice: false })
+            })
+            .then(r => r.json())
+            .then(data => {
+                appendMessage('bot', data.reply);
+                if(window.avatarLipSync) window.avatarLipSync(data.reply);
+            });
         };
-
-        sendButton.addEventListener('click', () => sendMessage(false));
-        userInput.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-                sendMessage(false);
-                event.preventDefault();
-            }
-        });
-
-        function stopAllSpeech() {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-            }
-        }
-
-        micButton.addEventListener('click', () => {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                alert('Il riconoscimento vocale non è supportato in questo browser. Usa Google Chrome su HTTPS o localhost.');
-                return;
-            }
-            if (recognitionActive) {
-                recognitionInstance && recognitionInstance.stop();
-                return;
-            }
-            stopAllSpeech();
-            recognitionInstance = new SpeechRecognition();
-            recognitionInstance.lang = 'it-IT';
-            recognitionInstance.continuous = false;
-            recognitionInstance.interimResults = false;
-
-            recognitionInstance.onstart = () => {
-                recognitionActive = true;
-                micButton.classList.add('listening');
-                micButton.disabled = true;
-            };
-            recognitionInstance.onend = () => {
-                recognitionActive = false;
-                micButton.classList.remove('listening');
-                micButton.disabled = false;
-            };
-            recognitionInstance.onerror = (event) => {
-                recognitionActive = false;
-                micButton.classList.remove('listening');
-                micButton.disabled = false;
-                alert('Errore microfono: ' + event.error);
-            };
-            recognitionInstance.onresult = event => {
-                const transcript = event.results[0][0].transcript;
-                userInput.value = transcript;
-                sendMessage(true);
-            };
-
-            recognitionInstance.start();
-        });
-
-        signLanguageButton.addEventListener('click', () => {
-            window.location.href = '/sign-language';
-        });
-
-        animationButton.addEventListener('click', () => {
-            window.open('https://otofarma-ai-diagnosis-nxyj.onrender.com/', '_blank', 'width=1000,height=800');
-        });
-
-        // Location button logic
-        locationButton.addEventListener('click', function() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function(pos) {
-                        userLat = pos.coords.latitude;
-                        userLon = pos.coords.longitude;
-                        const locStatus = document.getElementById("locStatus");
-                        locStatus.style.display = "inline";
-                        locStatus.style.color = "green";
-                        locStatus.innerText = "Posizione rilevata!";
-                    },
-                    function(error) {
-                        let msg = "Per favore consenti l'accesso alla posizione per trovare la farmacia più vicina.";
-                        if(error.code === error.PERMISSION_DENIED) {
-                            msg = "Devi consentire l'accesso alla posizione dalle impostazioni del browser.";
-                        } else if(error.code === error.POSITION_UNAVAILABLE) {
-                            msg = "La posizione non è disponibile sul tuo dispositivo.";
-                        } else if(error.code === error.TIMEOUT) {
-                            msg = "Timeout nel recupero della posizione.";
-                        }
-                        const locStatus = document.getElementById("locStatus");
-                        locStatus.style.display = "inline";
-                        locStatus.style.color = "red";
-                        locStatus.innerText = msg;
-                    }
-                );
-            } else {
-                alert("Il tuo browser non supporta la geolocalizzazione.");
-            }
-        });
-
-        // Preload voices for best experience
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.getVoices();
+        function appendMessage(sender, msg) {
+            const box = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = sender + '-msg';
+            div.textContent = msg;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
         }
     </script>
 </body>
