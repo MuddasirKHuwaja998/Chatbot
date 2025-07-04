@@ -39,6 +39,29 @@
             position: relative;
             overflow: hidden;
         }
+        .avatar-widget {
+            position: fixed;
+            top: 28px;
+            right: 28px;
+            z-index: 900;
+            width: 310px;
+            min-width: 160px;
+            height: 390px;
+            border-radius: 18px;
+            background: #16181b;
+            box-shadow: 0 6px 36px #0005, 0 1.5px 10px #0077ff22;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: box-shadow 0.2s;
+        }
+        .avatar-widget:hover {
+            box-shadow: 0 10px 60px #0077ff66, 0 2px 18px #0077ff11;
+        }
+        #avatar-container {
+            width: 100%;
+            height: 100%;
+        }
         .chat-header {
             background: var(--header-green);
             padding: 1.4rem 2rem;
@@ -229,6 +252,10 @@
             .chat-box { padding: 1.2rem 1.2rem; margin-top: 95px; height: calc(100vh - 180px);}
             .input-container { height: 74px; padding: 0.7rem; font-size: 1rem; }
         }
+        @media (max-width: 700px) {
+            .avatar-widget { width: 99vw; min-width: 0; height: 270px; left: 0; right: 0; top: 0; border-radius: 0 0 14px 14px; }
+            #avatar-container { width: 100%; height: 100%; }
+        }
         @media (max-width: 600px) {
             .chat-header h1 { font-size: 1.3rem; }
             .logo { width: 74px; min-width: 48px; }
@@ -248,9 +275,52 @@
             .bot-icon, .bot-icon-inner { width: 14px; height: 14px;}
             .message, .input-field { font-size: 0.83rem;}
         }
+        /* Custom for new bot messages */
+        .user-msg {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+            border-radius: 1.8rem;
+            border-bottom-right-radius: 0.66rem;
+            padding: 1.3rem 2.1rem;
+            margin-bottom: 0.3rem;
+            max-width: 70%;
+            font-size: 1.18rem;
+            display: flex;
+            align-items: flex-end;
+            gap: 0.85rem;
+        }
+        .bot-msg {
+            align-self: flex-start;
+            background: var(--input-bg);
+            border: 1.7px solid #2d9c6a22;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+            position: relative;
+            border-radius: 1.8rem;
+            padding: 1.3rem 2.1rem;
+            margin-bottom: 0.3rem;
+            max-width: 70%;
+            font-size: 1.18rem;
+            display: flex;
+            align-items: flex-end;
+            gap: 0.85rem;
+        }
     </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three":       "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js",
+          "three-gltf":  "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/loaders/GLTFLoader.js",
+          "three-ctrl":  "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/controls/OrbitControls.js"
+        }
+      }
+    </script>
+    <script type="module" src="{{ url_for('static', filename='index.js') }}"></script>
 </head>
 <body>
+    <div class="avatar-widget">
+      <div id="avatar-container"></div>
+    </div>
     <div class="chat-container">
         <div class="chat-header">
             <div class="header-content">
@@ -261,9 +331,7 @@
                 </div>
             </div>
         </div>
-
         <div class="chat-box" id="chatBox"></div>
-
         <div class="input-container">
             <input type="text" class="input-field" id="userInput" placeholder="Scrivi il tuo messaggio...">
             <button class="send-button" id="sendButton">Invia</button>
@@ -275,6 +343,7 @@
         </div>
     </div>
     <script>
+        // --- Variables ---
         const userInput = document.getElementById('userInput');
         const sendButton = document.getElementById('sendButton');
         const micButton = document.getElementById('micButton');
@@ -288,9 +357,10 @@
         let recognitionActive = false;
         let recognitionInstance = null;
 
-        const displayMessage = (message, isUser = false) => {
+        // --- Helper Functions ---
+        function displayMessage(message, isUser = false) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.className = isUser ? 'user-message message user-msg' : 'bot-message message bot-msg';
             if (!isUser) {
                 const botIcon = document.createElement('span');
                 botIcon.className = "bot-icon";
@@ -309,7 +379,7 @@
             setTimeout(() => {
                 chatBox.scrollTop = chatBox.scrollHeight;
             }, 50);
-        };
+        }
 
         function animateBotIcon() {
             const lastBotMessages = document.querySelectorAll('.bot-message');
@@ -325,7 +395,6 @@
         function speakMessage(message) {
             if (!('speechSynthesis' in window)) return;
             let synth = window.speechSynthesis;
-
             function speakWithVoices() {
                 let voices = synth.getVoices();
                 let selectedVoice = voices.find(v =>
@@ -355,7 +424,8 @@
             speakWithVoices();
         }
 
-        const sendMessage = (fromVoice=false) => {
+        // --- Sending Message logic ---
+        function sendMessage(fromVoice=false) {
             const message = userInput.value.trim();
             if (message) {
                 displayMessage(message, true);
@@ -378,13 +448,14 @@
                     if (data.voice && lastSentWithMic) {
                         speakMessage(data.reply);
                     }
+                    if(window.avatarLipSync) window.avatarLipSync(data.reply);
                 })
                 .catch(error => {
                     displayMessage('Errore di rete.', false);
                     console.error('Error:', error);
                 });
             }
-        };
+        }
 
         sendButton.addEventListener('click', () => sendMessage(false));
         userInput.addEventListener('keypress', (event) => {
@@ -394,12 +465,12 @@
             }
         });
 
+        // --- Speech Recognition ---
         function stopAllSpeech() {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
         }
-
         micButton.addEventListener('click', () => {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
@@ -441,15 +512,17 @@
             recognitionInstance.start();
         });
 
+        // --- Sign Language button ---
         signLanguageButton.addEventListener('click', () => {
             window.location.href = '/sign-language';
         });
 
+        // --- Animation button ---
         animationButton.addEventListener('click', () => {
             window.open('https://otofarma-ai-diagnosis-nxyj.onrender.com/', '_blank', 'width=1000,height=800');
         });
 
-        // Location button logic
+        // --- Location button logic ---
         locationButton.addEventListener('click', function() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -481,7 +554,7 @@
             }
         });
 
-        // Preload voices for best experience
+        // --- Preload voices for best experience ---
         if ('speechSynthesis' in window) {
             window.speechSynthesis.getVoices();
         }
