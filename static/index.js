@@ -1,8 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three-gltf';
 import { OrbitControls } from 'three-ctrl';
-
-// Optional: dat.GUI for interactive camera/avatar adjustment
 import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.18/+esm';
 
 // Avatar Widget Sizing
@@ -11,16 +9,15 @@ const AVATAR_H = document.querySelector('.avatar-widget')?.offsetHeight || 390;
 
 // Scene
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x181a1b);
 
-// Camera – Professional, just in front of the avatar, slightly above eye level
+// Camera
 const camera = new THREE.PerspectiveCamera(
   36,
   AVATAR_W / AVATAR_H,
   0.1,
   1000
 );
-camera.position.set(0, 1.6, 2.1); // Move further back for less arm, more face
+camera.position.set(0, 1.6, 2.1);
 camera.lookAt(0, 1.45, 0);
 
 // Renderer
@@ -32,7 +29,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 document.getElementById('avatar-container').appendChild(renderer.domElement);
 
-// Controls (locked, but you can enable for debugging)
+// Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.enableZoom = false;
@@ -61,13 +58,9 @@ gltfLoader.load(
       }
     });
 
-    // Center avatar and crop arms out of view as much as possible
-    avatar.position.set(0, -1.1, 0);      // Raise the avatar so face is well framed
-    avatar.scale.set(1.6, 1.6, 1.6);      // Slightly zoom in
-
-    // Rotate avatar to face camera (adjust if needed)
-    avatar.rotation.y = 0; // or Math.PI
-
+    avatar.position.set(0, -1.1, 0);
+    avatar.scale.set(1.6, 1.6, 1.6);
+    avatar.rotation.y = 0;
     scene.add(avatar);
 
     animate();
