@@ -10,6 +10,9 @@ from datetime import datetime
 import pytz
 from flask import Flask, render_template, request, jsonify
 
+# --- FLASK CORS IMPORT & SETUP ---
+from flask_cors import CORS
+
 try:
     from spellchecker import SpellChecker
     spell = SpellChecker(language="it")
@@ -25,6 +28,9 @@ except ImportError:
     rapidfuzz_available = False
 
 app = Flask(__name__)
+
+# --- ENABLE CORS ---
+CORS(app)
 
 # Use environment variable if available, else fallback to 'corpus' directory in current folder
 CORPUS_PATH = os.environ.get("CORPUS_PATH", os.path.join(os.path.dirname(__file__), "corpus"))
@@ -448,10 +454,14 @@ def index():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    user_message = request.json.get("message", "")
-    voice_mode = request.json.get("voice", False)
-    user_lat = request.json.get("lat", None)
-    user_lon = request.json.get("lon", None)
+    # --- VALIDATE JSON INPUT FOR SAFARI/IOS ---
+    try:
+        user_message = request.json.get("message", "")
+        voice_mode = request.json.get("voice", False)
+        user_lat = request.json.get("lat", None)
+        user_lon = request.json.get("lon", None)
+    except Exception:
+        return jsonify({"reply": "Richiesta non valida. Assicurati di inviare dati JSON corretti.", "voice": False}), 400
 
     # 1. Risposta localizzata farmacia più vicina — solo se lat/lon disponibili
     if is_near_me_query(user_message):
@@ -462,14 +472,12 @@ def chat():
             except Exception:
                 reply = "Si è verificato un errore nel calcolo della farmacia più vicina. Riprova tra poco!"
         else:
-            # Non chiedere città, non rispondere in inglese, solo messaggio tecnico
             reply = "Per poterti suggerire la farmacia più vicina ho bisogno che il browser consenta l'accesso alla posizione: controlla le impostazioni e aggiorna la pagina."
-        return jsonify({"reply": reply, "voice": voice_mode})
+        return jsonify({"reply": reply, "voice": voice_mode}), 200
 
-    # 2. Q&A standard
     user_message_corr = correct_spelling(user_message)
     if not is_probably_italian(user_message_corr):
-        return jsonify({"reply": "Questo assistente risponde solo a domande in italiano. Per favore riformula la domanda in italiano.", "voice": voice_mode})
+        return jsonify({"reply": "Questo assistente risponde solo a domande in italiano. Per favore riformula la domanda in italiano.", "voice": voice_mode}), 200
 
     if is_pharmacy_question(user_message_corr):
         found_cities = extract_city_from_query(user_message_corr)
@@ -484,21 +492,21 @@ def chat():
             field_intents = extract_field_intent(user_message_corr)
             best_ph = pharmacy_best_match(user_message_corr)
             reply = format_pharmacy_answer(best_ph, field_intents)
-        return jsonify({"reply": reply, "voice": voice_mode})
+        return jsonify({"reply": reply, "voice": voice_mode}), 200
 
     time_or_date = detect_time_or_date_question(user_message_corr)
     if time_or_date == "time":
-        return jsonify({"reply": get_time_answer(), "voice": voice_mode})
+        return jsonify({"reply": get_time_answer(), "voice": voice_mode}), 200
     elif time_or_date == "date":
-        return jsonify({"reply": get_date_answer(), "voice": voice_mode})
+        return jsonify({"reply": get_date_answer(), "voice": voice_mode}), 200
 
     general = check_general_patterns(user_message_corr)
     if general:
-        return jsonify({"reply": general, "voice": voice_mode})
+        return jsonify({"reply": general, "voice": voice_mode}), 200
 
     reply = match_yaml_qa(user_message_corr)
     if reply:
-        return jsonify({"reply": reply, "voice": voice_mode})
+        return jsonify({"reply": reply, "voice": voice_mode}), 200
 
     fallback_messages = [
         "Mi dispiace, non ho trovato una risposta alla tua domanda. Puoi riformulare o chiedere altro?",
@@ -508,7 +516,7 @@ def chat():
         "Mi dispiace, non ho capito bene la domanda. Puoi chiarire o chiedere in altro modo?"
     ]
     reply = random.choice(fallback_messages)
-    return jsonify({"reply": reply, "voice": voice_mode})
+    return jsonify({"reply": reply, "voice": voice_mode}), 200
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
