@@ -8,10 +8,28 @@ import unicodedata
 import math
 from datetime import datetime
 import pytz
+
 from flask import Flask, render_template, request, jsonify
 
-# --- FLASK CORS IMPORT & SETUP ---
-from flask_cors import CORS
+try:
+    from flask_cors import CORS
+except ImportError:
+    raise ImportError("Install flask-cors: pip install flask-cors")
+app = Flask(__name__)
+CORS(app)
+
+try:
+    import nltk
+    nltk.download('punkt', quiet=True)
+    nltk.download('averaged_perceptron_tagger', quiet=True)
+    nltk.download('stopwords', quiet=True)
+    from nltk.tokenize import word_tokenize
+    from nltk.corpus import stopwords
+    from nltk import pos_tag
+    nltk_it_stopwords = set(stopwords.words('italian'))
+    nltk_available = True
+except Exception:
+    nltk_available = False
 
 try:
     from spellchecker import SpellChecker
@@ -22,15 +40,110 @@ except Exception:
     spell = None
 
 try:
-    from rapidfuzz import process, fuzz
+    from rapidfuzz import process, fuzz, distance
     rapidfuzz_available = True
 except ImportError:
     rapidfuzz_available = False
 
-app = Flask(__name__)
+try:
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    nlp_available = True
+except ImportError:
+    nlp_available = False
 
-# --- ENABLE CORS ---
-CORS(app)
+CUSTOM_GREETINGS = [
+    ("ciao", "Salve! Sono qui per aiutarti in tutto ciò che riguarda Otofarma."),
+    ("salve", "Salve! Sono qui per aiutarti in tutto ciò che riguarda Otofarma."),
+    ("buongiorno", "Buongiorno! Sono sempre disponibile per rispondere alle tue domande."),
+    ("buonasera", "Buonasera! Sono sempre disponibile per rispondere alle tue domande."),
+    ("buonanotte", "Buonanotte! Sono qui anche a quest'ora per aiutarti."),
+    ("come va", "Sto bene, grazie! Sono sempre pronta a rispondere alle tue domande su Otofarma."),
+    ("come stai", "Sto bene, grazie! Sono sempre pronta a rispondere alle tue domande su Otofarma."),
+    ("ehi", "Ciao! Come posso aiutarti?"),
+    ("hey", "Ciao! Come posso aiutarti?"),
+    ("come va?", "Sto bene, grazie! Sono sempre pronta a rispondere alle tue domande su Otofarma."),
+]
+
+COMMON_MISSPELLINGS = {
+    "caio": "ciao",
+    "ciaociao": "ciao",
+    "coia": "ciao",
+    "coaio": "ciao",
+    "comeva": "come va",
+    "comeva?": "come va",
+    "come ba": "come va",
+    "chi e": "chi è",
+    "giorni": "giorno",
+    "giornata": "giorno",
+    "otofarma": "otofarma",
+    "aprito": "aperto",
+    "chiuso": "chiuso",
+    "orariufficio": "orari ufficio",
+    "aprite": "aprite",
+    "chiudete": "chiudete",
+    "fns": "fine",
+    "fn": "fine"
+}
+
+def glue_split(text):
+    for k in ["ciao", "salve", "buongiorno", "buonasera", "comeva", "comeva?", "come ba"]:
+        if k in text and text.count(k) > 1:
+            text = text.replace(k, f"{k} ")
+    return text
+
+def correct_spelling(text):
+    text = glue_split(text)
+    for wrong, right in COMMON_MISSPELLINGS.items():
+        text = re.sub(rf'\b{wrong}\b', right, text, flags=re.IGNORECASE)
+    if not spellchecker_available or not text:
+        return text
+    words = re.findall(r'\w+', text)
+    corrections = []
+    for word in words:
+        c = spell.correction(word)
+        if c and rapidfuzz_available and fuzz.ratio(word, c) >= 65:
+            corrections.append(c)
+        else:
+            corrections.append(word)
+    fixed = text
+    for w, c in zip(words, corrections):
+        fixed = re.sub(r'\b{}\b'.format(re.escape(w)), c, fixed, count=1)
+    return fixed
+
+OFFICE_PATTERNS = [
+    r"\b(orari\s*(d[ei]l)?\s*ufficio)\b", r"\b(orari\s*apertura)\b", r"\b(orari\s*chiusura)\b",
+    r"\b(quando\s*apre)\b", r"\b(quando\s*chiude)\b", r"\b(quando\s*è\s*aperto)\b",
+    r"\b(quando\s*è\s*chiuso)\b", r"\b(apertura\s*otofarma)\b", r"\b(chiusura\s*otofarma)\b",
+    r"\b(orario\s*otofarma)\b", r"\b(aprite)\b", r"\b(chiudete)\b", r"\b(orari\s*servizio)\b",
+    r"\b(orari\s*assistenz)\b", r"\b(office\s*hours)\b", r"\b(business\s*hours)\b",
+    r"\b(aperti)\b", r"\b(chiusi)\b",
+    r"\b(a\s*che\s*ora\s*apre)\b", r"\b(a\s*che\s*ora\s*otofarma\s*apre)\b", r"\b(quando\s*apre\s*otofarma)\b",
+    r"\b(a\s*che\s*ora\s*otofarma\s*spa\s*apre)\b", r"\b(a\s*che\s*ora\s*apre\s*otofarma\s*spa)\b",
+    r"\b(quando\s*apre\s*otofarma\s*spa)\b", r"\b(orari\s*otofarma\s*spa)\b"
+]
+OFFICE_TIMES = [
+    "Gli uffici Otofarma sono aperti dal lunedì al venerdì dalle 9:00 alle 18:30 (ora italiana).",
+    "L'orario di apertura degli uffici Otofarma è dalle 9:00 alle 18:30 dal lunedì al venerdì (CET).",
+    "Puoi contattare Otofarma nei giorni feriali dalle 9:00 alle 18:30, ora locale italiana.",
+    "Gli orari di servizio Otofarma sono dal lunedì al venerdì, dalle 9 alle 18:30 (ora italiana).",
+    "Siamo disponibili dal lunedì al venerdì dalle 9:00 alle 18:30 (fuso orario italiano).",
+    "I nostri uffici osservano il seguente orario: apertura alle 9:00 e chiusura alle 18:30 dal lunedì al venerdì.",
+    "Orari Otofarma: dal lunedì al venerdì, apertura alle 9:00, chiusura alle 18:30 (ora europea).",
+    "Otofarma è reperibile negli orari lavorativi: 9:00 - 18:30 dal lunedì al venerdì (CET)."
+]
+OFFICE_KEYWORDS = {"ufficio", "apertura", "chiusura", "orari", "office", "business", "servizio", "lavorativi", "aperti", "chiusi", "spa"}
+
+FUZZY_TIME_PATTERNS = [
+    r"(che\s*)?ora\s*(è|e|sono)?", r"mi\s*(puoi)?\s*dire\s*l'?ora", r"orario\s*(attuale|corrente)?", r"adesso\s*che\s*ore",
+    r"adesso\s*ora", r"dimmi\s*ora", r"ora\s*adesso", r"ora\s*attuale", r"che\s*orario", r"quanto\s*è\s*l'?ora",
+    r"tempi\s*adesso", r"ora\s*in\s*italia", r"orologio", r"orari\s*attuali"
+]
+FUZZY_DATE_PATTERNS = [
+    r"(che\s*)?giorno\s*(è|e)?", r"che\s*giorno\s*è\s*oggi", r"data\s*di\s*oggi", r"giornata\s*di\s*oggi", r"oggi\s*che\s*giorno",
+    r"mi\s*(puoi)?\s*dire\s*la\s*data", r"giorno\s*odierno", r"giorno\s*attuale", r"che\s*data", r"quale\s*data",
+    r"oggi\s*che\s*data", r"data\s*odierna", r"giorno\s*della\s*settimana", r"quale\s*giorno"
+]
 
 # Use environment variable if available, else fallback to 'corpus' directory in current folder
 CORPUS_PATH = os.environ.get("CORPUS_PATH", os.path.join(os.path.dirname(__file__), "corpus"))
@@ -55,6 +168,9 @@ for yml_file in glob.glob(os.path.join(CORPUS_PATH, "**", "*.yml"), recursive=Tr
         except Exception as e:
             print(f"Failed to parse {yml_file}: {e}")
 
+qa_questions = [q for q, _ in all_qa_pairs]
+qa_answers = [a for _, a in all_qa_pairs]
+
 def normalize(text):
     text = text.strip().lower()
     text = ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
@@ -62,25 +178,68 @@ def normalize(text):
     text = re.sub(r'\s+', ' ', text)
     return text
 
-def correct_spelling(text):
-    if not spellchecker_available or not text:
-        return text
-    words = text.split()
-    corrected = [spell.correction(w) or w for w in words]
-    return ' '.join(corrected)
-
 def extract_keywords(text):
-    stopwords = set([
-        "il","lo","la","i","gli","le","un","una","che","di","a","da","in","con","su","per","tra","fra",
-        "mi","ti","si","ci","vi","lui","lei","noi","voi","loro","sono","sei","è","siamo","siete","ho","hai","ha",
-        "abbiamo","avete","hanno","era","eri","fu","fui","eravamo","eravate","erano","ma","e","o","ed","anche",
-        "come","quando","dove","chi","cosa","perche","perché","quali","qual","quale","questo","questa","quello",
-        "quella","questi","quelle","quelli","al","agli","alle","agli","del","della","dello","degli","delle","dei",
-        "sul","sullo","sulla","sulle","sui","agli","all","alla","allo","alle","queste","questo","questi","quella",
-        "quello","quelle","quelli","tu","te","io","noi","voi","loro","piu","meno","molto","tanto","tutta","tutto",
-        "tutti","tutte","ogni","alcuni","alcune"
-    ])
-    return set([w for w in normalize(text).split() if w not in stopwords and len(w) > 2])
+    if nltk_available:
+        words = word_tokenize(normalize(text))
+        filtered = [w for w in words if w not in nltk_it_stopwords and len(w) > 2]
+        tagged = pos_tag(filtered)
+        keywords = [w for w, t in tagged if t.startswith('NN') or t.startswith('JJ') or t == 'FW']
+        main_words = keywords if keywords else filtered
+        return set(main_words[:2])
+    else:
+        stopwords = set([
+            "il","lo","la","i","gli","le","un","una","che","di","a","da","in","con","su","per","tra","fra",
+            "mi","ti","si","ci","vi","lui","lei","noi","voi","loro","sono","sei","è","siamo","siete","ho","hai","ha",
+            "abbiamo","avete","hanno","era","eri","fu","fui","eravamo","eravate","erano","ma","e","o","ed","anche",
+            "come","quando","dove","chi","cosa","perche","perché","quali","qual","quale","questo","questa","quello",
+            "quella","questi","quelle","quelli","al","agli","alle","del","della","dello","degli","delle","dei",
+            "sul","sullo","sulla","sulle","sui","all","alla","allo","alle","queste","questo","questi","quella",
+            "quello","quelle","quelli","tu","te","io","noi","voi","loro","piu","meno","molto","tanto","tutta","tutto",
+            "tutti","tutte","ogni","alcuni","alcune"
+        ])
+        filtered = [w for w in normalize(text).split() if w not in stopwords and len(w) > 2]
+        return set(filtered[:2])
+
+def semantic_match(user_msg, questions, answers):
+    if not nlp_available or not questions:
+        return None, 0
+    corpus = list(questions) + [user_msg]
+    vectorizer = TfidfVectorizer().fit(corpus)
+    tfidf_matrix = vectorizer.transform(corpus)
+    sim_scores = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1]).flatten()
+    best_idx = sim_scores.argmax()
+    best_score = sim_scores[best_idx]
+    return (answers[best_idx], best_score) if best_score > 0.34 else (None, 0)
+
+def fuzzy_match(user_msg, questions, answers):
+    if not rapidfuzz_available or not questions:
+        return None, 0
+    results = process.extractOne(
+        user_msg, questions, scorer=fuzz.partial_ratio
+    )
+    if results and results[1] > 65:
+        idx = questions.index(results[0])
+        return answers[idx], results[1] / 100.0
+    return None, 0
+
+def match_yaml_qa_ai(user_msg):
+    msg_corr = correct_spelling(user_msg)
+    msg_norm = normalize(user_msg)
+    corr_norm = normalize(msg_corr)
+    questions_norm = [normalize(q) for q in qa_questions]
+    keywords = extract_keywords(msg_corr)
+    for idx, qn in enumerate(questions_norm):
+        if qn == msg_norm or qn == corr_norm:
+            return qa_answers[idx]
+    for idx, qn in enumerate(questions_norm):
+        qwords = set(qn.split())
+        if keywords and keywords.issubset(qwords):
+            return qa_answers[idx]
+    answer, score = semantic_match(msg_corr, questions_norm, qa_answers)
+    if answer:
+        return answer
+    answer, score = fuzzy_match(msg_corr, questions_norm, qa_answers)
+    return answer
 
 def is_probably_italian(text):
     text_corr = correct_spelling(text)
@@ -113,34 +272,46 @@ def is_probably_italian(text):
     return True
 
 def detect_time_or_date_question(msg):
-    msg = correct_spelling(msg)
-    msg_lc = msg.strip().lower()
-    msg_simple = (
-        msg_lc.replace("é", "e")
-        .replace("è", "e")
-        .replace("à", "a")
-        .replace("ò", "o")
-        .replace("ù", "u")
-        .replace("ì", "i")
-    )
-    time_patterns = [
-        r"che\s*ore\s*sono", r"che\s*ora\s*(è|e)?", r"mi\s*(puoi)?\s*dire\s*l'?ora", r"orario\s*(attuale|corrente)",
-        r"adesso\s*che\s*ore\s*sono", r"chi\s*ora\s*sono", r"ora\s*attuale", r"ora\s*e",
-    ]
-    date_patterns = [
-        r"che\s*giorno\s*(è|e)?", r"che\s*giorno\s*è\s*oggi", r"data\s*di\s*oggi", r"oggi\s*che\s*giorno\s*è",
-        r"mi\s*(puoi)?\s*dire\s*la\s*data\s*di\s*oggi", r"giorno\s*mercato\s*azionario", r"che\s*giorno",
-        r"giorno\s*di\s*oggi", r"oggi\s*che\s*giorno", r"chi\s*giorno\s*oggi", r"giornato", r"oggi", r"giorno",
-    ]
-    for pat in time_patterns:
-        if re.search(pat, msg_simple):
+    msg_corr = correct_spelling(msg)
+    msg_lc = normalize(msg_corr)
+    for pat in FUZZY_TIME_PATTERNS:
+        if re.search(pat, msg_lc):
             return "time"
-    for pat in date_patterns:
-        if re.search(pat, msg_simple):
+        if rapidfuzz_available:
+            if fuzz.partial_ratio(msg_lc, pat.replace(r"\s*", " ")) > 75:
+                return "time"
+    for pat in FUZZY_DATE_PATTERNS:
+        if re.search(pat, msg_lc):
             return "date"
-    if msg_simple.strip() in ["oggi", "giorno"]:
-        return "date"
+        if rapidfuzz_available:
+            if fuzz.partial_ratio(msg_lc, pat.replace(r"\s*", " ")) > 75:
+                return "date"
+    tokens = msg_lc.split()
+    if tokens:
+        if tokens[0] in ["ora", "orario", "orari"]:
+            return "time"
+        if tokens[0] in ["giorno", "data"]:
+            return "date"
     return None
+
+def detect_office_hours_question(msg):
+    msg_corr = correct_spelling(msg)
+    msg_lc = normalize(msg_corr)
+    if check_general_patterns(msg_lc):  # Don't match greetings as office hours
+        return False
+    for pat in OFFICE_PATTERNS:
+        if re.search(pat, msg_lc):
+            return True
+        if rapidfuzz_available:
+            if fuzz.partial_ratio(msg_lc, pat.replace(r"\s*", " ")) > 80:
+                return True
+    tokens = set(msg_lc.split())
+    if tokens & OFFICE_KEYWORDS:
+        return True
+    return False
+
+def get_office_hours_answer():
+    return random.choice(OFFICE_TIMES)
 
 def get_time_answer():
     tz = pytz.timezone("Europe/Rome")
@@ -150,7 +321,9 @@ def get_time_answer():
         f"Ora in Italia sono le {now.strftime('%H:%M')}",
         f"In questo momento in Italia sono le {now.strftime('%H:%M')}",
         f"Siamo alle {now.strftime('%H:%M')} ora italiana",
-        f"Attualmente in Italia sono le {now.strftime('%H:%M')}"
+        f"Attualmente in Italia sono le {now.strftime('%H:%M')}",
+        f"In questo momento sono le {now.strftime('%H:%M')} in Italia",
+        f"L'orologio segna le {now.strftime('%H:%M')} ora italiana",
     ]
     return random.choice(polite_formats)
 
@@ -166,28 +339,23 @@ def get_date_answer():
         f"La data odierna in Italia è {now.day} {month} {now.year}",
         f"Oggi è il {now.day} {month} {now.year} {weekday} in Italia",
         f"È {weekday} {now.day} {month} {now.year} secondo il calendario italiano",
-        f"Attualmente in Italia è {weekday} {now.day} {month} {now.year}"
+        f"Attualmente in Italia è {weekday} {now.day} {month} {now.year}",
+        f"Oggi la data è: {weekday} {now.day} {month} {now.year}",
+        f"Secondo il calendario italiano oggi è {weekday} {now.day} {month} {now.year}"
     ]
     return random.choice(polite_dates)
 
 def check_general_patterns(user_msg):
-    greetings = [
-        "ciao", "salve", "buongiorno", "buonasera", "buonanotte", "hey", "ehi"
-    ]
     msg = normalize(correct_spelling(user_msg))
-    for g in greetings:
-        if g in msg:
-            return "Salve! Sono qui per rispondere alle tue domande."
-    return None
-
-def match_yaml_qa(user_msg):
-    msg_corr = correct_spelling(user_msg)
-    msg_norm = normalize(user_msg)
-    corr_norm = normalize(msg_corr)
-    questions_norm = [normalize(q) for q, _ in all_qa_pairs]
-    for idx, qn in enumerate(questions_norm):
-        if qn == msg_norm or qn == corr_norm:
-            return all_qa_pairs[idx][1]
+    for pattern, reply in CUSTOM_GREETINGS:
+        if rapidfuzz_available and fuzz.partial_ratio(pattern, msg) > 80:
+            return reply
+        if pattern in msg:
+            return reply
+    tokens = msg.split()
+    for k in ["ciao", "salve", "buongiorno", "buonasera", "buonanotte"]:
+        if tokens and tokens[0] == k and len(tokens) == 1:
+            return CUSTOM_GREETINGS[0][1]
     return None
 
 pharmacies = []
@@ -401,7 +569,6 @@ def nearest_pharmacy(user_lat, user_lon):
     return best_ph
 
 def format_nearest_pharmacy(ph):
-    # AI-style, Italian, random intros
     if not ph:
         return random.choice([
             "Non sono riuscito a localizzare una farmacia nelle immediate vicinanze. Riprova tra qualche minuto oppure controlla la connessione.",
@@ -448,22 +615,40 @@ def is_near_me_query(user_msg):
     ]
     return any(pat in msg for pat in near_patterns)
 
+class FallbackMemory:
+    def __init__(self, maxlen=20):
+        self.maxlen = maxlen
+        self.last_fallbacks = []
+    def get_unique(self, pool):
+        unused = [m for m in pool if m not in self.last_fallbacks]
+        if not unused:
+            unused = pool
+            self.last_fallbacks = []
+        chosen = random.choice(unused)
+        self.remember(chosen)
+        return chosen
+    def remember(self, fallback):
+        self.last_fallbacks.append(fallback)
+        while len(self.last_fallbacks) > self.maxlen:
+            self.last_fallbacks.pop(0)
+
+fallback_mem = FallbackMemory()
+
 @app.route("/")
 def index():
     return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    # --- VALIDATE JSON INPUT FOR SAFARI/IOS ---
-    try:
-        user_message = request.json.get("message", "")
-        voice_mode = request.json.get("voice", False)
-        user_lat = request.json.get("lat", None)
-        user_lon = request.json.get("lon", None)
-    except Exception:
-        return jsonify({"reply": "Richiesta non valida. Assicurati di inviare dati JSON corretti.", "voice": False}), 400
+    user_message = request.json.get("message", "")
+    voice_mode = request.json.get("voice", False)
+    user_lat = request.json.get("lat", None)
+    user_lon = request.json.get("lon", None)
 
-    # 1. Risposta localizzata farmacia più vicina — solo se lat/lon disponibili
+    general = check_general_patterns(user_message)
+    if general:
+        return jsonify({"reply": general, "voice": voice_mode})
+
     if is_near_me_query(user_message):
         if user_lat is not None and user_lon is not None:
             try:
@@ -473,11 +658,14 @@ def chat():
                 reply = "Si è verificato un errore nel calcolo della farmacia più vicina. Riprova tra poco!"
         else:
             reply = "Per poterti suggerire la farmacia più vicina ho bisogno che il browser consenta l'accesso alla posizione: controlla le impostazioni e aggiorna la pagina."
-        return jsonify({"reply": reply, "voice": voice_mode}), 200
+        return jsonify({"reply": reply, "voice": voice_mode})
 
     user_message_corr = correct_spelling(user_message)
     if not is_probably_italian(user_message_corr):
-        return jsonify({"reply": "Questo assistente risponde solo a domande in italiano. Per favore riformula la domanda in italiano.", "voice": voice_mode}), 200
+        return jsonify({"reply": "Questo assistente risponde solo a domande in italiano. Per favore riformula la domanda in italiano.", "voice": voice_mode})
+
+    if detect_office_hours_question(user_message_corr):
+        return jsonify({"reply": get_office_hours_answer(), "voice": voice_mode})
 
     if is_pharmacy_question(user_message_corr):
         found_cities = extract_city_from_query(user_message_corr)
@@ -492,32 +680,42 @@ def chat():
             field_intents = extract_field_intent(user_message_corr)
             best_ph = pharmacy_best_match(user_message_corr)
             reply = format_pharmacy_answer(best_ph, field_intents)
-        return jsonify({"reply": reply, "voice": voice_mode}), 200
+        return jsonify({"reply": reply, "voice": voice_mode})
 
     time_or_date = detect_time_or_date_question(user_message_corr)
     if time_or_date == "time":
-        return jsonify({"reply": get_time_answer(), "voice": voice_mode}), 200
+        return jsonify({"reply": get_time_answer(), "voice": voice_mode})
     elif time_or_date == "date":
-        return jsonify({"reply": get_date_answer(), "voice": voice_mode}), 200
+        return jsonify({"reply": get_date_answer(), "voice": voice_mode})
 
-    general = check_general_patterns(user_message_corr)
-    if general:
-        return jsonify({"reply": general, "voice": voice_mode}), 200
-
-    reply = match_yaml_qa(user_message_corr)
+    reply = match_yaml_qa_ai(user_message_corr)
     if reply:
-        return jsonify({"reply": reply, "voice": voice_mode}), 200
+        return jsonify({"reply": reply, "voice": voice_mode})
 
     fallback_messages = [
-        "Mi dispiace, non ho trovato una risposta alla tua domanda. Puoi riformulare o chiedere altro?",
-        "Non sono sicuro di aver capito. Puoi riprovare con una domanda diversa?",
-        "Al momento non dispongo di informazioni su questo argomento. Vuoi chiedere qualcos'altro?",
-        "Non ho trovato una risposta precisa. Se vuoi, puoi essere più specifico nella tua richiesta.",
-        "Mi dispiace, non ho capito bene la domanda. Puoi chiarire o chiedere in altro modo?"
+        "Al momento non dispongo di una risposta precisa alla tua richiesta, ma sono qui per aiutarti su qualsiasi altro tema riguardante Otofarma.",
+        "Mi scuso, non sono riuscito a trovare una risposta soddisfacente. Se desideri, puoi riformulare la domanda o chiedere su un altro argomento.",
+        "Domanda interessante! Tuttavia, non ho informazioni puntuali su questo punto. Sono a disposizione per altre domande.",
+        "La tua richiesta è stata ricevuta, ma non dispongo di dettagli specifici. Puoi fornire ulteriori informazioni o chiedere altro?",
+        "Non trovo una risposta adeguata in questo momento. Ti invito a riformulare o a chiedere su altri temi.",
+        "Mi dispiace, non ho trovato la risposta richiesta. Se vuoi puoi essere più dettagliato oppure chiedere su altri servizi Otofarma.",
+        "Al momento non ho dati su questo specifico argomento. Sono qui per aiutarti su tutto ciò che riguarda Otofarma.",
+        "Non dispongo di una risposta esaustiva ora, ma resto a disposizione per tutte le tue domande su Otofarma.",
+        "Sto ancora apprendendo: puoi riprovare a chiedere in modo diverso o chiedere su un altro servizio?",
+        "Non riesco a trovare informazioni pertinenti. Sono sempre pronto ad aiutarti per qualsiasi esigenza su Otofarma.",
+        "Domanda ricevuta. Se vuoi, posso aiutarti a cercare altre informazioni o servizi correlati.",
+        "Non sono sicuro di aver compreso appieno la richiesta. Puoi riformulare o chiedere altro?",
+        "Se vuoi ulteriori dettagli su Otofarma o sulle farmacie, chiedimi pure!",
+        "Sono qui per aiutarti: puoi chiedere in modo diverso o esplorare altri servizi disponibili.",
+        "Se ti occorrono informazioni su orari, servizi o farmacie, chiedimi pure senza esitare.",
+        "Sono qui per offrirti il massimo supporto: puoi essere più specifico nella tua richiesta?",
+        "Non dispongo di una risposta su questo, ma posso aiutarti a trovare informazioni su servizi, orari o farmacie Otofarma.",
+        "Se hai bisogno di dettagli aggiuntivi, sono disponibile ad aiutarti."
     ]
-    reply = random.choice(fallback_messages)
-    return jsonify({"reply": reply, "voice": voice_mode}), 200
+    reply = fallback_mem.get_unique(fallback_messages)
+    return jsonify({"reply": reply, "voice": voice_mode})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+    
