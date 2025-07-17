@@ -73,13 +73,16 @@ gltfLoader.load(
   }
 );
 
-// LIPSYNC (unchanged)
+// LIPSYNC (FIXED: Cancel ongoing speech to prevent double speaking)
 window.avatarLipSync = function(text) {
   if (!window.speechSynthesis || !avatar || mouthShapeKey == null) return;
   let voices = window.speechSynthesis.getVoices();
   let selectedVoice = voices.find(v =>
     v.lang === 'it-IT' && v.name.toLowerCase().includes("google italiano")
   ) || voices.find(v => v.lang === 'it-IT');
+
+  // Fix: Cancel ongoing speech before starting new (prevents double speaking)
+  window.speechSynthesis.cancel();
 
   const utter = new window.SpeechSynthesisUtterance(text);
   utter.lang = 'it-IT';
