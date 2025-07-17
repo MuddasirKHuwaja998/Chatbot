@@ -395,6 +395,7 @@
         function speakMessage(message) {
             if (!('speechSynthesis' in window)) return;
             let synth = window.speechSynthesis;
+            synth.cancel(); // fixes double-speaking issue
             function speakWithVoices() {
                 let voices = synth.getVoices();
                 let selectedVoice = voices.find(v =>
@@ -418,8 +419,10 @@
                 utterance.rate = 0.97;
                 synth.speak(utterance);
             }
-            if (synth.onvoiceschanged !== undefined) {
+            // Attach only ONCE
+            if (!window._voicesListenerAdded) {
                 synth.onvoiceschanged = speakWithVoices;
+                window._voicesListenerAdded = true;
             }
             speakWithVoices();
         }
@@ -445,8 +448,10 @@
                     displayMessage(data.reply);
                     userInput.value = '';
                     animateBotIcon();
+                    // Only speak if voice AND fromVoice is true, then reset flag
                     if (data.voice && lastSentWithMic) {
                         speakMessage(data.reply);
+                        lastSentWithMic = false;
                     }
                     if(window.avatarLipSync) window.avatarLipSync(data.reply);
                 })
