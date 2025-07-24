@@ -1,364 +1,160 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OtoBot - Assistente Virtuale Professionale Otofarma</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <title>OtoBot - Assistente Vocale Otofarma</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .header {
+      margin-bottom: 30px;
+    }
+    
+    .logo {
+      font-size: 3em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .subtitle {
+      font-size: 1.2em;
+      opacity: 0.9;
+    }
+    
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.1);
+      padding: 30px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+    }
+    
+    #status {
+      font-size: 1.3em;
+      margin: 20px 0;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #micBtn {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #4CAF50, #45a049);
+      color: white;
+      font-size: 3em;
+      cursor: pointer;
+      margin: 20px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    #micBtn:hover {
+      transform: scale(1.05);
+    }
+    
+    #micBtn.listening {
+      background: linear-gradient(135deg, #FF5722, #E64A19);
+      animation: pulse 1.5s infinite;
+    }
+    
+    #micBtn.processing {
+      background: linear-gradient(135deg, #FFC107, #FF9800);
+      animation: rotate 1s linear infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    .instructions {
+      margin-top: 20px;
+      font-size: 1.1em;
+      line-height: 1.5;
+    }
+    
+    .voice-hint {
+      background: rgba(255,255,255,0.2);
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    
+    .voice-hint .highlight {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    
+    audio {
+      width: 100%;
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .connection-status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 15px;
+      border-radius: 20px;
+      font-size: 0.9em;
+    }
+    
+    .connection-status.online {
+      background: rgba(76, 175, 80, 0.9);
+    }
+    
+    .connection-status.offline {
+      background: rgba(244, 67, 54, 0.9);
+    }
+  </style>
 </head>
 <body>
-    <!-- Main Container -->
-    <div class="main-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo-section">
-                    <img src="/static/otofarma-logo.png" alt="Otofarma Logo" class="logo" onerror="this.style.display='none';">
-                    <div class="brand-text">
-                        <h1>OtoBot</h1>
-                        <p>Assistente Virtuale Professionale</p>
-                    </div>
-                </div>
-                <div class="header-controls">
-                    <button id="voiceToggle" class="voice-toggle-btn" title="Attiva/Disattiva Riconoscimento Vocale">
-                        <i class="fas fa-microphone"></i>
-                        <span>Voce Attiva</span>
-                    </button>
-                    <button id="stopSpeechBtn" class="stop-speech-btn" title="Interrompi Discorso" style="display: none;">
-                        <i class="fas fa-stop"></i>
-                        <span>Ferma</span>
-                    </button>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content Area -->
-        <div class="content-wrapper">
-            <!-- Avatar Section -->
-            <div class="avatar-section">
-                <div class="avatar-widget">
-                    <div id="avatar-container"></div>
-                    <div class="avatar-status">
-                        <div id="status" class="status-text">
-                            Dì "OtoBot" per attivare l'assistente o premi il microfono
-                        </div>
-                        <div class="voice-indicator" id="voiceIndicator">
-                            <div class="wave"></div>
-                            <div class="wave"></div>
-                            <div class="wave"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Chat Section -->
-            <div class="chat-section">
-                <div class="chat-container">
-                    <div id="chatMessages" class="chat-messages">
-                        <div class="message bot-message welcome-message">
-                            <div class="message-avatar">
-                                <i class="fas fa-robot"></i>
-                            </div>
-                            <div class="message-content">
-                                <div class="message-header">
-                                    <span class="sender-name">OtoBot</span>
-                                    <span class="message-time" id="welcomeTime"></span>
-                                </div>
-                                <div class="message-text">
-                                    Salve! Sono OtoBot, il vostro assistente virtuale professionale di Otofarma Spa. 
-                                    Sono qui per fornirvi informazioni sui nostri apparecchi acustici, servizi e farmacie affiliate.
-                                    <br><br>
-                                    <strong>Come interagire:</strong>
-                                    <ul>
-                                        <li>🎤 Dite <strong>"OtoBot"</strong> per attivarmi vocalmente</li>
-                                        <li>💬 Scrivete la vostra domanda qui sotto</li>
-                                        <li>🎯 Tenete premuto il microfono per fare domande</li>
-                                        <li>⏹️ Dite <strong>"basta"</strong> o <strong>"stop"</strong> per interrompermi</li>
-                                    </ul>
-                                    Come posso aiutarvi oggi?
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Input Area -->
-                    <div class="input-area">
-                        <div class="input-container">
-                            <button id="micBtn" class="mic-button" title="Tieni premuto per parlare">
-                                <i class="fas fa-microphone"></i>
-                                <span class="mic-pulse"></span>
-                            </button>
-                            <div class="text-input-wrapper">
-                                <input type="text" id="messageInput" class="message-input" 
-                                       placeholder="Scrivi la tua domanda su Otofarma..." 
-                                       maxlength="500">
-                                <button id="sendBtn" class="send-button" title="Invia messaggio">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="input-hints">
-                            <span class="hint-item" onclick="sendQuickMessage('Che tipo di assistenza è inclusa?')">
-                                Assistenza inclusa
-                            </span>
-                            <span class="hint-item" onclick="sendQuickMessage('Quanto costano gli apparecchi acustici?')">
-                                Prezzi apparecchi
-                            </span>
-                            <span class="hint-item" onclick="sendQuickMessage('Posso provare gratis per un mese?')">
-                                Prova gratuita
-                            </span>
-                            <span class="hint-item" onclick="sendQuickMessage('Farmacie vicino a me')">
-                                Farmacie vicine
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Professional Features Panel -->
-        <div class="features-panel">
-            <div class="feature-item">
-                <i class="fas fa-headphones"></i>
-                <span>Apparecchi Acustici</span>
-            </div>
-            <div class="feature-item">
-                <i class="fas fa-map-marker-alt"></i>
-                <span>Farmacie Affiliate</span>
-            </div>
-            <div class="feature-item">
-                <i class="fas fa-phone"></i>
-                <span>Teleaudiologia</span>
-            </div>
-            <div class="feature-item">
-                <i class="fas fa-shield-alt"></i>
-                <span>Garanzia & Assistenza</span>
-            </div>
-        </div>
+  <div class="connection-status" id="connectionStatus">🟢 Connesso</div>
+  
+  <div class="header">
+    <div class="logo">🎙️ OtoBot</div>
+    <div class="subtitle">Assistente Vocale Otofarma Spa</div>
+  </div>
+  
+  <div class="container">
+    <div id="status">Inizializzazione assistente vocale...</div>
+    
+    <button id="micBtn" title="Tieni premuto per parlare">🎤</button>
+    
+    <div class="instructions">
+      <p>Tieni premuto il microfono per parlare</p>
+      <div class="voice-hint">
+        💡 Puoi anche dire "<span class="highlight">OtoBot</span>" per attivarmi
+      </div>
     </div>
+    
+    <audio id="audioReply" controls></audio>
+  </div>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
-        <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <p>OtoBot sta elaborando la risposta...</p>
-        </div>
-    </div>
-
-    <!-- Audio Element for Reply -->
-    <audio id="audioReply" style="display: none;"></audio>
-
-    <!-- Scripts -->
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
-            "three-gltf": "https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js",
-            "three-ctrl": "https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js"
-        }
-    }
-    </script>
-
-    <script>
-        // Global variables for chat functionality
-        let isProcessing = false;
-        let userLocation = null;
-
-        // Initialize welcome time
-        document.getElementById('welcomeTime').textContent = new Date().toLocaleTimeString('it-IT', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        // Get user location for pharmacy queries
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                position => {
-                    userLocation = {
-                        lat: position.coords.latitude,
-                        lon: position.coords.longitude
-                    };
-                    console.log('User location obtained for pharmacy queries');
-                },
-                error => {
-                    console.log('Location access denied or unavailable');
-                }
-            );
-        }
-
-        // Voice control buttons
-        const voiceToggle = document.getElementById('voiceToggle');
-        const stopSpeechBtn = document.getElementById('stopSpeechBtn');
-
-        voiceToggle.addEventListener('click', function() {
-            if (window.toggleVoiceActivation) {
-                window.toggleVoiceActivation();
-                this.classList.toggle('active');
-            }
-        });
-
-        stopSpeechBtn.addEventListener('click', function() {
-            if (window.stopOtoBotSpeech) {
-                window.stopOtoBotSpeech();
-            }
-        });
-
-        // Text input functionality
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendTextMessage();
-            }
-        });
-
-        sendBtn.addEventListener('click', sendTextMessage);
-
-        // Send text message function
-        async function sendTextMessage() {
-            const message = messageInput.value.trim();
-            if (!message || isProcessing) return;
-
-            isProcessing = true;
-            messageInput.value = '';
-            
-            // Add user message to chat
-            addMessage(message, 'user');
-            
-            // Show loading
-            showLoading();
-            
-            try {
-                const response = await fetch('/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        voice: true,
-                        lat: userLocation?.lat,
-                        lon: userLocation?.lon
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Add bot response to chat
-                    addMessage(data.reply, 'bot');
-                    
-                    // Speak the response if voice is enabled
-                    if (data.voice && window.otoBotSpeak) {
-                        window.otoBotSpeak(data.reply);
-                        showStopButton();
-                    }
-                } else {
-                    addMessage('Mi dispiace, si è verificato un errore. Riprova tra poco.', 'bot');
-                }
-            } catch (error) {
-                console.error('Chat error:', error);
-                addMessage('Errore di connessione. Controlla la rete e riprova.', 'bot');
-            } finally {
-                hideLoading();
-                isProcessing = false;
-            }
-        }
-
-        // Quick message function
-        function sendQuickMessage(message) {
-            messageInput.value = message;
-            sendTextMessage();
-        }
-
-        // Add message to chat
-        function addMessage(text, sender) {
-            const chatMessages = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}-message`;
-            
-            const time = new Date().toLocaleTimeString('it-IT', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-
-            const avatar = sender === 'user' ? 
-                '<i class="fas fa-user"></i>' : 
-                '<i class="fas fa-robot"></i>';
-
-            const senderName = sender === 'user' ? 'Tu' : 'OtoBot';
-
-            messageDiv.innerHTML = `
-                <div class="message-avatar">${avatar}</div>
-                <div class="message-content">
-                    <div class="message-header">
-                        <span class="sender-name">${senderName}</span>
-                        <span class="message-time">${time}</span>
-                    </div>
-                    <div class="message-text">${text.replace(/\n/g, '<br>')}</div>
-                </div>
-            `;
-
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Loading functions
-        function showLoading() {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-        }
-
-        function hideLoading() {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-
-        // Show/hide stop button
-        function showStopButton() {
-            stopSpeechBtn.style.display = 'flex';
-            setTimeout(() => {
-                stopSpeechBtn.style.display = 'none';
-            }, 30000); // Hide after 30 seconds
-        }
-
-        // Voice indicator management
-        function showVoiceActivity() {
-            document.getElementById('voiceIndicator').classList.add('active');
-        }
-
-        function hideVoiceActivity() {
-            document.getElementById('voiceIndicator').classList.remove('active');
-        }
-
-        // Listen for voice events from the avatar system
-        window.addEventListener('voiceStart', showVoiceActivity);
-        window.addEventListener('voiceEnd', hideVoiceActivity);
-
-        // Global functions for avatar integration
-        window.addMessage = addMessage;
-        window.showLoading = showLoading;
-        window.hideLoading = hideLoading;
-        window.showStopButton = showStopButton;
-
-        window.toggleVoiceActivation = function() {
-            if (window.startVoiceActivation && window.stopVoiceActivation) {
-                // Toggle functionality will be handled by the avatar system
-                console.log('Voice activation toggled');
-            }
-        };
-
-        // Professional voice feedback
-        window.speechSynthesis.addEventListener('voiceschanged', function() {
-            console.log('Professional voices ready for OtoBot');
-        });
-
-        console.log('Professional OtoBot Interface Initialized');
-    </script>
-
-    <!-- Load the enhanced avatar system -->
-    <script type="module" src="/static/index.js"></script>
+  <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>
 </html>
+
+
