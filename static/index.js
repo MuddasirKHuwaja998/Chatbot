@@ -4,54 +4,82 @@ let isListening = false;
 let lastActivationTime = 0;
 const ACTIVATION_COOLDOWN = 3000; // 3 seconds cooldown between activations
 
+// Current speech management
+let currentUtterance = null;
+let isCurrentlySpeaking = false;
+let speechInterrupted = false;
+
 // Microphone button elements
 const micBtn = document.getElementById('micBtn');
 const status = document.getElementById('status');
 const audioReply = document.getElementById('audioReply');
 
-// Voice Settings for Professional Italian Male Voice
-function getBestItalianMaleVoice() {
+// Enhanced Professional Italian Voice Selection
+function getBestProfessionalItalianVoice() {
   const voices = window.speechSynthesis.getVoices();
   
-  // Priority order for best Italian male voices
-  const preferredMaleVoices = [
+  // Priority for MODERN, CLEAR, PROFESSIONAL voices (avoid old/robotic ones)
+  const professionalVoices = [
+    // Modern Microsoft Neural voices (highest quality)
+    'Microsoft Elsa - Italian (Italy)',
+    'Microsoft Isabella - Italian (Italy)',
     'Microsoft Cosimo - Italian (Italy)',
-    'Cosimo',
-    'Microsoft Riccardo - Italian (Italy)', 
-    'Riccardo',
-    'Paolo',
-    'Marco',
-    'Andrea',
+    
+    // Google voices (natural sounding)
+    'Google italiano',
+    'Google Italiano',
+    
+    // Modern system voices
     'Luca',
-    'Google Italiano'
+    'Paola',
+    'Alice',
+    
+    // Fallback professional voices
+    'it-IT-Standard-A',
+    'it-IT-Standard-B',
+    'it-IT-Wavenet-A',
+    'it-IT-Wavenet-B'
   ];
 
-  // First try to find exact matches for male voices
-  for (const voiceName of preferredMaleVoices) {
+  // Find the best professional voice
+  for (const voiceName of professionalVoices) {
     const voice = voices.find(v => 
       v.name.toLowerCase().includes(voiceName.toLowerCase()) && 
-      v.lang.includes('it')
+      v.lang.includes('it') &&
+      !v.name.toLowerCase().includes('compact') &&  // Avoid compact/compressed voices
+      !v.name.toLowerCase().includes('enhanced') &&  // Sometimes these are older
+      !v.name.toLowerCase().includes('premium')      // Premium doesn't always mean better
     );
-    if (voice) return voice;
+    if (voice) {
+      console.log('Selected professional voice:', voice.name);
+      return voice;
+    }
   }
 
-  // Fallback: find any Italian voice with male characteristics
-  const italianVoice = voices.find(v => 
+  // Smart fallback: prefer female voices (often clearer for customer service)
+  const femaleVoice = voices.find(v => 
     v.lang.includes('it-IT') && 
-    (v.name.toLowerCase().includes('cosimo') || 
-     v.name.toLowerCase().includes('riccardo') ||
-     v.name.toLowerCase().includes('paolo') ||
-     v.name.toLowerCase().includes('marco') ||
-     v.name.toLowerCase().includes('luca'))
+    (v.name.toLowerCase().includes('elsa') || 
+     v.name.toLowerCase().includes('isabella') ||
+     v.name.toLowerCase().includes('paola') ||
+     v.name.toLowerCase().includes('alice'))
   );
   
-  if (italianVoice) return italianVoice;
+  if (femaleVoice) {
+    console.log('Using female professional voice:', femaleVoice.name);
+    return femaleVoice;
+  }
 
-  // Last resort: any Italian voice
-  return voices.find(v => v.lang.includes('it-IT')) || voices.find(v => v.lang.includes('it'));
+  // Last resort: any modern Italian voice
+  const modernVoice = voices.find(v => 
+    v.lang.includes('it-IT') && 
+    !v.name.toLowerCase().includes('compact')
+  );
+  
+  return modernVoice || voices.find(v => v.lang.includes('it'));
 }
 
-// Enhanced Voice Detection with Precise "OtoBot" Matching
+// Enhanced Voice Detection with Continuous Monitoring
 function initializeVoiceRecognition() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     console.warn('Speech recognition not supported');
@@ -61,32 +89,29 @@ function initializeVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
   
+  // Enhanced settings for better activation detection
   recognition.continuous = true;
   recognition.interimResults = true;
   recognition.lang = 'it-IT';
-  recognition.maxAlternatives = 3;
+  recognition.maxAlternatives = 5; // More alternatives for better accuracy
 
   recognition.onresult = function(event) {
     const currentTime = Date.now();
-    if (currentTime - lastActivationTime < ACTIVATION_COOLDOWN) {
-      return; // Prevent rapid fire activations
-    }
-
+    
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const transcript = event.results[i][0].transcript.toLowerCase().trim();
       
-      if (event.results[i].isFinal) {
-        console.log('Final transcript:', transcript);
-        
-        // Very precise "OtoBot" detection
+      // Check for interruption phrases while speaking
+      if (isCurrentlySpeaking && detectInterruption(transcript)) {
+        console.log('Speech interruption detected:', transcript);
+        stopCurrentSpeech();
+        return;
+      }
+      
+      // Check for activation (with cooldown)
+      if (currentTime - lastActivationTime > ACTIVATION_COOLDOWN) {
         if (isExactOtoBotActivation(transcript)) {
-          lastActivationTime = currentTime;
-          activateOtoBot();
-          break;
-        }
-      } else {
-        // Even for interim results, check for activation
-        if (isExactOtoBotActivation(transcript)) {
+          console.log('Voice activation detected:', transcript);
           lastActivationTime = currentTime;
           activateOtoBot();
           break;
@@ -97,50 +122,95 @@ function initializeVoiceRecognition() {
 
   recognition.onerror = function(event) {
     console.error('Speech recognition error:', event.error);
-    if (event.error === 'no-speech' || event.error === 'audio-capture') {
-      // Restart recognition after a brief delay
-      setTimeout(() => {
-        if (!isListening) startVoiceRecognition();
-      }, 1000);
+    
+    // Handle specific errors gracefully
+    if (event.error === 'no-speech') {
+      // Normal - just continue listening
+      setTimeout(restartRecognition, 1000);
+    } else if (event.error === 'audio-capture') {
+      console.log('Microphone access issue');
+      setTimeout(restartRecognition, 2000);
+    } else if (event.error === 'not-allowed') {
+      console.log('Microphone permission denied');
+      status.textContent = "Permetti l'accesso al microfono per l'attivazione vocale";
+    } else {
+      setTimeout(restartRecognition, 1500);
     }
   };
 
   recognition.onend = function() {
-    console.log('Speech recognition ended');
+    console.log('Speech recognition ended - restarting...');
     isListening = false;
-    // Auto-restart recognition
-    setTimeout(() => {
-      if (!isListening) startVoiceRecognition();
-    }, 500);
+    setTimeout(restartRecognition, 500);
   };
+}
+
+// Restart recognition function
+function restartRecognition() {
+  if (!isListening && recognition) {
+    startVoiceRecognition();
+  }
+}
+
+// Enhanced interruption detection
+function detectInterruption(transcript) {
+  const interruptionPhrases = [
+    'basta', 'stop', 'fermati', 'silenzio', 'zitto', 'smetti',
+    'taci', 'finisci', 'interruzione', 'pausa', 'aspetta',
+    'ferma', 'chiudi', 'spegni', 'cancella', 'annulla'
+  ];
+  
+  return interruptionPhrases.some(phrase => transcript.includes(phrase));
+}
+
+// Stop current speech immediately
+function stopCurrentSpeech() {
+  speechInterrupted = true;
+  isCurrentlySpeaking = false;
+  
+  // Cancel speech synthesis
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+  }
+  
+  // Reset current utterance
+  currentUtterance = null;
+  
+  // Update UI
+  status.textContent = "Discorso interrotto. Dì 'OtoBot' per riattivare.";
+  stopMicrophoneAnimation();
+  
+  console.log('Speech interrupted by user command');
 }
 
 // Extremely precise OtoBot activation detection
 function isExactOtoBotActivation(transcript) {
   const normalized = normalizeForActivation(transcript);
   
-  // Exact word matching patterns
-  const exactPatterns = [
+  // Exact activation phrases
+  const activationPhrases = [
     'otobot',
     'oto bot',
     'otto bot',
-    'ottobot'
+    'ottobot',
+    'hey otobot',
+    'ciao otobot',
+    'salve otobot',
+    'assistente virtuale',
+    'assistente otofarma'
   ];
 
-  // Check for exact matches
-  for (const pattern of exactPatterns) {
-    // Complete word match
-    if (normalized === pattern) return true;
+  // Check for exact matches at word boundaries
+  for (const phrase of activationPhrases) {
+    // Complete match
+    if (normalized === phrase) return true;
     
-    // Word boundary match (start/end of sentence)
-    const regex = new RegExp(`\\b${pattern}\\b`);
+    // Word boundary match
+    const regex = new RegExp(`\\b${phrase.replace(/\s+/g, '\\s+')}\\b`);
     if (regex.test(normalized)) return true;
-  }
-
-  // Additional safety check: must not be part of longer words
-  const words = normalized.split(/\s+/);
-  for (const word of words) {
-    if (exactPatterns.includes(word)) {
+    
+    // Start or end of sentence
+    if (normalized.startsWith(phrase + ' ') || normalized.endsWith(' ' + phrase)) {
       return true;
     }
   }
@@ -148,19 +218,20 @@ function isExactOtoBotActivation(transcript) {
   return false;
 }
 
-// Text normalization for activation detection
+// Enhanced text normalization
 function normalizeForActivation(text) {
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s]/g, '') // Remove punctuation
+    .replace(/[^\w\s]/g, ' ') // Replace punctuation with spaces
     .replace(/\s+/g, ' ') // Normalize whitespace
-    .replace(/otto/g, 'oto') // Handle common mispronunciation
+    .replace(/otto/g, 'oto') // Handle mispronunciation
     .replace(/òto/g, 'oto')
-    .replace(/óto/g, 'oto');
+    .replace(/óto/g, 'oto')
+    .trim();
 }
 
-// Start voice recognition
+// Start voice recognition with error handling
 function startVoiceRecognition() {
   if (!recognition || isListening) return;
   
@@ -168,10 +239,13 @@ function startVoiceRecognition() {
     isListening = true;
     recognition.start();
     console.log('Voice recognition started - listening for "OtoBot"');
-    status.textContent = "Dì 'OtoBot' per attivare l'assistente o premi il microfono";
+    if (!isCurrentlySpeaking) {
+      status.textContent = "Dì 'OtoBot' per attivare l'assistente o premi il microfono";
+    }
   } catch (error) {
     console.error('Error starting voice recognition:', error);
     isListening = false;
+    setTimeout(restartRecognition, 2000);
   }
 }
 
@@ -184,16 +258,16 @@ function stopVoiceRecognition() {
   }
 }
 
-// Activate OtoBot with professional greeting
+// Activate OtoBot with professional response
 async function activateOtoBot() {
-  console.log('OtoBot activated!');
+  console.log('OtoBot activated by voice!');
   
   // Stop listening temporarily to avoid feedback
   stopVoiceRecognition();
   
   // Visual feedback
   micBtn.classList.add('listening');
-  status.textContent = "OtoBot attivato! Elaborazione in corso...";
+  status.textContent = "OtoBot attivato! Elaborazione...";
   
   try {
     // Send activation request to backend
@@ -210,81 +284,110 @@ async function activateOtoBot() {
 
     if (response.ok) {
       const data = await response.json();
-      speakWithMaleVoice(data.reply);
+      speakWithProfessionalVoice(data.reply);
     } else {
-      console.error('Error communicating with backend');
-      speakWithMaleVoice('Buongiorno, sono OtoBot, il suo assistente virtuale di Otofarma Spa. Sono qui per aiutarla in tutto ciò che riguarda i nostri servizi e prodotti. Come posso esserle utile oggi?');
+      console.error('Backend communication error');
+      speakWithProfessionalVoice('Buongiorno, sono OtoBot, il vostro assistente virtuale professionale di Otofarma. Come posso aiutarvi oggi?');
     }
   } catch (error) {
     console.error('Network error:', error);
-    speakWithMaleVoice('Buongiorno, sono OtoBot, il suo assistente virtuale di Otofarma Spa. Sono qui per aiutarla in tutto ciò che riguarda i nostri servizi e prodotti. Come posso esserle utile oggi?');
+    speakWithProfessionalVoice('Buongiorno, sono OtoBot, il vostro assistente virtuale di Otofarma. Come posso aiutarvi?');
   }
   
   // Remove visual feedback
   micBtn.classList.remove('listening');
   
-  // Restart listening after a delay
+  // Restart listening after speech ends
   setTimeout(() => {
-    startVoiceRecognition();
-  }, 3000);
+    if (!isCurrentlySpeaking) {
+      startVoiceRecognition();
+    }
+  }, 2000);
 }
 
-// Enhanced professional Italian male voice - matching app.py style
-function speakWithMaleVoice(text) {
+// Professional speech synthesis with interruption handling
+function speakWithProfessionalVoice(text) {
   if (!window.speechSynthesis || !text) return;
   
-  // Cancel any ongoing speech
-  window.speechSynthesis.cancel();
+  // Stop any current speech first
+  stopCurrentSpeech();
+  
+  // Reset interruption flag
+  speechInterrupted = false;
+  isCurrentlySpeaking = true;
   
   // Wait for voices to load if needed
   if (window.speechSynthesis.getVoices().length === 0) {
     window.speechSynthesis.addEventListener('voiceschanged', () => {
-      speakWithMaleVoice(text);
+      speakWithProfessionalVoice(text);
     }, { once: true });
     return;
   }
 
   const utterance = new SpeechSynthesisUtterance(text);
-  const selectedVoice = getBestItalianMaleVoice();
+  currentUtterance = utterance;
   
-  if (selectedVoice) {
-    utterance.voice = selectedVoice;
-    console.log('Using professional voice:', selectedVoice.name);
+  const professionalVoice = getBestProfessionalItalianVoice();
+  if (professionalVoice) {
+    utterance.voice = professionalVoice;
+    console.log('Using professional voice:', professionalVoice.name);
   }
   
-  // Professional announcement voice settings - matching app.py preferences
+  // PROFESSIONAL SETTINGS for clear, natural speech
   utterance.lang = 'it-IT';
-  utterance.pitch = 0.85;  // Lower pitch for more authoritative, professional sound
-  utterance.rate = 0.85;   // Slower, more deliberate announcement-style speech
-  utterance.volume = 0.95; // Clear, strong volume
-
-  status.textContent = "OtoBot sta parlando...";
+  utterance.pitch = 1.0;   // Natural pitch (not too low)
+  utterance.rate = 0.9;    // Slightly slower for clarity
+  utterance.volume = 0.85; // Clear but not overwhelming
+  
+  status.textContent = "OtoBot sta parlando... (dì 'basta' per interrompere)";
 
   utterance.onstart = () => {
-    console.log('Speaking with professional male announcement voice');
+    if (speechInterrupted) return;
+    console.log('Professional speech started');
     animateMicrophone();
   };
 
   utterance.onend = () => {
-    console.log('Speech ended');
-    status.textContent = "Dì 'OtoBot' per attivare l'assistente o premi il microfono";
-    stopMicrophoneAnimation();
+    isCurrentlySpeaking = false;
+    currentUtterance = null;
+    
+    if (!speechInterrupted) {
+      status.textContent = "Dì 'OtoBot' per attivare l'assistente o premi il microfono";
+      stopMicrophoneAnimation();
+      
+      // Restart voice recognition
+      setTimeout(() => {
+        startVoiceRecognition();
+      }, 1000);
+    }
+    
+    console.log('Professional speech ended');
   };
 
   utterance.onerror = (event) => {
-    console.error('Speech error:', event.error);
-    status.textContent = "Errore durante la riproduzione vocale";
+    console.error('Speech synthesis error:', event.error);
+    isCurrentlySpeaking = false;
+    currentUtterance = null;
+    status.textContent = "Errore nella sintesi vocale";
     stopMicrophoneAnimation();
+    
+    // Restart recognition
+    setTimeout(() => {
+      startVoiceRecognition();
+    }, 1000);
   };
 
-  window.speechSynthesis.speak(utterance);
+  // Small delay to ensure proper initialization
+  setTimeout(() => {
+    if (!speechInterrupted) {
+      window.speechSynthesis.speak(utterance);
+    }
+  }, 100);
 }
 
 // Microphone animation during speech
 function animateMicrophone() {
   micBtn.classList.add('listening');
-  
-  // Add pulsing animation
   micBtn.style.animation = 'pulse 1.5s infinite';
 }
 
@@ -298,17 +401,36 @@ let mediaRecorder, audioChunks = [];
 let recording = false;
 let stream = null;
 
-micBtn.addEventListener('mousedown', startRecording);
-micBtn.addEventListener('touchstart', startRecording);
-micBtn.addEventListener('mouseup', stopRecording);
-micBtn.addEventListener('mouseleave', stopRecording);
-micBtn.addEventListener('touchend', stopRecording);
+// Enhanced button event listeners
+micBtn.addEventListener('mousedown', handleMicStart);
+micBtn.addEventListener('touchstart', handleMicStart);
+micBtn.addEventListener('mouseup', handleMicStop);
+micBtn.addEventListener('mouseleave', handleMicStop);
+micBtn.addEventListener('touchend', handleMicStop);
 
-async function startRecording(e) {
-  if (recording) return;
+function handleMicStart(e) {
+  e.preventDefault();
+  if (!recording && !isCurrentlySpeaking) {
+    startRecording();
+  }
+}
+
+function handleMicStop(e) {
+  e.preventDefault();
+  if (recording) {
+    stopRecording();
+  }
+}
+
+async function startRecording() {
+  if (recording || isCurrentlySpeaking) return;
+  
+  // Stop voice activation listening while recording
+  stopVoiceRecognition();
+  
   recording = true;
   micBtn.classList.add('listening');
-  status.textContent = "Sto ascoltando...";
+  status.textContent = "Sto ascoltando la tua domanda...";
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -318,70 +440,81 @@ async function startRecording(e) {
     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
 
     mediaRecorder.onstop = async () => {
-      status.textContent = "Elaborazione...";
-      
-      // Start recognition for user input
+      status.textContent = "Elaborazione della domanda...";
       await processVoiceInput();
-      
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      micBtn.classList.remove('listening');
-      recording = false;
+      cleanup();
     };
 
     mediaRecorder.start();
   } catch (error) {
-    console.error('Error accessing microphone:', error);
-    status.textContent = "Errore nell'accesso al microfono";
-    recording = false;
-    micBtn.classList.remove('listening');
+    console.error('Microphone access error:', error);
+    status.textContent = "Errore accesso microfono. Controlla i permessi.";
+    cleanup();
   }
 }
 
-function stopRecording(e) {
+function stopRecording() {
   if (recording && mediaRecorder && mediaRecorder.state === "recording") {
-    status.textContent = "Sto elaborando la tua voce...";
     mediaRecorder.stop();
   }
 }
 
-// Process voice input with speech recognition
+function cleanup() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+  micBtn.classList.remove('listening');
+  recording = false;
+  
+  // Restart voice activation after a delay
+  setTimeout(() => {
+    if (!isCurrentlySpeaking) {
+      startVoiceRecognition();
+    }
+  }, 1000);
+}
+
+// Process voice input with enhanced recognition
 async function processVoiceInput() {
   try {
-    status.textContent = "Dimmi la tua domanda...";
-    
-    // Create a new recognition instance for user input
     const userRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     userRecognition.lang = 'it-IT';
     userRecognition.continuous = false;
     userRecognition.interimResults = false;
+    userRecognition.maxAlternatives = 3;
 
     userRecognition.onresult = async function(event) {
       const transcript = event.results[0][0].transcript;
-      console.log('User said:', transcript);
+      console.log('User question:', transcript);
       
-      // Send to backend for processing
+      // Send to backend
       await sendMessageToBackend(transcript);
     };
 
     userRecognition.onerror = function(event) {
-      console.error('Recognition error:', event.error);
-      status.textContent = "Errore nel riconoscimento vocale. Riprova.";
+      console.error('User input recognition error:', event.error);
+      status.textContent = "Non ho capito. Riprova premendo il microfono.";
+      setTimeout(() => {
+        startVoiceRecognition();
+      }, 2000);
     };
 
     userRecognition.start();
 
   } catch (error) {
-    console.error('Error processing voice input:', error);
-    status.textContent = "Errore nell'elaborazione vocale";
+    console.error('Voice input processing error:', error);
+    status.textContent = "Errore elaborazione vocale. Riprova.";
+    setTimeout(() => {
+      startVoiceRecognition();
+    }, 2000);
   }
 }
 
-// Send message to backend and get response - matching app.py JSON structure
+// Send message to backend
 async function sendMessageToBackend(message) {
   try {
-    status.textContent = "Elaborazione della risposta...";
+    status.textContent = "Sto preparando la risposta...";
     
     const response = await fetch('/chat', {
       method: 'POST',
@@ -396,30 +529,32 @@ async function sendMessageToBackend(message) {
 
     if (response.ok) {
       const data = await response.json();
-      // Check if male_voice flag is set in response (from app.py)
-      if (data.male_voice || data.voice) {
-        speakWithMaleVoice(data.reply);
-      } else {
-        status.textContent = data.reply;
-      }
+      speakWithProfessionalVoice(data.reply);
     } else {
-      status.textContent = "Errore nella comunicazione con il server";
+      status.textContent = "Errore comunicazione server. Riprova.";
+      setTimeout(() => {
+        startVoiceRecognition();
+      }, 2000);
     }
   } catch (error) {
-    console.error('Error sending message:', error);
-    status.textContent = "Errore di rete";
+    console.error('Backend communication error:', error);
+    status.textContent = "Errore di rete. Riprova.";
+    setTimeout(() => {
+      startVoiceRecognition();
+    }, 2000);
   }
 }
 
-// Initialize everything when page loads
+// Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('OtoBot Voice Assistant initializing...');
+  console.log('Professional OtoBot Voice Assistant initializing...');
   
-  // Wait for voices to load
+  // Initialize speech synthesis
   if (window.speechSynthesis) {
+    // Load voices
     if (window.speechSynthesis.getVoices().length === 0) {
       window.speechSynthesis.addEventListener('voiceschanged', () => {
-        console.log('Voices loaded:', window.speechSynthesis.getVoices().length);
+        console.log('Professional voices loaded:', window.speechSynthesis.getVoices().length);
         initializeVoiceRecognition();
         setTimeout(startVoiceRecognition, 1000);
       }, { once: true });
@@ -430,16 +565,22 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   status.textContent = "Dì 'OtoBot' per attivare l'assistente o premi il microfono";
-  console.log('OtoBot Voice Assistant ready - say "OtoBot" to activate or press microphone');
+  console.log('Professional OtoBot ready - Voice activation active');
 });
 
-// Handle page visibility changes
+// Handle page visibility for better performance
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    stopVoiceRecognition();
+    // Page hidden - pause voice recognition
+    if (!isCurrentlySpeaking) {
+      stopVoiceRecognition();
+    }
   } else {
+    // Page visible - resume voice recognition
     setTimeout(() => {
-      if (!isListening) startVoiceRecognition();
+      if (!isListening && !isCurrentlySpeaking) {
+        startVoiceRecognition();
+      }
     }, 1000);
   }
 });
@@ -447,20 +588,23 @@ document.addEventListener('visibilitychange', () => {
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
   stopVoiceRecognition();
-  window.speechSynthesis.cancel();
+  stopCurrentSpeech();
   if (stream) {
     stream.getTracks().forEach(track => track.stop());
   }
 });
 
-// Test voice function for debugging
-window.testOtoBotVoice = function() {
-  speakWithMaleVoice('Salve, sono OtoBot, il suo assistente virtuale di Otofarma Spa. Test della voce maschile italiana professionale.');
+// Global functions for external access
+window.testProfessionalVoice = function() {
+  speakWithProfessionalVoice('Salve, sono OtoBot, il vostro assistente professionale di Otofarma. Test della voce professionale italiana.');
 };
 
-// Global function for external calls (if needed)
+window.stopOtoBotSpeech = function() {
+  stopCurrentSpeech();
+};
+
 window.otoBotSpeak = function(text) {
-  speakWithMaleVoice(text);
+  speakWithProfessionalVoice(text);
 };
 
-console.log('OtoBot Voice Assistant loaded successfully - Avatar removed, Voice-only mode active');
+console.log('Professional OtoBot Voice Assistant loaded - Enhanced voice quality and interruption handling active');
