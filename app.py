@@ -52,17 +52,54 @@ try:
 except ImportError:
     nlp_available = False
 
+ASSISTANT_NAME = "OtoBot"
+
+PRECISE_ASSISTANT_NAME_PATTERNS = [
+    r"^otobot$",
+    r"^oto\s+bot$",
+    r"^oto\s*bot$",
+    r"\botobot\b",
+    r"\boto\s+bot\b",
+    r"\boto\s*bot\b"
+]
+
+EXTENDED_ASSISTANT_NAME_PATTERNS = [
+    r"\b(otofarm)\b",
+    r"\b(otofarma)\b",
+    r"\b(assistente\s+virtuale)\b",
+    r"\b(assistente\s+otofarma)\b",
+    r"\b(virtual\s+assistant)\b"
+]
+
+VOICE_ACTIVATION_KEYWORDS = {
+    "otobot", "oto bot", "assistente virtuale", "assistente otofarma", 
+    "virtual assistant", "hey otobot", "ciao otobot", "salve otobot"
+}
+
+ASSISTANT_RESPONSES = [
+    f"Buongiorno, sono {ASSISTANT_NAME}, l'assistente virtuale di Otofarma Spa. Sono qui per aiutarla in tutto ciò che riguarda i nostri servizi e prodotti. Come posso esserle utile oggi?",
+    f"Salve, sono {ASSISTANT_NAME}, il suo assistente virtuale di Otofarma. Sono a sua completa disposizione per rispondere alle sue domande sui nostri servizi. Cosa desidera sapere?",
+    f"Buongiorno, sono {ASSISTANT_NAME} da Otofarma Spa. Sono qui per fornirle tutte le informazioni di cui ha bisogno sui nostri apparecchi acustici e servizi. Come posso aiutarla?",
+    f"Salve, mi presento, sono {ASSISTANT_NAME}, l'assistente virtuale di Otofarma. Sono a sua disposizione per qualsiasi domanda sui nostri prodotti e servizi. Cosa posso fare per lei?",
+    f"Buongiorno, sono {ASSISTANT_NAME}, il suo assistente personale di Otofarma Spa. Sono qui per supportarla e rispondere a tutte le sue domande. Come posso essere di aiuto?",
+    f"Salve, sono {ASSISTANT_NAME} di Otofarma. Sono qui per offrirle assistenza completa sui nostri servizi audiologici e apparecchi acustici. Cosa desidera sapere?",
+    f"Buongiorno, sono {ASSISTANT_NAME}, assistente virtuale di Otofarma Spa. Sono a sua completa disposizione per fornirle informazioni dettagliate sui nostri servizi. Come posso aiutarla oggi?",
+    f"Salve, sono {ASSISTANT_NAME}, il suo consulente virtuale specializzato in soluzioni uditive Otofarma. Sono qui per supportarla in ogni sua esigenza. Come posso assisterla?",
+    f"Buongiorno, sono {ASSISTANT_NAME} da Otofarma Spa, il suo partner digitale per tutte le informazioni sui nostri prodotti e servizi audiologici. Cosa posso fare per lei oggi?",
+    f"Salve, mi chiamo {ASSISTANT_NAME} e sono l'assistente virtuale dedicato di Otofarma. Sono qui per guidarla e rispondere a tutte le sue domande sui nostri apparecchi acustici. Come posso aiutarla?"
+]
+
 CUSTOM_GREETINGS = [
     ("ciao", "Salve! Sono qui per aiutarti in tutto ciò che riguarda Otofarma."),
     ("salve", "Salve! Sono qui per aiutarti in tutto ciò che riguarda Otofarma."),
     ("buongiorno", "Buongiorno! Sono sempre disponibile per rispondere alle tue domande."),
     ("buonasera", "Buonasera! Sono sempre disponibile per rispondere alle tue domande."),
     ("buonanotte", "Buonanotte! Sono qui anche a quest'ora per aiutarti."),
-    ("come va", "Sto bene, grazie! Sono sempre pronta a rispondere alle tue domande su Otofarma."),
-    ("come stai", "Sto bene, grazie! Sono sempre pronta a rispondere alle tue domande su Otofarma."),
+    ("come va", "Sto bene, grazie! Sono sempre pronto a rispondere alle tue domande su Otofarma."),
+    ("come stai", "Sto bene, grazie! Sono sempre pronto a rispondere alle tue domande su Otofarma."),
     ("ehi", "Ciao! Come posso aiutarti?"),
     ("hey", "Ciao! Come posso aiutarti?"),
-    ("come va?", "Sto bene, grazie! Sono sempre pronta a rispondere alle tue domande su Otofarma."),
+    ("come va?", "Sto bene, grazie! Sono sempre pronto a rispondere alle tue domande su Otofarma."),
 ]
 
 COMMON_MISSPELLINGS = {
@@ -83,11 +120,26 @@ COMMON_MISSPELLINGS = {
     "aprite": "aprite",
     "chiudete": "chiudete",
     "fns": "fine",
-    "fn": "fine"
+    "fn": "fine",
+    "otobot": "otobot",
+    "otobott": "otobot",
+    "ottobot": "otobot",
+    "otubot": "otobot",
+    "apparecchi": "apparecchi",
+    "acustici": "acustici",
+    "ricaricabili": "ricaricabili",
+    "garanzia": "garanzia",
+    "teleaudiologia": "teleaudiologia",
+    "fastidio": "fastidio",
+    "orecchio": "orecchio",
+    "caccia": "caccia",
+    "collegano": "collegano",
+    "perdere": "perdere",
+    "acqua": "acqua"
 }
 
 def glue_split(text):
-    for k in ["ciao", "salve", "buongiorno", "buonasera", "comeva", "comeva?", "come ba"]:
+    for k in ["ciao", "salve", "buongiorno", "buonasera", "comeva", "comeva?", "come ba", "otobot"]:
         if k in text and text.count(k) > 1:
             text = text.replace(k, f"{k} ")
     return text
@@ -185,7 +237,7 @@ def extract_keywords(text):
         tagged = pos_tag(filtered)
         keywords = [w for w, t in tagged if t.startswith('NN') or t.startswith('JJ') or t == 'FW']
         main_words = keywords if keywords else filtered
-        return set(main_words[:2])
+        return set(main_words[:5])
     else:
         stopwords = set([
             "il","lo","la","i","gli","le","un","una","che","di","a","da","in","con","su","per","tra","fra",
@@ -198,29 +250,104 @@ def extract_keywords(text):
             "tutti","tutte","ogni","alcuni","alcune"
         ])
         filtered = [w for w in normalize(text).split() if w not in stopwords and len(w) > 2]
-        return set(filtered[:2])
+        return set(filtered[:5])
 
 def semantic_match(user_msg, questions, answers):
     if not nlp_available or not questions:
         return None, 0
-    corpus = list(questions) + [user_msg]
-    vectorizer = TfidfVectorizer().fit(corpus)
-    tfidf_matrix = vectorizer.transform(corpus)
-    sim_scores = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1]).flatten()
-    best_idx = sim_scores.argmax()
-    best_score = sim_scores[best_idx]
-    return (answers[best_idx], best_score) if best_score > 0.34 else (None, 0)
+    try:
+        corpus = list(questions) + [user_msg]
+        vectorizer = TfidfVectorizer().fit(corpus)
+        tfidf_matrix = vectorizer.transform(corpus)
+        sim_scores = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1]).flatten()
+        best_idx = sim_scores.argmax()
+        best_score = sim_scores[best_idx]
+        return (answers[best_idx], best_score) if best_score > 0.28 else (None, 0)
+    except Exception:
+        return None, 0
 
 def fuzzy_match(user_msg, questions, answers):
     if not rapidfuzz_available or not questions:
         return None, 0
-    results = process.extractOne(
-        user_msg, questions, scorer=fuzz.partial_ratio
-    )
-    if results and results[1] > 65:
-        idx = questions.index(results[0])
-        return answers[idx], results[1] / 100.0
+    try:
+        results = process.extractOne(
+            user_msg, questions, scorer=fuzz.partial_ratio
+        )
+        if results and results[1] > 65:
+            idx = questions.index(results[0])
+            return answers[idx], results[1] / 100.0
+    except Exception:
+        pass
     return None, 0
+
+def enhanced_keyword_match(user_msg, questions, answers):
+    msg_keywords = extract_keywords(user_msg)
+    if not msg_keywords:
+        return None, 0
+    
+    best_match = None
+    best_score = 0
+    
+    for idx, question in enumerate(questions):
+        q_keywords = extract_keywords(question)
+        if not q_keywords:
+            continue
+            
+        common_keywords = msg_keywords & q_keywords
+        if common_keywords:
+            score = len(common_keywords) / len(msg_keywords | q_keywords)
+            if score > best_score and score > 0.35:
+                best_score = score
+                best_match = answers[idx]
+    
+    return best_match, best_score
+
+def exact_phrase_match(user_msg, questions, answers):
+    user_norm = normalize(user_msg)
+    for idx, question in enumerate(questions):
+        question_norm = normalize(question)
+        if user_norm == question_norm:
+            return answers[idx], 1.0
+        if len(user_norm) > 10 and user_norm in question_norm:
+            return answers[idx], 0.95
+        if len(question_norm) > 10 and question_norm in user_norm:
+            return answers[idx], 0.90
+    return None, 0
+
+def advanced_substring_match(user_msg, questions, answers):
+    user_norm = normalize(user_msg)
+    user_words = set(user_norm.split())
+    
+    best_match = None
+    best_score = 0
+    
+    for idx, question in enumerate(questions):
+        question_norm = normalize(question)
+        question_words = set(question_norm.split())
+        
+        if len(user_words) == 0 or len(question_words) == 0:
+            continue
+            
+        common_words = user_words & question_words
+        if common_words:
+            word_score = len(common_words) / max(len(user_words), len(question_words))
+            
+            # Bonus for important keywords from otofarmaspa.yml
+            important_keywords = {
+                "prova", "gratis", "mese", "assistenza", "prezzo", "ricaricabili", "fastidio", 
+                "orecchio", "caccia", "collegano", "pagare", "perdere", "garanzia", "acqua",
+                "teleaudiologia", "apparecchi", "acustici", "costo", "meno", "online"
+            }
+            
+            important_matches = common_words & important_keywords
+            if important_matches:
+                word_score += len(important_matches) * 0.15
+            
+            if word_score > best_score and word_score > 0.25:
+                best_score = word_score
+                best_match = answers[idx]
+    
+    return best_match, best_score
 
 def match_yaml_qa_ai(user_msg):
     msg_corr = correct_spelling(user_msg)
@@ -228,25 +355,49 @@ def match_yaml_qa_ai(user_msg):
     corr_norm = normalize(msg_corr)
     questions_norm = [normalize(q) for q in qa_questions]
     keywords = extract_keywords(msg_corr)
+    
+    # First: Exact phrase matching
+    answer, score = exact_phrase_match(msg_corr, questions_norm, qa_answers)
+    if answer and score > 0.85:
+        return answer
+    
+    # Second: Exact normalized matching
     for idx, qn in enumerate(questions_norm):
         if qn == msg_norm or qn == corr_norm:
             return qa_answers[idx]
-    for idx, qn in enumerate(questions_norm):
-        qwords = set(qn.split())
-        if keywords and keywords.issubset(qwords):
-            return qa_answers[idx]
-    answer, score = semantic_match(msg_corr, questions_norm, qa_answers)
-    if answer:
+    
+    # Third: Advanced substring matching with keyword bonuses
+    answer, score = advanced_substring_match(msg_corr, questions_norm, qa_answers)
+    if answer and score > 0.4:
         return answer
+    
+    # Fourth: Enhanced keyword matching
+    answer, score = enhanced_keyword_match(msg_corr, questions_norm, qa_answers)
+    if answer and score > 0.4:
+        return answer
+    
+    # Fifth: Semantic similarity matching
+    answer, score = semantic_match(msg_corr, questions_norm, qa_answers)
+    if answer and score > 0.3:
+        return answer
+        
+    # Sixth: Fuzzy matching as last resort
     answer, score = fuzzy_match(msg_corr, questions_norm, qa_answers)
-    return answer
+    if answer and score > 0.7:
+        return answer
+    
+    return None
 
 def is_probably_italian(text):
     text_corr = correct_spelling(text)
     italian_keywords = [
         "ciao", "come", "puoi", "aiutarmi", "grazie", "prenotare", "test", "udito", "orari", "info", "salve",
         "quanto", "dove", "chi", "cosa", "quale", "azienda", "giorno", "ora", "bot", "servizio", "prenotazione",
-        "farmacia", "farmacie", "indirizzo", "telefono", "email", "cap", "provincia", "regione"
+        "farmacia", "farmacie", "indirizzo", "telefono", "email", "cap", "provincia", "regione", "otobot",
+        "assistente", "apparecchi", "acustici", "ricaricabili", "garanzia", "prezzo", "pagare", "prova",
+        "fastidio", "orecchio", "caccia", "collegano", "perdere", "acqua", "teleaudiologia", "gratis",
+        "mese", "assistenza", "costano", "online", "resistenti", "vedere", "danno", "voglio", "parlarne",
+        "familiare", "succede", "metto", "sono"
     ]
     text_lc = text_corr.lower()
     matches = sum(kw in text_lc for kw in italian_keywords)
@@ -270,6 +421,49 @@ def is_probably_italian(text):
     if len(words & english_words) / (len(words)+1e-5) > 0.3:
         return False
     return True
+
+def detect_precise_assistant_name(msg):
+    msg_corr = correct_spelling(msg)
+    msg_lc = normalize(msg_corr).strip()
+    
+    # Exact word matching for precise activation
+    words = msg_lc.split()
+    
+    # Check for exact "otobot" at start or end of message
+    if words and (words[0] == "otobot" or words[-1] == "otobot"):
+        return True
+    
+    # Check for "oto bot" (two words)
+    if len(words) >= 2:
+        for i in range(len(words) - 1):
+            if words[i] == "oto" and words[i + 1] == "bot":
+                return True
+    
+    # Check for voice activation keywords
+    for keyword in VOICE_ACTIVATION_KEYWORDS:
+        if keyword in msg_lc:
+            return True
+    
+    # Precise pattern matching
+    for pattern in PRECISE_ASSISTANT_NAME_PATTERNS:
+        if re.search(pattern, msg_lc):
+            return True
+    
+    # Extended pattern matching (less sensitive)
+    for pattern in EXTENDED_ASSISTANT_NAME_PATTERNS:
+        if re.search(pattern, msg_lc):
+            # Additional context check to avoid false positives
+            context_words = {"assistente", "virtuale", "otofarma", "spa"}
+            if any(word in msg_lc for word in context_words):
+                return True
+    
+    return False
+
+def detect_assistant_name(msg):
+    return detect_precise_assistant_name(msg)
+
+def get_assistant_introduction():
+    return random.choice(ASSISTANT_RESPONSES)
 
 def detect_time_or_date_question(msg):
     msg_corr = correct_spelling(msg)
@@ -297,7 +491,9 @@ def detect_time_or_date_question(msg):
 def detect_office_hours_question(msg):
     msg_corr = correct_spelling(msg)
     msg_lc = normalize(msg_corr)
-    if check_general_patterns(msg_lc):  # Don't match greetings as office hours
+    if check_general_patterns(msg_lc):
+        return False
+    if detect_assistant_name(msg_lc):
         return False
     for pat in OFFICE_PATTERNS:
         if re.search(pat, msg_lc):
@@ -347,6 +543,10 @@ def get_date_answer():
 
 def check_general_patterns(user_msg):
     msg = normalize(correct_spelling(user_msg))
+    
+    if detect_assistant_name(msg):
+        return None
+    
     for pattern, reply in CUSTOM_GREETINGS:
         if rapidfuzz_available and fuzz.partial_ratio(pattern, msg) > 80:
             return reply
@@ -638,16 +838,33 @@ fallback_mem = FallbackMemory()
 def index():
     return render_template("index.html")
 
+@app.route("/voice_activation", methods=["POST"])
+def voice_activation():
+    """Endpoint specifically for voice activation detection"""
+    user_message = request.json.get("message", "")
+    
+    if detect_precise_assistant_name(user_message):
+        return jsonify({
+            "activated": True,
+            "reply": get_assistant_introduction(),
+            "voice": True
+        })
+    
+    return jsonify({"activated": False})
+
 @app.route("/chat", methods=["POST"])
 def chat():
     user_message = request.json.get("message", "")
-    voice_mode = request.json.get("voice", False)
+    voice_mode = request.json.get("voice", True)
     user_lat = request.json.get("lat", None)
     user_lon = request.json.get("lon", None)
 
+    if detect_assistant_name(user_message):
+        return jsonify({"reply": get_assistant_introduction(), "voice": voice_mode, "male_voice": True})
+
     general = check_general_patterns(user_message)
     if general:
-        return jsonify({"reply": general, "voice": voice_mode})
+        return jsonify({"reply": general, "voice": voice_mode, "male_voice": True})
 
     if is_near_me_query(user_message):
         if user_lat is not None and user_lon is not None:
@@ -658,14 +875,14 @@ def chat():
                 reply = "Si è verificato un errore nel calcolo della farmacia più vicina. Riprova tra poco!"
         else:
             reply = "Per poterti suggerire la farmacia più vicina ho bisogno che il browser consenta l'accesso alla posizione: controlla le impostazioni e aggiorna la pagina."
-        return jsonify({"reply": reply, "voice": voice_mode})
+        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
     user_message_corr = correct_spelling(user_message)
     if not is_probably_italian(user_message_corr):
-        return jsonify({"reply": "Questo assistente risponde solo a domande in italiano. Per favore riformula la domanda in italiano.", "voice": voice_mode})
+        return jsonify({"reply": "Questo assistente risponde solo a domande in italiano. Per favore riformula la domanda in italiano.", "voice": voice_mode, "male_voice": True})
 
     if detect_office_hours_question(user_message_corr):
-        return jsonify({"reply": get_office_hours_answer(), "voice": voice_mode})
+        return jsonify({"reply": get_office_hours_answer(), "voice": voice_mode, "male_voice": True})
 
     if is_pharmacy_question(user_message_corr):
         found_cities = extract_city_from_query(user_message_corr)
@@ -680,17 +897,17 @@ def chat():
             field_intents = extract_field_intent(user_message_corr)
             best_ph = pharmacy_best_match(user_message_corr)
             reply = format_pharmacy_answer(best_ph, field_intents)
-        return jsonify({"reply": reply, "voice": voice_mode})
+        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
     time_or_date = detect_time_or_date_question(user_message_corr)
     if time_or_date == "time":
-        return jsonify({"reply": get_time_answer(), "voice": voice_mode})
+        return jsonify({"reply": get_time_answer(), "voice": voice_mode, "male_voice": True})
     elif time_or_date == "date":
-        return jsonify({"reply": get_date_answer(), "voice": voice_mode})
+        return jsonify({"reply": get_date_answer(), "voice": voice_mode, "male_voice": True})
 
     reply = match_yaml_qa_ai(user_message_corr)
     if reply:
-        return jsonify({"reply": reply, "voice": voice_mode})
+        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
     fallback_messages = [
         "Al momento non dispongo di una risposta precisa alla tua richiesta, ma sono qui per aiutarti su qualsiasi altro tema riguardante Otofarma.",
@@ -713,9 +930,10 @@ def chat():
         "Se hai bisogno di dettagli aggiuntivi, sono disponibile ad aiutarti."
     ]
     reply = fallback_mem.get_unique(fallback_messages)
-    return jsonify({"reply": reply, "voice": voice_mode})
+    return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
     
