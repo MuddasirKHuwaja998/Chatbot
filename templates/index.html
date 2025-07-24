@@ -2,94 +2,647 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Voice Assistant</title>
+  <title>OtoBot - Assistente Vocale Otofarma</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
     body {
-      background: linear-gradient(135deg, #6dd5ed 0%, #2193b0 100%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
       color: #fff;
       text-align: center;
       margin: 0;
       padding: 0;
       min-height: 100vh;
+      overflow-x: hidden;
     }
+    
     .container {
-      margin-top: 60px;
-      padding: 30px;
-      background: rgba(33, 147, 176, 0.7);
-      border-radius: 20px;
-      max-width: 400px;
+      margin-top: 40px;
+      padding: 40px 30px;
+      background: rgba(102, 126, 234, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 25px;
+      max-width: 450px;
       margin-left: auto;
       margin-right: auto;
-      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      box-shadow: 0 15px 35px 0 rgba(31, 38, 135, 0.37);
+      border: 1px solid rgba(255, 255, 255, 0.18);
     }
-    h1 {
-      font-size: 2.2em;
-      margin-bottom: 0.2em;
-      font-weight: 700;
-      text-shadow: 1px 1px 6px #2193b0;
+    
+    .logo {
+      font-size: 2.8em;
+      margin-bottom: 0.3em;
+      font-weight: 800;
+      text-shadow: 2px 2px 8px rgba(118, 75, 162, 0.8);
+      background: linear-gradient(45deg, #fff, #f0f0f0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
+    
+    .subtitle {
+      font-size: 1.1em;
+      margin-bottom: 2em;
+      opacity: 0.9;
+      font-weight: 300;
+    }
+    
+    #status {
+      font-size: 1.3em;
+      margin-bottom: 1.5em;
+      min-height: 2em;
+      font-weight: 500;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+      transition: all 0.3s ease;
+      line-height: 1.4;
+    }
+    
+    .status-listening {
+      color: #4CAF50 !important;
+      animation: breathe 2s ease-in-out infinite;
+    }
+    
+    .status-processing {
+      color: #FFC107 !important;
+      animation: pulse-text 1.5s ease-in-out infinite;
+    }
+    
+    .status-speaking {
+      color: #2196F3 !important;
+      animation: wave 1.8s ease-in-out infinite;
+    }
+    
+    @keyframes breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    @keyframes pulse-text {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    @keyframes wave {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-3px); }
+    }
+    
+    .mic-container {
+      position: relative;
+      display: inline-block;
+      margin: 30px 0;
+    }
+    
     #micBtn {
-      width: 110px;
-      height: 110px;
-      background: linear-gradient(135deg, #e96443 0%, #904e95 100%);
+      width: 130px;
+      height: 130px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       border: none;
       border-radius: 50%;
       color: #fff;
-      font-size: 2.5em;
+      font-size: 3em;
       cursor: pointer;
-      margin: 30px 0;
-      box-shadow: 0 6px 18px 0 rgba(144, 78, 149, 0.24);
-      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 10px 25px 0 rgba(118, 75, 162, 0.4);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       outline: none;
       position: relative;
+      z-index: 2;
+      border: 3px solid rgba(255, 255, 255, 0.3);
     }
+    
+    #micBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px 0 rgba(118, 75, 162, 0.6);
+    }
+    
+    #micBtn:active {
+      transform: translateY(0px);
+      box-shadow: 0 8px 20px 0 rgba(118, 75, 162, 0.5);
+    }
+    
     #micBtn.listening {
-      background: linear-gradient(135deg, #ffe259 0%, #ffa751 100%);
-      box-shadow: 0 0 40px 10px #ffa75188;
-      animation: pulse 1s infinite;
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+      animation: mic-pulse 2s infinite;
+      transform: scale(1.1);
     }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 #ffa75155; }
-      70% { box-shadow: 0 0 20px 10px #ffa75144; }
-      100% { box-shadow: 0 0 0 0 #ffa75122; }
+    
+    #micBtn.processing {
+      background: linear-gradient(135deg, #FFC107 0%, #FF9800 100%);
+      animation: mic-rotate 1.5s linear infinite;
     }
-    #status {
-      font-size: 1.2em;
-      margin-bottom: 1em;
-      min-height: 1.5em;
+    
+    #micBtn.speaking {
+      background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+      animation: mic-bounce 1.8s ease-in-out infinite;
     }
-    audio {
+    
+    @keyframes mic-pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 20px rgba(76, 175, 80, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+      }
+    }
+    
+    @keyframes mic-rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    @keyframes mic-bounce {
+      0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+      }
+      40% {
+        transform: translateY(-10px);
+      }
+      60% {
+        transform: translateY(-5px);
+      }
+    }
+    
+    .voice-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 160px;
+      height: 160px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .voice-indicator.active {
+      opacity: 1;
+      animation: voice-ring 2s ease-out infinite;
+    }
+    
+    @keyframes voice-ring {
+      0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1.3);
+        opacity: 0;
+      }
+    }
+    
+    .instructions {
+      font-size: 1em;
       margin-top: 25px;
+      opacity: 0.8;
+      line-height: 1.6;
+      max-width: 350px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .activation-hint {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 15px 20px;
+      margin-top: 20px;
+      font-size: 0.95em;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .activation-hint .highlight {
+      color: #4CAF50;
+      font-weight: bold;
+      text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    }
+    
+    audio {
+      margin-top: 20px;
       width: 100%;
       border-radius: 10px;
       outline: none;
+      display: none;
     }
+    
     .footer {
-      margin-top: 60px;
+      margin-top: 50px;
       font-size: 0.9em;
-      color: #eee;
-      opacity: 0.5;
+      color: rgba(255, 255, 255, 0.7);
+      opacity: 0.6;
+    }
+    
+    .connection-status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    
+    .connection-status.online {
+      background: rgba(76, 175, 80, 0.9);
+      color: white;
+    }
+    
+    .connection-status.offline {
+      background: rgba(244, 67, 54, 0.9);
+      color: white;
+    }
+    
+    .voice-waves {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 15px;
+      height: 30px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .voice-waves.active {
+      opacity: 1;
+    }
+    
+    .wave {
+      width: 4px;
+      height: 20px;
+      background: linear-gradient(to top, #4CAF50, #81C784);
+      margin: 0 2px;
+      border-radius: 2px;
+      animation: wave-animation 1.5s ease-in-out infinite;
+    }
+    
+    .wave:nth-child(2) { animation-delay: 0.1s; }
+    .wave:nth-child(3) { animation-delay: 0.2s; }
+    .wave:nth-child(4) { animation-delay: 0.3s; }
+    .wave:nth-child(5) { animation-delay: 0.4s; }
+    
+    @keyframes wave-animation {
+      0%, 100% { height: 20px; }
+      50% { height: 35px; }
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        margin: 20px;
+        padding: 30px 20px;
+      }
+      
+      .logo {
+        font-size: 2.3em;
+      }
+      
+      #micBtn {
+        width: 110px;
+        height: 110px;
+        font-size: 2.5em;
+      }
+      
+      #status {
+        font-size: 1.1em;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="connection-status" id="connectionStatus">🟢 Online</div>
+  
   <div class="container">
-    <h1>Voice Assistant</h1>
-    <div id="status">Premi e tieni premuto il microfono per parlare</div>
-    <button id="micBtn" title="Tieni premuto per parlare">🎤</button>
-    <audio id="audioReply" controls style="display:none"></audio>
+    <h1 class="logo">🎙️ OtoBot</h1>
+    <p class="subtitle">Assistente Vocale Otofarma Spa</p>
+    
+    <div id="status">Inizializzazione in corso...</div>
+    
+    <div class="mic-container">
+      <div class="voice-indicator" id="voiceIndicator"></div>
+      <button id="micBtn" title="Tieni premuto per parlare o dì 'OtoBot'">🎤</button>
+    </div>
+    
+    <div class="voice-waves" id="voiceWaves">
+      <div class="wave"></div>
+      <div class="wave"></div>
+      <div class="wave"></div>
+      <div class="wave"></div>
+      <div class="wave"></div>
+    </div>
+    
+    <div class="instructions">
+      <p>Tieni premuto il microfono per parlare</p>
+      <div class="activation-hint">
+        💡 Puoi anche dire semplicemente "<span class="highlight">OtoBot</span>" per attivarmi
+      </div>
+    </div>
+    
+    <audio id="audioReply" controls></audio>
   </div>
+  
   <div class="footer">
-    &copy; 2025 Voice AI Assistant
+    &copy; 2025 OtoBot - Assistente Vocale Otofarma Spa
   </div>
+
   <script>
-    let mediaRecorder, audioChunks = [];
+    // Voice Recognition Variables
+    let recognition = null;
+    let isListening = false;
+    let lastActivationTime = 0;
+    const ACTIVATION_COOLDOWN = 3000;
+
+    // UI Elements
     const micBtn = document.getElementById('micBtn');
     const status = document.getElementById('status');
     const audioReply = document.getElementById('audioReply');
+    const voiceIndicator = document.getElementById('voiceIndicator');
+    const voiceWaves = document.getElementById('voiceWaves');
+    const connectionStatus = document.getElementById('connectionStatus');
 
+    // Voice Settings for Professional Italian Male Voice
+    function getBestItalianMaleVoice() {
+      const voices = window.speechSynthesis.getVoices();
+      
+      const preferredMaleVoices = [
+        'Microsoft Cosimo - Italian (Italy)',
+        'Cosimo',
+        'Microsoft Riccardo - Italian (Italy)', 
+        'Riccardo',
+        'Paolo',
+        'Marco',
+        'Andrea',
+        'Luca',
+        'Google Italiano'
+      ];
+
+      for (const voiceName of preferredMaleVoices) {
+        const voice = voices.find(v => 
+          v.name.toLowerCase().includes(voiceName.toLowerCase()) && 
+          v.lang.includes('it')
+        );
+        if (voice) return voice;
+      }
+
+      const italianVoice = voices.find(v => 
+        v.lang.includes('it-IT') && 
+        (v.name.toLowerCase().includes('cosimo') || 
+         v.name.toLowerCase().includes('riccardo') ||
+         v.name.toLowerCase().includes('paolo') ||
+         v.name.toLowerCase().includes('marco') ||
+         v.name.toLowerCase().includes('luca'))
+      );
+      
+      if (italianVoice) return italianVoice;
+      return voices.find(v => v.lang.includes('it-IT')) || voices.find(v => v.lang.includes('it'));
+    }
+
+    // Enhanced Voice Detection with Precise "OtoBot" Matching
+    function initializeVoiceRecognition() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        console.warn('Speech recognition not supported');
+        updateStatus("Riconoscimento vocale non supportato", "offline");
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'it-IT';
+      recognition.maxAlternatives = 3;
+
+      recognition.onresult = function(event) {
+        const currentTime = Date.now();
+        if (currentTime - lastActivationTime < ACTIVATION_COOLDOWN) {
+          return;
+        }
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript.toLowerCase().trim();
+          
+          if (event.results[i].isFinal) {
+            console.log('Final transcript:', transcript);
+            
+            if (isExactOtoBotActivation(transcript)) {
+              lastActivationTime = currentTime;
+              activateOtoBot();
+              break;
+            }
+          } else {
+            if (isExactOtoBotActivation(transcript)) {
+              lastActivationTime = currentTime;
+              activateOtoBot();
+              break;
+            }
+          }
+        }
+      };
+
+      recognition.onerror = function(event) {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'no-speech' || event.error === 'audio-capture') {
+          setTimeout(() => {
+            if (!isListening) startVoiceRecognition();
+          }, 1000);
+        }
+      };
+
+      recognition.onend = function() {
+        console.log('Speech recognition ended');
+        isListening = false;
+        setTimeout(() => {
+          if (!isListening) startVoiceRecognition();
+        }, 500);
+      };
+    }
+
+    // Extremely precise OtoBot activation detection
+    function isExactOtoBotActivation(transcript) {
+      const normalized = normalizeForActivation(transcript);
+      
+      const exactPatterns = [
+        'otobot',
+        'oto bot',
+        'otto bot',
+        'ottobot',
+        'ciao otobot',
+        'salve otobot',
+        'buongiorno otobot',
+        'hey otobot'
+      ];
+
+      for (const pattern of exactPatterns) {
+        if (normalized === pattern) return true;
+        
+        const regex = new RegExp(`\\b${pattern}\\b`);
+        if (regex.test(normalized)) return true;
+      }
+
+      const words = normalized.split(/\s+/);
+      for (const word of words) {
+        if (['otobot', 'ottobot'].includes(word)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    function normalizeForActivation(text) {
+      return text
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .replace(/otto/g, 'oto')
+        .replace(/òto/g, 'oto')
+        .replace(/óto/g, 'oto');
+    }
+
+    // UI Status Updates
+    function updateStatus(message, type = "default") {
+      status.textContent = message;
+      status.className = type === "listening" ? "status-listening" : 
+                        type === "processing" ? "status-processing" :
+                        type === "speaking" ? "status-speaking" : "";
+    }
+
+    function updateConnectionStatus(online) {
+      connectionStatus.textContent = online ? "🟢 Online" : "🔴 Offline";
+      connectionStatus.className = `connection-status ${online ? 'online' : 'offline'}`;
+    }
+
+    // Start voice recognition
+    function startVoiceRecognition() {
+      if (!recognition || isListening) return;
+      
+      try {
+        isListening = true;
+        recognition.start();
+        console.log('Voice recognition started - listening for "OtoBot"');
+        updateStatus("Dì 'OtoBot' per attivare l'assistente o premi il microfono", "listening");
+        updateConnectionStatus(true);
+      } catch (error) {
+        console.error('Error starting voice recognition:', error);
+        isListening = false;
+        updateConnectionStatus(false);
+      }
+    }
+
+    function stopVoiceRecognition() {
+      if (recognition && isListening) {
+        recognition.stop();
+        isListening = false;
+        console.log('Voice recognition stopped');
+      }
+    }
+
+    // Activate OtoBot with professional greeting
+    async function activateOtoBot() {
+      console.log('OtoBot activated!');
+      
+      stopVoiceRecognition();
+      
+      micBtn.classList.add('processing');
+      voiceIndicator.classList.add('active');
+      updateStatus("🤖 OtoBot attivato! Elaborazione in corso...", "processing");
+      
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: 'otobot',
+            voice: true
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          speakWithMaleVoice(data.reply);
+        } else {
+          console.error('Error communicating with backend');
+          speakWithMaleVoice('Buongiorno, sono OtoBot, il suo assistente virtuale di Otofarma Spa. Sono qui per aiutarla in tutto ciò che riguarda i nostri servizi e prodotti. Come posso esserle utile oggi?');
+        }
+      } catch (error) {
+        console.error('Network error:', error);
+        speakWithMaleVoice('Buongiorno, sono OtoBot, il suo assistente virtuale di Otofarma Spa. Sono qui per aiutarla in tutto ciò che riguarda i nostri servizi e prodotti. Come posso esserle utile oggi?');
+      }
+      
+      micBtn.classList.remove('processing');
+      voiceIndicator.classList.remove('active');
+      
+      setTimeout(() => {
+        startVoiceRecognition();
+      }, 3000);
+    }
+
+    // Enhanced professional Italian male voice
+    function speakWithMaleVoice(text) {
+      if (!window.speechSynthesis || !text) return;
+      
+      window.speechSynthesis.cancel();
+      
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.addEventListener('voiceschanged', () => {
+          speakWithMaleVoice(text);
+        }, { once: true });
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      const selectedVoice = getBestItalianMaleVoice();
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        console.log('Using professional voice:', selectedVoice.name);
+      }
+      
+      utterance.lang = 'it-IT';
+      utterance.pitch = 0.85;
+      utterance.rate = 0.85;
+      utterance.volume = 0.95;
+
+      updateStatus("🎙️ OtoBot sta parlando...", "speaking");
+
+      utterance.onstart = () => {
+        console.log('Speaking with professional male announcement voice');
+        micBtn.classList.add('speaking');
+        voiceWaves.classList.add('active');
+      };
+
+      utterance.onend = () => {
+        console.log('Speech ended');
+        updateStatus("Dì 'OtoBot' per attivare l'assistente o premi il microfono", "listening");
+        micBtn.classList.remove('speaking');
+        voiceWaves.classList.remove('active');
+      };
+
+      utterance.onerror = (event) => {
+        console.error('Speech error:', event.error);
+        updateStatus("Errore durante la riproduzione vocale");
+        micBtn.classList.remove('speaking');
+        voiceWaves.classList.remove('active');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // Microphone button functionality
+    let mediaRecorder, audioChunks = [];
     let recording = false;
     let stream = null;
 
@@ -103,49 +656,159 @@
       if (recording) return;
       recording = true;
       micBtn.classList.add('listening');
-      status.textContent = "Sto ascoltando...";
+      voiceIndicator.classList.add('active');
+      updateStatus("🎧 Sto ascoltando...", "listening");
 
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
 
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
 
-      mediaRecorder.onstop = async () => {
-        status.textContent = "Elaborazione...";
-        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'input.wav');
+        mediaRecorder.onstop = async () => {
+          updateStatus("⚙️ Elaborazione...", "processing");
+          await processVoiceInput();
+          
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+          }
+          micBtn.classList.remove('listening');
+          voiceIndicator.classList.remove('active');
+          recording = false;
+        };
 
-        // Send audio to Flask backend
-        const response = await fetch('/voice', { method: 'POST', body: formData });
-
-        if (response.ok) {
-          const replyBlob = await response.blob();
-          audioReply.src = URL.createObjectURL(replyBlob);
-          audioReply.style.display = '';
-          audioReply.play();
-          status.textContent = "Risposta dal bot!";
-        } else {
-          status.textContent = "Errore: " + (await response.text());
-        }
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-        }
-        micBtn.classList.remove('listening');
+        mediaRecorder.start();
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+        updateStatus("❌ Errore nell'accesso al microfono");
         recording = false;
-      };
-
-      mediaRecorder.start();
+        micBtn.classList.remove('listening');
+        voiceIndicator.classList.remove('active');
+      }
     }
 
     function stopRecording(e) {
       if (recording && mediaRecorder && mediaRecorder.state === "recording") {
-        status.textContent = "Sto elaborando la tua voce...";
+        updateStatus("🔄 Sto elaborando la tua voce...", "processing");
         mediaRecorder.stop();
       }
     }
+
+    async function processVoiceInput() {
+      try {
+        updateStatus("🎯 Dimmi la tua domanda...", "listening");
+        
+        const userRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        userRecognition.lang = 'it-IT';
+        userRecognition.continuous = false;
+        userRecognition.interimResults = false;
+
+        userRecognition.onresult = async function(event) {
+          const transcript = event.results[0][0].transcript;
+          console.log('User said:', transcript);
+          
+          await sendMessageToBackend(transcript);
+        };
+
+        userRecognition.onerror = function(event) {
+          console.error('Recognition error:', event.error);
+          updateStatus("❌ Errore nel riconoscimento vocale. Riprova.");
+        };
+
+        userRecognition.start();
+
+      } catch (error) {
+        console.error('Error processing voice input:', error);
+        updateStatus("❌ Errore nell'elaborazione vocale");
+      }
+    }
+
+    async function sendMessageToBackend(message) {
+      try {
+        updateStatus("🤖 Elaborazione della risposta...", "processing");
+        
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: message,
+            voice: true
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          speakWithMaleVoice(data.reply);
+        } else {
+          updateStatus("❌ Errore nella comunicazione con il server");
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+        updateStatus("❌ Errore di rete");
+        updateConnectionStatus(false);
+      }
+    }
+
+    // Initialize everything when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('OtoBot Voice Assistant initializing...');
+      updateStatus("🔄 Inizializzazione...", "processing");
+      
+      if (window.speechSynthesis) {
+        if (window.speechSynthesis.getVoices().length === 0) {
+          window.speechSynthesis.addEventListener('voiceschanged', () => {
+            console.log('Voices loaded:', window.speechSynthesis.getVoices().length);
+            initializeVoiceRecognition();
+            setTimeout(() => {
+              startVoiceRecognition();
+              updateStatus("✅ OtoBot pronto! Dì 'OtoBot' o premi il microfono", "listening");
+            }, 1000);
+          }, { once: true });
+        } else {
+          initializeVoiceRecognition();
+          setTimeout(() => {
+            startVoiceRecognition();
+            updateStatus("✅ OtoBot pronto! Dì 'OtoBot' o premi il microfono", "listening");
+          }, 1000);
+        }
+      }
+      
+      console.log('OtoBot Voice Assistant ready - say "OtoBot" to activate or press microphone');
+    });
+
+    // Handle page visibility changes
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopVoiceRecognition();
+        updateConnectionStatus(false);
+      } else {
+        setTimeout(() => {
+          if (!isListening) {
+            startVoiceRecognition();
+            updateConnectionStatus(true);
+          }
+        }, 1000);
+      }
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      stopVoiceRecognition();
+      window.speechSynthesis.cancel();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    });
+
+    // Test voice function for debugging
+    window.testOtoBotVoice = function() {
+      speakWithMaleVoice('Salve, sono OtoBot, il suo assistente virtuale di Otofarma Spa. Test della voce maschile italiana professionale.');
+    };
+
+    console.log('OtoBot Voice Assistant loaded successfully');
   </script>
 </body>
 </html>
-
