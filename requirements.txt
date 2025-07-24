@@ -12,3 +12,5 @@ vosk==0.3.45
 TTS==0.21.1
 torch==2.0.1
 torchaudio==2.0.2
+soundfile==0.12.1
+librosa==0.10.1
