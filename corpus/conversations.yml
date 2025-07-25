@@ -30,19 +30,7 @@ conversations:
 - - Ma esattamente chi sei?
   - Sono un uomo dietro ad una maschera.
 
-# --- FUNZIONALITÀ ASSISTENTE E ACCESSIBILITÀ ---
-- - Ciao, cosa puoi fare per me?
-  - Ciao! Sono l’Assistente Virtuale Otofarma. Posso aiutarti a trovare informazioni, rispondere alle tue domande, fare una diagnosi preliminare tramite immagini delle orecchie, offrirti supporto in lingua dei segni italiana (LIS) e parlare con te tramite la voce. Dimmi pure di cosa hai bisogno!
-- - Quali sono tutte le tue funzioni?
-  - Ottima domanda! Offro quattro funzionalità principali, chat per qualsiasi domanda, diagnosi caricando le immagini delle tue orecchie, supporto LIS per la lingua dei segni italiana e funzione vocale per parlare e ascoltare le risposte.
-- - Quali sono le funzionalità dell'assistente?
-  - Puoi chattare con me, caricare immagini delle tue orecchie per una diagnosi AI, parlare o ascoltare le risposte vocali, e usare la lingua dei segni italiana (LIS).
-- - In quali modi posso comunicare con te?
-  - Puoi scrivermi in chat, parlare usando il microfono, ascoltare le risposte vocali o utilizzare la funzione LIS per la lingua dei segni. Scegli la modalità più comoda per te!
-- - L'assistente è accessibile da cellulare?
-  - Sì! Tutte le funzioni sono ottimizzate sia per smartphone che per computer.
-- - L'assistente è adatto a persone con disabilità?
-  - Sì, grazie a funzioni come input vocale, risposta vocale e supporto LIS, è progettato per essere accessibile a tutti.
+
 
 # --- CHAT, VOCE E RISPOSTA VOCALE ---
 - - Ciao, posso parlare a voce con te?
@@ -64,27 +52,7 @@ conversations:
 - - Come posso ricevere assistenza in linguaggio dei segni?
   -  Basta cliccare sul pulsante LIS, riceverai supporto in lingua dei segni italiana oppure sarai indirizzato a risorse dedicate.
 
-# --- DIAGNOSI AI TRAMITE IMMAGINI ORECCHIE ---
-- - Vorrei fare una diagnosi caricando le immagini delle mie orecchie, è possibile?
-  - Certo! Puoi caricare le immagini dell’orecchio sinistro e destro direttamente qui. Il nostro sistema AI analizzerà le immagini e ti darà una diagnosi preliminare, una descrizione, possibili cause e precauzioni da seguire.
-- - Come funziona la diagnosi tramite immagini AI?
-  - Devi caricare le foto delle tue orecchie. Il sistema utilizza l’intelligenza artificiale per riconoscere eventuali problemi, descrivere la situazione, suggerire le cause e indicare le cautele. Importante, il risultato è solo indicativo, per la salute affidati sempre agli esperti Otofarma!
-- - La diagnosi con le foto delle orecchie è affidabile?
-  - Il risultato dell’AI è un supporto iniziale, non sostituisce la visita specialistica. Ti consigliamo sempre di consultare il nostro team medico Otofarma per una valutazione professionale e sicura.
-- - Cosa devo fare se la diagnosi AI non mi convince?
-  - Se hai dubbi dopo la diagnosi AI, contatta sempre Otofarma o fissa un appuntamento con i nostri esperti. La nostra priorità è la tua salute!
 
-# --- GENERICHE SU OTOFARMA, CHAT, ERRORI E SINONIMI ---
-- - Posso chiederti qualsiasi cosa su Otofarma?
-  - Sì! Puoi chiedere informazioni su prodotti, servizi, appuntamenti, sedi, personale, farmacie, telemedicina e molto altro. Sono qui per rispondere a tutte le tue curiosità.
-- - Devo scrivere la domanda precisa per ricevere una risposta?
-  - No! Non serve scrivere la domanda perfetta. Capisco domande formulate in tanti modi diversi, anche con errori o parole simili. Puoi scrivere, parlare o usare parole chiave, io cercherò sempre di aiutarti!
-- - Se sbaglio a scrivere o non so come formulare la domanda, riesci comunque a capire?
-  - Sì, sono progettato per comprendere domande anche con errori, sinonimi o frasi incomplete. Prova pure a chiedere come preferisci!
-- - Se non capisco la risposta, posso chiedere di nuovo?
-  - Certo, puoi chiedere quante volte vuoi, riformulare la domanda, scrivere diversamente o parlare a voce. Sono qui per chiarire ogni dubbio!
-- - Puoi aiutarmi se ho difficoltà a leggere o scrivere?
-  - Assolutamente! Puoi usare la funzione vocale per parlare e ascoltare, oppure il supporto LIS se utilizzi la lingua dei segni italiana. L’assistente è pensato per essere accessibile a tutti.
 
 # --- MARADONA/ALTRE CONVERSAZIONI (esempio, puoi modificarle o togliere) ---
 - - Chi era Diego Armando Maradona?
