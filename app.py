@@ -8,15 +8,7 @@ import unicodedata
 import math
 from datetime import datetime
 import pytz
-import tempfile
-import wave
 import json
-from pydub import AudioSegment
-from TTS.api import TTS
-from vosk import Model, KaldiRecognizer
-from flask import send_file
-import urllib.request
-import zipfile
 
 
 from flask import Flask, render_template, request, jsonify
@@ -27,88 +19,8 @@ except ImportError:
     raise ImportError("Install flask-cors: pip install flask-cors")
 app = Flask(__name__)
 CORS(app)
-# Voice processing configuration with absolute paths for deployment
-VOSK_MODEL_PATH = os.environ.get("VOSK_MODEL_PATH", "/app/models/vosk-model-it-0.22/vosk-model-it-0.22")
-SPEAKER_WAV_PATH = os.environ.get("SPEAKER_WAV_PATH", "/app/voice_preview_antonio.wav")
-def download_vosk_model_if_needed():
-    """Download VOSK model automatically if not exists"""
-    model_dir = os.path.join(os.path.dirname(__file__), "models", "vosk-model-it-0.22", "vosk-model-it-0.22")
     
-    if not os.path.exists(model_dir):
-        print("📥 Downloading VOSK Italian model...")
-        
-        # Create models directory
-        os.makedirs(os.path.dirname(model_dir), exist_ok=True)
-        
-        try:
-            # Try main model first (best quality)
-            url = "https://alphacephei.com/vosk/models/vosk-model-it-0.22.zip"
-            zip_path = "vosk-model-it-0.22.zip"
-            
-            print("⬇️ Downloading main Italian model (this may take a few minutes)...")
-            urllib.request.urlretrieve(url, zip_path)
-            
-            print("📦 Extracting model...")
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall("models/")
-            
-            # Cleanup zip file
-            os.remove(zip_path)
-            print("✅ Main VOSK model downloaded successfully!")
-            
-        except Exception as e:
-            print(f"❌ Error downloading main model: {e}")
-            print("🔄 Trying smaller backup model...")
-            
-            try:
-                # Fallback to smaller model (still professional Italian)
-                url = "https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip"
-                zip_path = "vosk-model-small-it-0.22.zip"
-                
-                print("⬇️ Downloading smaller Italian model...")
-                urllib.request.urlretrieve(url, zip_path)
-                
-                print("📦 Extracting smaller model...")
-                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                    zip_ref.extractall("models/")
-                
-                # Rename to match expected path
-                small_model_path = os.path.join("models", "vosk-model-small-it-0.22")
-                if os.path.exists(small_model_path):
-                    import shutil
-                    target_path = os.path.join("models", "vosk-model-it-0.22", "vosk-model-it-0.22")
-                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
-                    shutil.move(small_model_path, target_path)
-                
-                os.remove(zip_path)
-                print("✅ Smaller VOSK model downloaded successfully!")
-                
-            except Exception as e2:
-                print(f"❌ Error downloading backup model: {e2}")
-                print("⚠️ Voice features will not be available")
 
-# Call the function before VOSK initialization
-download_vosk_model_if_needed()
-
-# Initialize VOSK and TTS models for live voice processing
-vosk_model = None
-tts = None
-
-try:
-    # Try absolute path first (for deployment)
-    if os.path.exists(VOSK_MODEL_PATH):
-        vosk_model = Model(VOSK_MODEL_PATH)
-        print(f"✅ VOSK model loaded from: {VOSK_MODEL_PATH}")
-    else:
-        # Try local path after download
-        local_vosk = os.path.join(os.path.dirname(__file__), "models", "vosk-model-it-0.22", "vosk-model-it-0.22")
-        if os.path.exists(local_vosk):
-            vosk_model = Model(local_vosk)
-            print(f"✅ VOSK model loaded from local: {local_vosk}")
-        else:
-            print("❌ VOSK model not found even after download attempt")
-except Exception as e:
-    print(f"❌ Error loading VOSK model: {e}")
 try:
     import nltk
     nltk.download('punkt', quiet=True)
@@ -129,6 +41,7 @@ try:
 except Exception:
     spellchecker_available = False
     spell = None
+
 
 try:
     from rapidfuzz import process, fuzz, distance
@@ -168,6 +81,59 @@ VOICE_ACTIVATION_KEYWORDS = {
     "virtual assistant", "hey otobot", "ciao otobot", "salve otobot"
 }
 
+# Enhanced voice activation for continuous listening
+ENHANCED_ACTIVATION_PATTERNS = [
+    r"\bhey\s+otobot\b",
+    r"\bciao\s+otobot\b", 
+    r"\bsalve\s+otobot\b",
+    r"\bbuongiorno\s+otobot\b",
+    r"\bbuonasera\s+otobot\b",
+    r"^otobot\b",
+    r"\botobot$",
+    r"\boto\s+bot\b",
+    r"\bassistente\s+otofarma\b",
+    r"\botofarma\s+assistente\b",
+    r"\botobot\s+",
+    r"\s+otobot\b",
+    r"^otobot$"
+]
+
+def detect_enhanced_voice_activation(text):
+    """Enhanced voice activation detection for Hey OtoBot"""
+    if not text:
+        return False
+   
+        
+    text_clean = normalize(text.strip())
+    
+    # Check enhanced patterns
+    for pattern in ENHANCED_ACTIVATION_PATTERNS:
+        if re.search(pattern, text_clean, re.IGNORECASE):
+            return True
+    
+    # Check if message starts or ends with activation words
+    words = text_clean.split()
+    if words:
+        first_two = " ".join(words[:2]).lower()
+        last_two = " ".join(words[-2:]).lower()
+        
+        activation_phrases = ["hey otobot", "ciao otobot", "salve otobot", "otobot", "oto bot"]
+        for phrase in activation_phrases:
+            if phrase in first_two or phrase in last_two:
+                return True
+    
+    return False
+
+def handle_voice_activation_greeting():
+    """Generate automatic greeting for Hey OtoBot - PROFESSIONAL RESPONSES"""
+    professional_greetings = [
+        f"Salve! Sono {ASSISTANT_NAME}, il suo assistente vocale professionale di Otofarma Spa. È un piacere sentirla! Come posso aiutarla oggi con i nostri apparecchi acustici di ultima generazione e servizi di teleaudiologia?",
+        f"Buongiorno! Sono {ASSISTANT_NAME} di Otofarma Spa. Sono molto felice che mi abbia attivato! Sono qui per fornirle tutte le informazioni sui nostri prodotti audiologici innovativi e servizi specializzati. Cosa desidera sapere?",
+        f"Salve e benvenuto! Sono {ASSISTANT_NAME}, il suo consulente virtuale specializzato di Otofarma. È un onore poterla servire oggi! Posso aiutarla con apparecchi acustici ricaricabili, garanzie, prezzi o qualsiasi altra informazione?",
+        f"Ciao! Sono {ASSISTANT_NAME} da Otofarma Spa. Sono entusiasta di poterla assistere! Sono qui per rispondere a tutte le sue domande sui nostri apparecchi acustici su misura, la teleaudiologia e i nostri servizi premium. Come posso essere utile?",
+        f"Buongiorno! È un piacere sentirla. Sono {ASSISTANT_NAME}, il suo assistente vocale di fiducia di Otofarma Spa. Sono completamente a sua disposizione per informazioni dettagliate sui nostri prodotti e servizi. Cosa posso fare per lei oggi?"
+    ]
+    return random.choice(professional_greetings)
 ASSISTANT_RESPONSES = [
     f"Buongiorno, sono {ASSISTANT_NAME}, l'assistente virtuale di Otofarma Spa. Sono qui per aiutarla in tutto ciò che riguarda i nostri servizi e prodotti. Come posso esserle utile oggi?",
     f"Salve, sono {ASSISTANT_NAME}, il suo assistente virtuale di Otofarma. Sono a sua completa disposizione per rispondere alle sue domande sui nostri servizi. Cosa desidera sapere?",
@@ -1169,87 +1135,6 @@ class FallbackMemory:
 
 fallback_mem = FallbackMemory()
 
-# Flask routes
-def transcribe_audio_vosk(audio_path):
-    """Transcribe audio using VOSK model for live voice processing"""
-    if not vosk_model:
-        raise Exception("VOSK model not available")
-    
-    wf = wave.open(audio_path, "rb")
-    rec = KaldiRecognizer(vosk_model, wf.getframerate())
-    results = []
-    
-    while True:
-        data = wf.readframes(4000)
-        if len(data) == 0:
-            break
-        if rec.AcceptWaveform(data):
-            part = json.loads(rec.Result())['text']
-            if part.strip():
-                results.append(part)
-    
-    final_result = json.loads(rec.FinalResult())['text']
-    if final_result.strip():
-        results.append(final_result)
-    
-    wf.close()
-    return " ".join(results).strip()
-
-def generate_italian_male_tts(text):
-    """Generate TTS with professional Italian male voice"""
-    if not tts:
-        raise Exception("TTS model not available")
-    
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio:
-        try:
-            # Try with custom Antonio speaker first
-            if os.path.exists(SPEAKER_WAV_PATH):
-                tts.tts_to_file(
-                    text=text,
-                    language="it",
-                    speaker_wav=SPEAKER_WAV_PATH,
-                    file_path=temp_audio.name
-                )
-                print(f"🔊 TTS generated with Antonio speaker: {SPEAKER_WAV_PATH}")
-            else:
-                # Try local speaker wav
-                local_speaker = os.path.join(os.path.dirname(__file__), "voice_preview_antonio.wav")
-                if os.path.exists(local_speaker):
-                    tts.tts_to_file(
-                        text=text,
-                        language="it",
-                        speaker_wav=local_speaker,
-                        file_path=temp_audio.name
-                    )
-                    print(f"🔊 TTS generated with local Antonio speaker")
-                else:
-                    # Fallback without custom speaker
-                    tts.tts_to_file(
-                        text=text,
-                        language="it",
-                        file_path=temp_audio.name
-                    )
-                    print("🔊 TTS generated with default Italian voice")
-            
-            return temp_audio.name
-            
-        except Exception as e:
-            print(f"❌ TTS generation error: {e}")
-            raise
-
-def convert_audio_to_wav(audio_path):
-    """Convert audio to WAV format if needed"""
-    try:
-        # Test if already valid WAV
-        wf = wave.open(audio_path, "rb")
-        wf.close()
-        return audio_path
-    except wave.Error:
-        # Convert to WAV using pydub
-        sound = AudioSegment.from_file(audio_path)
-        wav_path = audio_path + "_converted.wav"
-        sound.export(wav_path, format="wav")
-        return wav_path
 
 def process_voice_through_existing_chat(transcribed_text):
     """Process voice input through existing chat logic"""
@@ -1324,83 +1209,26 @@ def voice_activation():
         })
     
     return jsonify({"activated": False})
-@app.route("/voice", methods=["POST"])
-def live_voice_processing():
-    """Live voice processing endpoint - no file upload needed"""
-    if 'audio' not in request.files:
-        return jsonify({"error": "No audio data received"}), 400
 
-    if not vosk_model or not tts:
-        return jsonify({"error": "Voice processing not available"}), 503
-
-    audio_file = request.files['audio']
-    
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_input:
-        audio_file.save(temp_input.name)
-        
-        try:
-            # Convert to WAV if needed
-            wav_path = convert_audio_to_wav(temp_input.name)
-            
-            # Transcribe with VOSK
-            user_text = transcribe_audio_vosk(wav_path)
-            print(f"🎤 Live Voice Input: '{user_text}'")
-            
-            if not user_text.strip():
-                return jsonify({"error": "No speech detected"}), 400
-            
-            # Process through existing chat logic
-            answer_text = process_voice_through_existing_chat(user_text)
-            print(f"🗣️ Voice Response: '{answer_text[:50]}...'")
-            
-            # Generate Italian male TTS
-            tts_audio_path = generate_italian_male_tts(answer_text)
-            
-            # Return audio response for live playback
-            return send_file(
-                tts_audio_path,
-                mimetype="audio/wav",
-                as_attachment=False,
-                download_name="live_response.wav"
-            )
-            
-        except Exception as e:
-            print(f"❌ Live voice processing error: {e}")
-            return jsonify({"error": f"Voice processing failed: {str(e)}"}), 500
-        
-        finally:
-            # Cleanup temporary files
-            try:
-                if os.path.exists(temp_input.name):
-                    os.unlink(temp_input.name)
-                if wav_path != temp_input.name and os.path.exists(wav_path):
-                    os.unlink(wav_path)
-            except Exception:
-                pass
-
-@app.route("/voice_status", methods=["GET"])
-def check_voice_availability():
-    """Check if live voice processing is available"""
-    return jsonify({
-        "voice_available": vosk_model is not None and tts is not None,
-        "vosk_status": vosk_model is not None,
-        "tts_status": tts is not None,
-        "speaker_available": os.path.exists(SPEAKER_WAV_PATH) or os.path.exists(os.path.join(os.path.dirname(__file__), "voice_preview_antonio.wav")),
-        "mode": "live_microphone"
-    })
 @app.route("/chat", methods=["POST"])
 def chat():
     """Main chat endpoint with enhanced intelligence"""
     user_message = request.json.get("message", "")
     voice_mode = request.json.get("voice", True)
+    
+    # Enhanced voice activation detection
+    if detect_enhanced_voice_activation(user_message):
+        print("🔥 Hey OtoBot detected in chat!")
+        return jsonify({"reply": handle_voice_activation_greeting(), "voice": voice_mode, "male_voice": True})
     user_lat = request.json.get("lat", None)
     user_lon = request.json.get("lon", None)
+    
 
     print(f"Received message: '{user_message}'")
 
     # 1. Check for assistant name activation
     if detect_assistant_name(user_message):
-        return jsonify({"reply": get_assistant_introduction(), "voice": voice_mode, "male_voice": True})
+        return jsonify({"reply": handle_voice_activation_greeting(), "voice": voice_mode, "male_voice": True})
 
     # 2. Check for general greetings first
     general = check_general_patterns(user_message)
