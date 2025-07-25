@@ -1,396 +1,285 @@
-// Voice Assistant Variables for VOSK + TTS Backend Integration
-let isRecording = false;
-let mediaRecorder = null;
-let audioChunks = [];
-let stream = null;
-let lastActivationTime = 0;
-const ACTIVATION_COOLDOWN = 3000;
+// OtoBot Professional Italian Voice Assistant (Best Human Voice Selection)
 
-// UI Elements
+let isRecording = false;
+let isListening = false;
+let recognition = null;
+let continuousListening = true;
+
+// UI elements
 const micBtn = document.getElementById('micBtn');
 const status = document.getElementById('status');
-const audioReply = document.getElementById('audioReply');
+const activationStatus = document.getElementById('activationStatus');
+const connectionStatus = document.getElementById('connectionStatus');
 
-// Check if voice processing is available on backend
-async function checkVoiceAvailability() {
-    try {
-        const response = await fetch('/voice_status');
-        const data = await response.json();
-        console.log('Voice status:', data);
-        
-        if (data.voice_available) {
-            status.textContent = "🎤 Assistente vocale pronto - Premi e tieni premuto per parlare";
-            return true;
-        } else {
-            status.textContent = "❌ Assistente vocale non disponibile";
-            return false;
-        }
-    } catch (error) {
-        console.error('Error checking voice status:', error);
-        status.textContent = "⚠️ Errore connessione vocale";
-        return false;
-    }
+// --- Voice Synthesis (Best Italian Voice) ---
+function speakItalianBest(text) {
+    const synth = window.speechSynthesis;
+    let voices = synth.getVoices();
+
+    // Try to find the best neural/natural Italian voice
+    let preferredNames = [
+        'DiegoNeural', 'Giorgio', 'Wavenet-D', 'Wavenet-B', 'Wavenet', 'Neural', 'Natural'
+    ];
+    let italianNeural = voices.find(v =>
+        v.lang.startsWith('it') &&
+        preferredNames.some(name => v.name.toLowerCase().includes(name.toLowerCase()))
+    );
+
+    // Fallback: any Italian male voice
+    let italianMale = voices.find(v =>
+        v.lang.startsWith('it') &&
+        (v.name.toLowerCase().includes('male') ||
+         v.name.toLowerCase().includes('giorgio') ||
+         v.name.toLowerCase().includes('diego'))
+    );
+
+    // Fallback: any Italian voice
+    let italian = voices.find(v => v.lang.startsWith('it'));
+
+    // Fallback: any voice
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = (italianNeural || italianMale || italian || voices[0]).lang;
+    utter.voice = italianNeural || italianMale || italian || voices[0];
+    utter.rate = 1;
+    utter.pitch = 1;
+
+    synth.speak(utter);
 }
 
-// Voice Activation Detection (using Web Speech API for "otobot" detection)
-let recognition = null;
-let isListening = false;
-
-function initializeVoiceActivation() {
+// --- Hotword Detection ("Hey OtoBot") ---
+function initVoiceActivation() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        console.warn('Speech recognition not supported');
-        return;
+        activationStatus.textContent = "🎧 Hey OtoBot non supportato dal browser";
+        return false;
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
-    
+
     recognition.continuous = true;
-    recognition.interimResults = true;
+    recognition.interimResults = false;
     recognition.lang = 'it-IT';
+    recognition.maxAlternatives = 1;
 
-    recognition.onresult = function(event) {
-        const currentTime = Date.now();
-        if (currentTime - lastActivationTime < ACTIVATION_COOLDOWN) return;
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript.toLowerCase().trim();
-            
-            if (event.results[i].isFinal) {
-                console.log('Voice activation check:', transcript);
-                
-                if (isOtoBotActivation(transcript)) {
-                    lastActivationTime = currentTime;
-                    handleVoiceActivation();
-                    break;
-                }
-            }
-        }
-    };
-
-    recognition.onerror = function(event) {
-        console.error('Speech recognition error:', event.error);
-        setTimeout(() => {
-            if (!isListening) startVoiceActivation();
-        }, 1000);
-    };
-
-    recognition.onend = function() {
-        isListening = false;
-        setTimeout(() => {
-            if (!isListening) startVoiceActivation();
-        }, 500);
-    };
-}
-
-// Precise OtoBot activation detection
-function isOtoBotActivation(transcript) {
-    const normalized = transcript
-        .toLowerCase()
-        .replace(/[^\w\s]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    
-    const patterns = [
-        'otobot',
-        'oto bot',
-        'ciao otobot',
-        'salve otobot',
-        'hey otobot',
-        'assistente virtuale',
-        'assistente otofarma'
-    ];
-
-    return patterns.some(pattern => 
-        normalized === pattern || 
-        normalized.includes(pattern) ||
-        normalized.split(' ').includes('otobot')
-    );
-}
-
-// Handle voice activation
-async function handleVoiceActivation() {
-    console.log('🎯 OtoBot activated via voice!');
-    stopVoiceActivation();
-    
-    micBtn.classList.add('listening');
-    status.textContent = "🤖 OtoBot attivato! Elaborazione...";
-    
-    try {
-        // Send activation to backend
-        const response = await fetch('/voice_activation', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({message: 'otobot'})
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.activated) {
-                // Use your backend TTS instead of browser TTS
-                await sendTextToBackendTTS(data.reply);
-            }
-        }
-    } catch (error) {
-        console.error('Activation error:', error);
-    }
-    
-    micBtn.classList.remove('listening');
-    setTimeout(() => startVoiceActivation(), 2000);
-}
-
-// Start voice activation listening
-function startVoiceActivation() {
-    if (!recognition || isListening) return;
-    
-    try {
+    recognition.onstart = () => {
         isListening = true;
-        recognition.start();
-        console.log('👂 Listening for "OtoBot" activation...');
-    } catch (error) {
-        console.error('Error starting voice activation:', error);
+        activationStatus.textContent = "🎧 Ascolto 'Hey OtoBot': ATTIVO";
+        activationStatus.classList.add('listening');
+    };
+
+    recognition.onend = () => {
         isListening = false;
-    }
-}
-
-// Stop voice activation listening
-function stopVoiceActivation() {
-    if (recognition && isListening) {
-        recognition.stop();
-        isListening = false;
-    }
-}
-
-// Send text to backend TTS (for activation responses)
-async function sendTextToBackendTTS(text) {
-    try {
-        status.textContent = "🔊 Generazione voce italiana...";
-        
-        // Create a FormData with text as audio (dummy audio for TTS-only)
-        const formData = new FormData();
-        
-        // Create a minimal audio blob for the backend
-        const audioBlob = new Blob(['dummy'], {type: 'audio/wav'});
-        formData.append('audio', audioBlob, 'activation.wav');
-        
-        // Instead, use chat endpoint for activation
-        const response = await fetch('/chat', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                message: text,
-                voice: true
-            })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            status.textContent = "✅ Risposta pronta";
-            console.log('Backend response:', data.reply);
+        activationStatus.textContent = "🎧 Ascolto 'Hey OtoBot': SPENTO";
+        activationStatus.classList.remove('listening');
+        if (continuousListening) {
+            setTimeout(() => {
+                startVoiceActivation();
+            }, 1000);
         }
-        
-    } catch (error) {
-        console.error('TTS error:', error);
-        status.textContent = "❌ Errore generazione voce";
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[event.resultIndex][0].transcript.toLowerCase();
+
+        // Hotword patterns
+        const activationPatterns = [
+            'hey otobot', 'otobot', 'oto bot', 'ciao otobot',
+            'salve otobot', 'buongiorno otobot', 'assistente otofarma'
+        ];
+
+        let activated = false;
+        for (const pattern of activationPatterns) {
+            if (transcript.includes(pattern)) {
+                activated = true;
+                break;
+            }
+        }
+
+        if (activated) {
+            status.textContent = "🔥 Hey OtoBot attivato! Generando saluto...";
+            recognition.stop();
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: transcript,
+                    voice: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.reply) {
+                    status.textContent = "🗣️ Risposta vocale in corso...";
+                    speakItalianBest(data.reply);
+                    status.textContent = "✅ Pronto per nuova conversazione";
+                    setTimeout(() => {
+                        if (continuousListening) {
+                            startVoiceActivation();
+                        }
+                    }, 2000);
+                }
+            })
+            .catch(() => {
+                setTimeout(() => {
+                    if (continuousListening) {
+                        startVoiceActivation();
+                    }
+                }, 2000);
+            });
+        }
+    };
+
+    recognition.onerror = () => {
+        setTimeout(() => {
+            if (!isListening && continuousListening) {
+                startVoiceActivation();
+            }
+        }, 2000);
+    };
+
+    return true;
+}
+
+function startVoiceActivation() {
+    if (recognition && !isListening && continuousListening) {
+        try {
+            recognition.start();
+        } catch (error) {}
     }
 }
 
-// Main microphone recording functionality
-micBtn.addEventListener('mousedown', startRecording);
-micBtn.addEventListener('touchstart', startRecording);
-micBtn.addEventListener('mouseup', stopRecording);
-micBtn.addEventListener('mouseleave', stopRecording);
-micBtn.addEventListener('touchend', stopRecording);
-
-async function startRecording(e) {
-    e.preventDefault();
+// --- Microphone Button: Record, Auto-stop, Transcribe, Send, Auto-Play ---
+async function startRecording() {
     if (isRecording) return;
 
-    stopVoiceActivation(); // Stop background listening
-    
+    continuousListening = false;
+    if (recognition && isListening) recognition.stop();
+
     try {
-        stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: {
-                sampleRate: 16000,
-                channelCount: 1,
-                echoCancellation: true,
-                noiseSuppression: true
-            }
-        });
-        
-        mediaRecorder = new MediaRecorder(stream, {
-            mimeType: 'audio/webm;codecs=opus'
-        });
-        
-        audioChunks = [];
+        status.textContent = "🎤 Parla ora...";
         isRecording = true;
-        
-        micBtn.classList.add('listening');
-        status.textContent = "🎤 Sto ascoltando... (tieni premuto)";
+        micBtn.textContent = '🔴';
+        micBtn.classList.add('recording');
 
-        mediaRecorder.ondataavailable = event => {
-            if (event.data.size > 0) {
-                audioChunks.push(event.data);
+        // Use browser SpeechRecognition for transcription
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recorder = new SpeechRecognition();
+        recorder.lang = 'it-IT';
+        recorder.interimResults = false;
+        recorder.maxAlternatives = 1;
+
+        recorder.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            status.textContent = "⏳ Risposta in corso...";
+            micBtn.textContent = '⚙️';
+            micBtn.classList.remove('recording');
+            micBtn.classList.add('processing');
+            isRecording = false;
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: transcript,
+                    voice: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.reply) {
+                    status.textContent = "🗣️ Risposta vocale in corso...";
+                    speakItalianBest(data.reply);
+                    status.textContent = "✅ Pronto per nuova conversazione";
+                }
+                resetMicButton();
+                continuousListening = true;
+                setTimeout(() => {
+                    startVoiceActivation();
+                }, 2000);
+            });
+        };
+
+        recorder.onerror = (event) => {
+            status.textContent = "❌ Errore trascrizione o nessuna voce rilevata";
+            resetMicButton();
+            continuousListening = true;
+            setTimeout(() => {
+                startVoiceActivation();
+            }, 2000);
+        };
+
+        recorder.onend = () => {
+            if (isRecording) {
+                status.textContent = "❌ Nessuna voce rilevata";
+                resetMicButton();
+                continuousListening = true;
+                setTimeout(() => {
+                    startVoiceActivation();
+                }, 2000);
             }
         };
 
-        mediaRecorder.onstop = async () => {
-            await processRecordedAudio();
-        };
+        recorder.start();
 
-        mediaRecorder.start(100); // Collect data every 100ms
-        
     } catch (error) {
-        console.error('Microphone access error:', error);
-        status.textContent = "❌ Errore accesso microfono";
+        status.textContent = `❌ Errore microfono: ${error.message}`;
         isRecording = false;
-        micBtn.classList.remove('listening');
+        micBtn.textContent = '🎤';
+        micBtn.classList.remove('recording');
+        continuousListening = true;
+        setTimeout(() => {
+            startVoiceActivation();
+        }, 2000);
     }
 }
 
-function stopRecording(e) {
-    e.preventDefault();
-    if (!isRecording || !mediaRecorder) return;
-
-    status.textContent = "⏳ Elaborazione audio...";
-    mediaRecorder.stop();
-    isRecording = false;
-    
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-    }
+function stopRecording() {
+    // Not needed: browser SpeechRecognition auto-stops on silence
 }
 
-// Process recorded audio through VOSK + TTS backend
-async function processRecordedAudio() {
-    if (audioChunks.length === 0) {
-        status.textContent = "❌ Nessun audio registrato";
-        micBtn.classList.remove('listening');
-        setTimeout(() => startVoiceActivation(), 1000);
+function resetMicButton() {
+    micBtn.textContent = '🎤';
+    micBtn.classList.remove('recording', 'processing');
+}
+
+function toggleRecording() {
+    if (!isRecording) {
+        startRecording();
+    }
+    // No manual stop needed; auto-stops on silence
+}
+
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', function() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        status.textContent = "❌ Browser non supportato. Usa Chrome, Firefox o Safari aggiornati.";
+        if (micBtn) micBtn.disabled = true;
         return;
     }
 
-    try {
-        status.textContent = "🧠 Elaborazione con VOSK + TTS...";
-        
-        // Create audio blob
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        console.log('Audio blob size:', audioBlob.size);
-        
-        // Send to backend voice processing
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'recording.wav');
-
-        const response = await fetch('/voice', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (response.ok) {
-            // Backend returns Italian male TTS audio
-            const audioResponseBlob = await response.blob();
-            
-            if (audioResponseBlob.size > 0) {
-                status.textContent = "🔊 Riproduzione risposta italiana...";
-                
-                // Play the Italian male TTS response
-                const audioUrl = URL.createObjectURL(audioResponseBlob);
-                const audio = new Audio(audioUrl);
-                
-                audio.onloadeddata = () => {
-                    console.log('🎵 Playing Italian male TTS response');
-                };
-                
-                audio.onended = () => {
-                    status.textContent = "✅ Conversazione completata";
-                    URL.revokeObjectURL(audioUrl);
-                    setTimeout(() => {
-                        status.textContent = "🎤 Premi per parlare o dì 'OtoBot'";
-                        startVoiceActivation();
-                    }, 1000);
-                };
-                
-                audio.onerror = (error) => {
-                    console.error('Audio playback error:', error);
-                    status.textContent = "❌ Errore riproduzione audio";
-                };
-                
-                await audio.play();
-            } else {
-                status.textContent = "❌ Risposta audio vuota";
-            }
-        } else {
-            const errorData = await response.json();
-            console.error('Voice processing error:', errorData);
-            status.textContent = `❌ ${errorData.error || 'Errore elaborazione vocale'}`;
-        }
-        
-    } catch (error) {
-        console.error('Voice processing error:', error);
-        status.textContent = "❌ Errore durante l'elaborazione";
+    if (!(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+        status.textContent = "❌ Richiesto HTTPS. Accedi tramite https:// o localhost";
+        if (micBtn) micBtn.disabled = true;
+        return;
     }
-    
-    micBtn.classList.remove('listening');
-    audioChunks = [];
-    
-    // Restart voice activation after processing
-    setTimeout(() => {
-        if (!isListening) {
-            status.textContent = "🎤 Premi per parlare o dì 'OtoBot'";
-            startVoiceActivation();
-        }
-    }, 2000);
-}
 
-// Initialize everything when page loads
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 OtoBot Voice-to-Voice Assistant initializing...');
-    
-    // Check if backend voice processing is available
-    const voiceAvailable = await checkVoiceAvailability();
-    
-    if (voiceAvailable) {
-        // Initialize voice activation listening
-        initializeVoiceActivation();
+    if (micBtn) {
+        micBtn.addEventListener('click', toggleRecording);
+        micBtn.disabled = false;
+        micBtn.style.opacity = '1';
+        micBtn.style.cursor = 'pointer';
+    }
+
+    connectionStatus.textContent = "🟢 Pronto (TTS browser)";
+    connectionStatus.className = "connection-status online";
+
+    // Ensure voices are loaded before first use
+    window.speechSynthesis.onvoiceschanged = () => {};
+
+    if (initVoiceActivation()) {
         setTimeout(() => {
             startVoiceActivation();
-            status.textContent = "🎤 Premi per parlare o dì 'OtoBot' per attivare";
-        }, 1000);
-        
-        console.log('✅ Voice-to-Voice Assistant ready with VOSK + Italian TTS');
-    } else {
-        console.error('❌ Backend voice processing not available');
-        micBtn.disabled = true;
-    }
-});
-
-// Handle page visibility changes
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        stopVoiceActivation();
-        if (isRecording) {
-            stopRecording(new Event('visibilitychange'));
-        }
-    } else {
-        setTimeout(() => {
-            if (!isListening && !isRecording) startVoiceActivation();
         }, 1000);
     }
 });
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    stopVoiceActivation();
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-});
-
-// Debug function to test voice status
-window.testVoiceStatus = async function() {
-    const status = await checkVoiceAvailability();
-    console.log('Voice status test result:', status);
-};
-
-console.log('🎯 OtoBot Voice Assistant JavaScript loaded - Ready for VOSK + TTS processing');
