@@ -12,3 +12,4 @@ nltk==3.8.1
 rapidfuzz==3.6.2
 pytz==2024.1
 google-cloud-texttospeech==2.16.0
+google-cloud-speech==2.26.0
