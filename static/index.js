@@ -1,4 +1,4 @@
-// OtoBot Professional Italian Voice Assistant (Best Human Voice Selection)
+// OtoBot Professional Italian Voice Assistant (Google Cloud Charon Voice)
 
 let isRecording = false;
 let isListening = false;
@@ -11,39 +11,19 @@ const status = document.getElementById('status');
 const activationStatus = document.getElementById('activationStatus');
 const connectionStatus = document.getElementById('connectionStatus');
 
-// --- Voice Synthesis (Best Italian Voice) ---
-function speakItalianBest(text) {
-    const synth = window.speechSynthesis;
-    let voices = synth.getVoices();
-
-    // Try to find the best neural/natural Italian voice
-    let preferredNames = [
-        'DiegoNeural', 'Giorgio', 'Wavenet-D', 'Wavenet-B', 'Wavenet', 'Neural', 'Natural'
-    ];
-    let italianNeural = voices.find(v =>
-        v.lang.startsWith('it') &&
-        preferredNames.some(name => v.name.toLowerCase().includes(name.toLowerCase()))
-    );
-
-    // Fallback: any Italian male voice
-    let italianMale = voices.find(v =>
-        v.lang.startsWith('it') &&
-        (v.name.toLowerCase().includes('male') ||
-         v.name.toLowerCase().includes('giorgio') ||
-         v.name.toLowerCase().includes('diego'))
-    );
-
-    // Fallback: any Italian voice
-    let italian = voices.find(v => v.lang.startsWith('it'));
-
-    // Fallback: any voice
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = (italianNeural || italianMale || italian || voices[0]).lang;
-    utter.voice = italianNeural || italianMale || italian || voices[0];
-    utter.rate = 1;
-    utter.pitch = 1;
-
-    synth.speak(utter);
+// --- Voice Synthesis via Backend Google TTS ---
+function speakWithGoogleTTS(text) {
+    fetch('/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.play();
+    });
 }
 
 // --- Hotword Detection ("Hey OtoBot") ---
@@ -111,7 +91,7 @@ function initVoiceActivation() {
             .then(data => {
                 if (data.reply) {
                     status.textContent = "🗣️ Risposta vocale in corso...";
-                    speakItalianBest(data.reply);
+                    speakWithGoogleTTS(data.reply);
                     status.textContent = "✅ Pronto per nuova conversazione";
                     setTimeout(() => {
                         if (continuousListening) {
@@ -189,7 +169,7 @@ async function startRecording() {
             .then(data => {
                 if (data.reply) {
                     status.textContent = "🗣️ Risposta vocale in corso...";
-                    speakItalianBest(data.reply);
+                    speakWithGoogleTTS(data.reply);
                     status.textContent = "✅ Pronto per nuova conversazione";
                 }
                 resetMicButton();
@@ -271,11 +251,8 @@ document.addEventListener('DOMContentLoaded', function() {
         micBtn.style.cursor = 'pointer';
     }
 
-    connectionStatus.textContent = "🟢 Pronto (TTS browser)";
+    connectionStatus.textContent = "🟢 Pronto (TTS Google Cloud)";
     connectionStatus.className = "connection-status online";
-
-    // Ensure voices are loaded before first use
-    window.speechSynthesis.onvoiceschanged = () => {};
 
     if (initVoiceActivation()) {
         setTimeout(() => {
