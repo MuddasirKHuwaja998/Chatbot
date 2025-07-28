@@ -9,7 +9,7 @@ import math
 from datetime import datetime
 import pytz
 import json
-
+from google.cloud import texttospeech
 
 from flask import Flask, render_template, request, jsonify
 
@@ -1301,6 +1301,39 @@ def chat():
     
     reply = fallback_mem.get_unique(fallback_messages)
     return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
+# Google Cloud TTS endpoint for Italian male voice
+@app.route("/tts", methods=["POST"])
+def tts():
+    data = request.json
+    text = data.get("text", "")
+    voice_name = "it-IT-Chirp3-HD-Charon"  # Your chosen male Italian voice
+
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
+
+    client = texttospeech.TextToSpeechClient()
+    synthesis_input = texttospeech.SynthesisInput(text=text)
+    voice = texttospeech.VoiceSelectionParams(
+        language_code="it-IT",
+        name=voice_name
+    )
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3
+    )
+
+    response = client.synthesize_speech(
+        input=synthesis_input,
+        voice=voice,
+        audio_config=audio_config
+    )
+
+    return (
+        response.audio_content,
+        200,
+        {
+            "Content-Type": "audio/mpeg",
+            "Content-Disposition": "inline; filename=output.mp3"
+        }
+    )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
