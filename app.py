@@ -1334,7 +1334,33 @@ def tts():
             "Content-Disposition": "inline; filename=output.mp3"
         }
     )
+from google.cloud import speech
 
+@app.route("/transcribe", methods=["POST"])
+def transcribe():
+    if "audio" not in request.files:
+        return jsonify({"error": "No audio file provided"}), 400
+
+    audio_file = request.files["audio"]
+    audio_bytes = audio_file.read()
+
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
+
+    client = speech.SpeechClient()
+    audio = speech.RecognitionAudio(content=audio_bytes)
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
+        sample_rate_hertz=48000,
+        language_code="it-IT",
+        enable_automatic_punctuation=True
+    )
+
+    response = client.recognize(config=config, audio=audio)
+    transcript = ""
+    for result in response.results:
+        transcript += result.alternatives[0].transcript
+
+    return jsonify({"transcript": transcript})
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)
