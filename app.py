@@ -10,7 +10,7 @@ from datetime import datetime
 import pytz
 import json
 from google.cloud import texttospeech
-
+from google.cloud import speech
 from flask import Flask, render_template, request, jsonify
 
 try:
