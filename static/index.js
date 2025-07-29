@@ -11,6 +11,7 @@ const connectionStatus = document.getElementById('connectionStatus');
 
 // --- Voice Synthesis via Backend Google TTS ---
 function speakWithGoogleTTS(text) {
+    showMoveXloopAfterCurrentLoop();
     fetch('/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,7 +33,6 @@ async function startRecording() {
     if (isRecording) return;
 
     status.textContent = "🎤 Parla ora...";
-    micBtn.textContent = '🔴';
     micBtn.classList.add('recording');
     isRecording = true;
     audioChunks = [];
@@ -50,7 +50,6 @@ async function startRecording() {
 
         mediaRecorder.onstop = async () => {
             status.textContent = "⏳ Trascrizione in corso...";
-            micBtn.textContent = '⚙️';
             micBtn.classList.remove('recording');
             micBtn.classList.add('processing');
             isRecording = false;
@@ -123,7 +122,6 @@ async function startRecording() {
 }
 
 function resetMicButton() {
-    micBtn.textContent = '🎤';
     micBtn.classList.remove('recording', 'processing');
     micBtn.onclick = toggleRecording;
 }
