@@ -21,7 +21,24 @@ function speakWithGoogleTTS(text) {
     .then(blob => {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
+        let safetyTimer = setTimeout(() => {
+            if (typeof endMoveXloop === 'function') {
+                endMoveXloop();
+            }
+        }, 10000); // 10 secondi
         audio.play();
+        audio.onended = function() {
+            clearTimeout(safetyTimer);
+            if (typeof endMoveXloop === 'function') {
+                endMoveXloop();
+            }
+        };
+        audio.onerror = function() {
+            clearTimeout(safetyTimer);
+            if (typeof endMoveXloop === 'function') {
+                endMoveXloop();
+            }
+        };
     });
 }
 
