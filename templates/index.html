@@ -12,7 +12,7 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: url("{{ url_for('static', filename='bg.png') }}") center center / cover no-repeat;
+      background: url("https://www.dropbox.com/scl/fi/msi01xmeaegy5bkvek7xu/bg.png?rlkey=881rpavqg1cr6yp4zg8epxykz&st=rv3pv05t&raw=1") center center / cover no-repeat;
       z-index: 0;
       filter: blur(6px);
     }
@@ -217,20 +217,41 @@
   <!-- Loghi background rimossi -->
   <div class="bg-image"></div>
   <div class="logo-bar">
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Otofarma Logo" />
+    <img src="https://www.dropbox.com/scl/fi/azrsytscmtp2qxxpinxw2/logo.png?rlkey=p3tjx2rpuzz9hnx76yk8nonxm&st=9g9due5i&raw=1" alt="Otofarma Logo" />
   </div>
   <div id="status">Inizializzazione assistente vocale PROFESSIONALE ITALIANO...</div>
   <div class="white-fade-box"></div>
   <main>
     <div id="micBtn" title="Clicca per parlare con Antonio">
-      <video id="micVideo" src="{{ url_for('static', filename='miclogo.mov') }}" width="100%" height="100%" muted playsinline style="border-radius:50%;display:block;background:#fff;"></video>
+      <video id="micVideo" src="https://www.dropbox.com/scl/fi/fr3tqs02vno3xrx62r0g0/miclogo.mov?rlkey=sxtulpn5493k8znavoza4e8z9&st=bohq34fi&raw=1" width="100%" height="100%" muted playsinline style="border-radius:50%;display:block;background:#fff;"></video>
     </div>
   </main>
-  <script src="{{ url_for('static', filename='index.js') }}"></script>
+  <script src="/static/index.js"></script>
+  <!-- Precaricamento risorse Dropbox -->
+  <script>
+    // Preload immagini e video Dropbox
+    const preloadUrls = [
+      "https://www.dropbox.com/scl/fi/msi01xmeaegy5bkvek7xu/bg.png?rlkey=881rpavqg1cr6yp4zg8epxykz&st=rv3pv05t&raw=1",
+      "https://www.dropbox.com/scl/fi/azrsytscmtp2qxxpinxw2/logo.png?rlkey=p3tjx2rpuzz9hnx76yk8nonxm&st=9g9due5i&raw=1",
+      "https://www.dropbox.com/scl/fi/nvl7ogydpw0zsrenqdol4/stillXloop.png?rlkey=elp1pzpapo7l8kqu0htapbok2&st=vt8zt1df&raw=1",
+      "https://www.dropbox.com/scl/fi/wqpmv0qi1d70rzp9ih9b1/moveXloop.png?rlkey=hhuw96avt0qs5emxlhqghgv7v&st=k2huz8hh&raw=1",
+      "https://www.dropbox.com/scl/fi/fr3tqs02vno3xrx62r0g0/miclogo.mov?rlkey=sxtulpn5493k8znavoza4e8z9&st=bohq34fi&raw=1"
+    ];
+    preloadUrls.forEach(url => {
+      if (url.endsWith('.png')) {
+        const img = new Image();
+        img.src = url;
+      } else if (url.endsWith('.mov')) {
+        const video = document.createElement('video');
+        video.src = url;
+        video.preload = 'auto';
+      }
+    });
+  </script>
   <!-- Avatar loop visualization -->
   <div class="center-image">
     <div class="avatar-fade">
-      <img id="avatar-img" src="{{ url_for('static', filename='stillXloop.png') }}" alt="Avatar" style="position:absolute;left:0;top:0;width:100%;height:100%;display:block;" />
+      <img id="avatar-img" src="https://www.dropbox.com/scl/fi/nvl7ogydpw0zsrenqdol4/stillXloop.png?rlkey=elp1pzpapo7l8kqu0htapbok2&st=vt8zt1df&raw=1" alt="Avatar" style="position:absolute;left:0;top:0;width:100%;height:100%;display:block;" />
     </div>
   </div>
   <script>
@@ -244,20 +265,20 @@
     function startAvatarLoop() {
       avatarImg = document.getElementById('avatar-img');
       if (!avatarImg) return;
-      avatarImg.src = "{{ url_for('static', filename='stillXloop.png') }}";
+      avatarImg.src = "https://www.dropbox.com/scl/fi/nvl7ogydpw0zsrenqdol4/stillXloop.png?rlkey=elp1pzpapo7l8kqu0htapbok2&st=vt8zt1df&raw=1";
       loopStartTime = Date.now();
       if (loopInterval) clearInterval(loopInterval);
       loopInterval = setInterval(() => {
-        avatarImg.src = "{{ url_for('static', filename='stillXloop.png') }}";
+        avatarImg.src = "https://www.dropbox.com/scl/fi/nvl7ogydpw0zsrenqdol4/stillXloop.png?rlkey=elp1pzpapo7l8kqu0htapbok2&st=vt8zt1df&raw=1";
         loopStartTime = Date.now();
         if (pendingMoveX) {
           pendingMoveX = false;
           clearInterval(loopInterval);
           loopInterval = null;
           setTimeout(() => {
-            avatarImg.src = "{{ url_for('static', filename='moveXloop.png') }}";
+            avatarImg.src = "https://www.dropbox.com/scl/fi/wqpmv0qi1d70rzp9ih9b1/moveXloop.png?rlkey=hhuw96avt0qs5emxlhqghgv7v&st=k2huz8hh&raw=1";
             moveXTimeout = setTimeout(() => {
-              avatarImg.src = "{{ url_for('static', filename='stillXloop.png') }}";
+              avatarImg.src = "https://www.dropbox.com/scl/fi/nvl7ogydpw0zsrenqdol4/stillXloop.png?rlkey=elp1pzpapo7l8kqu0htapbok2&st=vt8zt1df&raw=1";
               startAvatarLoop();
             }, 10000);
           }, 0);
@@ -277,9 +298,9 @@
         pendingMoveX = false;
         clearInterval(loopInterval);
         loopInterval = null;
-        avatarImg.src = "{{ url_for('static', filename='moveXloop.png') }}";
+        avatarImg.src = "https://www.dropbox.com/scl/fi/wqpmv0qi1d70rzp9ih9b1/moveXloop.png?rlkey=hhuw96avt0qs5emxlhqghgv7v&st=k2huz8hh&raw=1";
         moveXTimeout = setTimeout(() => {
-          avatarImg.src = "{{ url_for('static', filename='stillXloop.png') }}";
+          avatarImg.src = "https://www.dropbox.com/scl/fi/nvl7ogydpw0zsrenqdol4/stillXloop.png?rlkey=elp1pzpapo7l8kqu0htapbok2&st=vt8zt1df&raw=1";
           startAvatarLoop();
         }, 10000);
       } else {
