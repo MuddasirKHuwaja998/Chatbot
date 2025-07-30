@@ -291,20 +291,24 @@
         clearTimeout(moveXTimeout);
         moveXTimeout = null;
       }
-      if (!loopStartTime) return;
-      const elapsed = Date.now() - loopStartTime;
-      if (elapsed >= 5000) {
-        pendingMoveX = false;
+      // Avvia subito l'animazione moveXloop
+      pendingMoveX = false;
+      if (loopInterval) {
         clearInterval(loopInterval);
         loopInterval = null;
-        avatarImg.src = "https://www.dropbox.com/scl/fi/wqpmv0qi1d70rzp9ih9b1/moveXloop.png?rlkey=hhuw96avt0qs5emxlhqghgv7v&st=k2huz8hh&raw=1";
-        moveXTimeout = setTimeout(() => {
-          avatarImg.src = "https://www.dropbox.com/scl/fi/bbaqiv2q4w1yaghwmvlur/stillXloop2.png?rlkey=vlubsuv6wkw8g53mhptecxp68&st=j43dwozz&raw=1";
-          startAvatarLoop();
-        }, 10000);
-      } else {
-        pendingMoveX = true;
       }
+      avatarImg.src = "https://www.dropbox.com/scl/fi/wqpmv0qi1d70rzp9ih9b1/moveXloop.png?rlkey=hhuw96avt0qs5emxlhqghgv7v&st=k2huz8hh&raw=1";
+      // La fine dell'animazione sarà gestita da endMoveXloop()
+    }
+
+    function endMoveXloop() {
+      if (!avatarImg) return;
+      if (moveXTimeout) {
+        clearTimeout(moveXTimeout);
+        moveXTimeout = null;
+      }
+      avatarImg.src = "https://www.dropbox.com/scl/fi/bbaqiv2q4w1yaghwmvlur/stillXloop2.png?rlkey=vlubsuv6wkw8g53mhptecxp68&st=j43dwozz&raw=1";
+      startAvatarLoop();
     }
 
     window.addEventListener('DOMContentLoaded', () => {
