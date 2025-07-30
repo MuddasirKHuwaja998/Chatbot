@@ -25,7 +25,7 @@ function speakWithGoogleTTS(text) {
             if (typeof endMoveXloop === 'function') {
                 endMoveXloop();
             }
-        }, 20000); // 10 secondi
+        }, 30000); // 30 secondi
         audio.play();
         audio.onended = function() {
             clearTimeout(safetyTimer);
