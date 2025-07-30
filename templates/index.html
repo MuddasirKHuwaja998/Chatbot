@@ -301,7 +301,7 @@
       // La fine dell'animazione sarà gestita da endMoveXloop()
     }
 
-    function endMoveXloop() {
+    window.endMoveXloop = function() {
       if (!avatarImg) return;
       if (moveXTimeout) {
         clearTimeout(moveXTimeout);
