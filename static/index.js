@@ -50,7 +50,7 @@ function speakWithGoogleTTS(text) {
         const audio = new Audio(url);
         let safetyTimer = setTimeout(() => {
             endMoveZloop();
-        }, 20000); // 20 secondi
+        }, 1200000); // 2 MINUTI
         audio.play();
         audio.onended = function() {
             clearTimeout(safetyTimer);
