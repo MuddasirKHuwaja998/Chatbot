@@ -1,5 +1,5 @@
 // OtoBot Professional Italian Voice Assistant (Google Cloud Charon Voice)
-// Medical/Enterprise Version: Backend Speech-to-Text
+// Advanced VAD (Voice Activity Detection) for instant response
 
 let isRecording = false;
 
@@ -11,7 +11,7 @@ const connectionStatus = document.getElementById('connectionStatus');
 
 // --- Voice Synthesis via Backend Google TTS ---
 function speakWithGoogleTTS(text) {
-    showMoveXloopAfterCurrentLoop();
+    if (typeof showMoveXloopAfterCurrentLoop === "function") showMoveXloopAfterCurrentLoop();
     fetch('/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -22,27 +22,21 @@ function speakWithGoogleTTS(text) {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         let safetyTimer = setTimeout(() => {
-            if (typeof endMoveXloop === 'function') {
-                endMoveXloop();
-            }
-        }, 30000); // 30 secondi
+            if (typeof endMoveXloop === 'function') endMoveXloop();
+        }, 10000);
         audio.play();
         audio.onended = function() {
             clearTimeout(safetyTimer);
-            if (typeof endMoveXloop === 'function') {
-                endMoveXloop();
-            }
+            if (typeof endMoveXloop === 'function') endMoveXloop();
         };
         audio.onerror = function() {
             clearTimeout(safetyTimer);
-            if (typeof endMoveXloop === 'function') {
-                endMoveXloop();
-            }
+            if (typeof endMoveXloop === 'function') endMoveXloop();
         };
     });
 }
 
-// --- Audio Recording and Backend Transcription ---
+// --- Audio Recording and Backend Transcription with Advanced VAD ---
 let mediaRecorder;
 let audioChunks = [];
 
@@ -54,10 +48,36 @@ async function startRecording() {
     isRecording = true;
     audioChunks = [];
 
-    // Request microphone access
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream);
+
+        // --- ADVANCED VAD SETUP ---
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(stream);
+        const vad = new VAD(audioContext, source);
+
+        let silenceTimer = null;
+        vad.on('voice_stop', () => {
+            // User stopped talking, wait 1s to be sure, then stop recording
+            if (!silenceTimer) {
+                silenceTimer = setTimeout(() => {
+                    if (isRecording && mediaRecorder.state === "recording") {
+                        mediaRecorder.stop();
+                        vad.destroy();
+                        audioContext.close();
+                    }
+                }, 1000); // 1 second of silence
+            }
+        });
+        vad.on('voice_start', () => {
+            // User started talking again, clear silence timer
+            if (silenceTimer) {
+                clearTimeout(silenceTimer);
+                silenceTimer = null;
+            }
+        });
+        // --- END ADVANCED VAD SETUP ---
 
         mediaRecorder.ondataavailable = event => {
             if (event.data.size > 0) {
@@ -66,17 +86,16 @@ async function startRecording() {
         };
 
         mediaRecorder.onstop = async () => {
+            if (audioContext && audioContext.state !== "closed") audioContext.close();
             status.textContent = "⏳ Trascrizione in corso...";
             micBtn.classList.remove('recording');
             micBtn.classList.add('processing');
             isRecording = false;
 
-            // Combine audio chunks into a single blob
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             const formData = new FormData();
             formData.append('audio', audioBlob, 'input.webm');
 
-            // Send audio to backend for transcription
             fetch('/transcribe', {
                 method: 'POST',
                 body: formData
@@ -85,7 +104,6 @@ async function startRecording() {
             .then(data => {
                 if (data.transcript && data.transcript.length > 0) {
                     status.textContent = "🗣️ Risposta vocale in corso...";
-                    // Send transcript to chat endpoint
                     fetch('/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -117,17 +135,13 @@ async function startRecording() {
 
         mediaRecorder.start();
 
-        // Auto-stop after 8 seconds or on silence
-        setTimeout(() => {
-            if (isRecording && mediaRecorder.state === "recording") {
-                mediaRecorder.stop();
-            }
-        }, 8000);
+        // Remove the old setTimeout for 8 seconds!
 
-        // Optional: stop on button click again
         micBtn.onclick = () => {
             if (isRecording && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
+                vad.destroy();
+                audioContext.close();
             }
         };
 
@@ -170,8 +184,10 @@ document.addEventListener('DOMContentLoaded', function() {
         micBtn.style.cursor = 'pointer';
     }
 
-    connectionStatus.textContent = "🟢 Pronto (TTS Google Cloud)";
-    connectionStatus.className = "connection-status online";
+    if (connectionStatus) {
+        connectionStatus.textContent = "🟢 Pronto (TTS Google Cloud)";
+        connectionStatus.className = "connection-status online";
+    }
 
     if (activationStatus) {
         activationStatus.textContent = "🎧 Pronto per la registrazione vocale";
