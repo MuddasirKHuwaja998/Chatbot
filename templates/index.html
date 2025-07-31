@@ -2,158 +2,71 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>OtoBot - Assistente Virtuale Otofarma</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/png" href="https://www.dropbox.com/scl/fi/2rjl3yy5sz95iwqoaiyp7/icon.png?rlkey=7u0xzcy5p819ukhboqci1t2xm&st=yiwgzsot&raw=1">
+  <title>Mic Button Only (Italian Lady Voice)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ... your CSS remains unchanged ... */
-    .bg-image { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: url("https://www.dropbox.com/scl/fi/msi01xmeaegy5bkvek7xu/bg.png?rlkey=881rpavqg1cr6yp4zg8epxykz&st=rv3pv05t&raw=1") center center / cover no-repeat; z-index: 0; }
-    body { margin: 0; padding: 0; min-height: 100vh; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; overflow: hidden; background: linear-gradient(135deg, #eafaf1 0%, #a8e6cf 100%); }
-    body::before { content: ""; position: fixed; left: 0; top: 0; width: 100vw; height: 32px; background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.99) 60%, rgba(255,255,255,0.08) 100%); filter: blur(36px); z-index: 1; }
-    .white-fade-box { position: absolute; top: 40%; left: 50%; transform: translateX(-50%); width: 900px; height: 900px; z-index: 1; pointer-events: none; background: #fff; border-radius: 50%; box-shadow: 0 8px 32px 0 rgba(46,204,113,0.10); filter: blur(20px); border: 1.5px solid rgba(255,255,255,0.22); opacity: 0.98; }
-    .logo-bar { width: 100vw; display: flex; justify-content: center; align-items: center; padding-top: 2vh; padding-bottom: 2vh; background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom: none; position: relative; z-index: 20; }
-    .logo-bar img { height: 6vh; max-height: 48px; width: auto; filter: drop-shadow(0 2px 12px #2ecc71); opacity: 0.92; position: relative; z-index: 21; }
-    .logo-bar::after { content: ""; position: absolute; left: 0; top: 0; width: 100%; height: 80px; pointer-events: none; background: linear-gradient(180deg, rgba(46,204,113,0.98) 0%, rgba(255,255,255,0.97) 18%, rgba(255,255,255,0.92) 60%, rgba(255,255,255,0.08) 100%); filter: blur(36px); z-index: 1; }
-    main { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100vw; margin-top: 60px; position: relative; z-index: 100; }
-    #status { font-size: 1.2em; color: #fff; background: transparent; border-radius: 0; padding: 18px 32px; margin-top: 10px; margin-bottom: 10px; min-width: 220px; text-align: center; box-shadow: none; border: none; position: relative; z-index: 101; display: none; }
-    #micBtn { width: 95px; height: 95px; border-radius: 50%; border: 2.5px solid rgba(46,204,113,0.33); background: #fff; color: #fff; font-size: 2.8em; cursor: pointer; box-shadow: 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); outline: 0.15vh solid rgba(46,204,113,0.10); transition: background 0.7s cubic-bezier(0.33,1,0.68,1), box-shadow 0.7s cubic-bezier(0.33,1,0.68,1), border 0.7s cubic-bezier(0.33,1,0.68,1), transform 0.35s cubic-bezier(0.33,1,0.68,1); overflow: hidden; display: flex; align-items: center; justify-content: center; opacity: 0.97; position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); z-index: 200; }
-    #micBtn:hover { transform: translateX(-50%) scale(1.12); background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(46,204,113,0.13) 100%); box-shadow: 0 1.2vh 3.6vh 0 rgba(33,145,80,0.13), 0 0.2vh 1.6vh 0 rgba(255,255,255,0.13) inset; border: 2.5px solid #2ecc71; }
-    #micBtn:active { transform: translateX(-50%) scale(0.97); background: linear-gradient(135deg, #2ecc71 0%, #a8e6cf 100%); box-shadow: 0 0 0 12px #42e69533, 0 0.8vh 3.2vh 0 rgba(46,204,113,0.33); border: 2.5px solid #2ecc71; }
-    @media (max-width: 600px) {
-      header { padding-left: 10px; }
-      .logo-img { height: 40px; }
-      main { margin-top: 30px; }
-      #status { font-size: 1em; padding: 12px 10px; }
-      #micBtn { width: 68px; height: 68px; font-size: 1.7em; bottom: 16px; }
-      .center-image img { width: 320px; height: 480px; }
-      .avatar-fade { width: 320px; height: 480px; }
+    body {
+      background: #f8f8f8;
+      padding: 2em 0;
+      text-align: center;
     }
-    .center-image { position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); z-index: 2; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; pointer-events: none; }
-    .avatar-fade { display: flex; justify-content: center; align-items: center; width: 600px; height: 900px; position: relative; overflow: hidden; }
-    .center-image img { width: 600px; height: 900px; -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 3%, rgba(0,0,0,1) 97%, rgba(0,0,0,0) 100%), linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 3%, rgba(0,0,0,1) 97%, rgba(0,0,0,0) 100%); mask-image: linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 3%, rgba(0,0,0,1) 97%, rgba(0,0,0,0) 100%), linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 3%, rgba(0,0,0,1) 97%, rgba(0,0,0,0) 100%); mask-composite: intersect; -webkit-mask-composite: source-in; position: absolute; left: 0; top: 0; }
+    .mic-button-custom {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2.5px solid #42e695;
+      background-color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: box-shadow 0.18s, transform 0.2s;
+      box-shadow: 0 2px 8px rgba(66,230,149,0.13);
+      outline: none;
+      position: relative;
+      overflow: hidden;
+      margin: 0 auto;
+    }
+    .mic-button-custom img {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 50%;
+      pointer-events: none;
+      background-color: #fff;
+      display: block;
+    }
+    .mic-button-custom.listening {
+      box-shadow: 0 0 0 4px #42e69588;
+      background-color: #e8f5e9;
+      animation: pulse-mic 1.1s infinite;
+    }
+    @keyframes pulse-mic {
+      0% { transform: scale(1);}
+      60% { transform: scale(1.13);}
+      100% { transform: scale(1);}
+    }
+    .mic-note {
+      margin-top: 1.5em;
+      color: #197d4d;
+      font-size: 1.15em;
+    }
+    .hidden { display: none; }
   </style>
+  <!-- VAD library: https://unpkg.com/voice-activity-detection/dist/vad.js -->
+  <script src="https://unpkg.com/voice-activity-detection/dist/vad.js"></script>
 </head>
 <body>
-  <div class="bg-image"></div>
-  <div class="logo-bar">
-    <img src="https://www.dropbox.com/scl/fi/azrsytscmtp2qxxpinxw2/logo.png?rlkey=p3tjx2rpuzz9hnx76yk8nonxm&st=9g9due5i&raw=1" alt="Otofarma Logo" />
-  </div>
-  <div id="status">Inizializzazione assistente vocale PROFESSIONALE ITALIANO...</div>
-  <div class="white-fade-box"></div>
-  <main>
-    <div id="micBtn" title="Clicca per parlare con OtoBot">
-      <video id="micVideo" src="https://www.dropbox.com/scl/fi/fr3tqs02vno3xrx62r0g0/miclogo.mov?rlkey=sxtulpn5493k8znavoza4e8z9&st=bohq34fi&raw=1" width="100%" height="100%" muted playsinline style="border-radius:50%;display:block;background:#fff;"></video>
-    </div>
-  </main>
-  <!-- Precaricamento risorse Dropbox -->
-  <script>
-    // Preload immagini e video Dropbox
-    const preloadUrls = [
-      "https://www.dropbox.com/scl/fi/msi01xmeaegy5bkvek7xu/bg.png?rlkey=881rpavqg1cr6yp4zg8epxykz&st=rv3pv05t&raw=1",
-      "https://www.dropbox.com/scl/fi/azrsytscmtp2qxxpinxw2/logo.png?rlkey=p3tjx2rpuzz9hnx76yk8nonxm&st=9g9due5i&raw=1",
-      "https://www.dropbox.com/scl/fi/bbaqiv2q4w1yaghwmvlur/stillXloop2.png?rlkey=vlubsuv6wkw8g53mhptecxp68&st=j43dwozz&raw=1",
-      "https://www.dropbox.com/scl/fi/wqpmv0qi1d70rzp9ih9b1/moveXloop.png?rlkey=hhuw96avt0qs5emxlhqghgv7v&st=k2huz8hh&raw=1",
-      "https://www.dropbox.com/scl/fi/fr3tqs02vno3xrx62r0g0/miclogo.mov?rlkey=sxtulpn5493k8znavoza4e8z9&st=bohq34fi&raw=1"
-    ];
-    preloadUrls.forEach(url => {
-      if (url.endsWith('.png')) {
-        const img = new Image();
-        img.src = url;
-      } else if (url.endsWith('.mov')) {
-        const video = document.createElement('video');
-        video.src = url;
-        video.preload = 'auto';
-      }
-    });
-  </script>
-  <div class="center-image">
-    <div class="avatar-fade">
-      <img id="avatar-img" src="https://www.dropbox.com/scl/fi/bbaqiv2q4w1yaghwmvlur/stillXloop2.png?rlkey=vlubsuv6wkw8g53mhptecxp68&st=j43dwozz&raw=1" alt="Avatar" style="position:absolute;left:0;top:0;width:100%;height:100%;display:block;" />
-    </div>
-  </div>
-  <script>
-    // Avatar loop logic
-    let avatarImg;
-    let loopInterval = null;
-    let loopStartTime = null;
-    let pendingMoveX = false;
-    let moveXTimeout = null;
-
-    function startAvatarLoop() {
-      avatarImg = document.getElementById('avatar-img');
-      if (!avatarImg) return;
-      avatarImg.src = "https://www.dropbox.com/scl/fi/bbaqiv2q4w1yaghwmvlur/stillXloop2.png?rlkey=vlubsuv6wkw8g53mhptecxp68&st=j43dwozz&raw=1";
-      loopStartTime = Date.now();
-      if (loopInterval) clearInterval(loopInterval);
-      loopInterval = setInterval(() => {
-        avatarImg.src = "https://www.dropbox.com/scl/fi/bbaqiv2q4w1yaghwmvlur/stillXloop2.png?rlkey=vlubsuv6wkw8g53mhptecxp68&st=j43dwozz&raw=1";
-        loopStartTime = Date.now();
-        if (pendingMoveX) {
-          pendingMoveX = false;
-          clearInterval(loopInterval);
-          loopInterval = null;
-          setTimeout(() => {
-            avatarImg.src = "https://www.dropbox.com/scl/fi/wqpmv0qi1d70rzp9ih9b1/moveXloop.png?rlkey=hhuw96avt0qs5emxlhqghgv7v&st=k2huz8hh&raw=1";
-            moveXTimeout = setTimeout(() => {
-              avatarImg.src = "https://www.dropbox.com/scl/fi/bbaqiv2q4w1yaghwmvlur/stillXloop2.png?rlkey=vlubsuv6wkw8g53mhptecxp68&st=j43dwozz&raw=1";
-              startAvatarLoop();
-            }, 10000);
-          }, 0);
-        }
-      }, 5000);
-    }
-
-    function showMoveXloopAfterCurrentLoop() {
-      if (!avatarImg) return;
-      if (moveXTimeout) {
-        clearTimeout(moveXTimeout);
-        moveXTimeout = null;
-      }
-      pendingMoveX = false;
-      if (loopInterval) {
-        clearInterval(loopInterval);
-        loopInterval = null;
-      }
-      avatarImg.src = "https://www.dropbox.com/scl/fi/wqpmv0qi1d70rzp9ih9b1/moveXloop.png?rlkey=hhuw96avt0qs5emxlhqghgv7v&st=k2huz8hh&raw=1";
-    }
-
-    window.endMoveXloop = function() {
-      if (!avatarImg) return;
-      if (moveXTimeout) {
-        clearTimeout(moveXTimeout);
-        moveXTimeout = null;
-      }
-      avatarImg.src = "https://www.dropbox.com/scl/fi/bbaqiv2q4w1yaghwmvlur/stillXloop2.png?rlkey=vlubsuv6wkw8g53mhptecxp68&st=j43dwozz&raw=1";
-      startAvatarLoop();
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      startAvatarLoop();
-      const micBtn = document.getElementById('micBtn');
-      const micVideo = document.getElementById('micVideo');
-      if (micBtn) {
-        micBtn.addEventListener('click', () => {
-          if (micVideo) {
-            let playCount = 0;
-            micVideo.currentTime = 0;
-            micVideo.play();
-            micVideo.onended = function() {
-              playCount++;
-              if (playCount < 2) {
-                micVideo.currentTime = 0;
-                micVideo.play();
-              } else {
-                micVideo.onended = null;
-              }
-            };
-          }
-        });
-      }
-    });
-  </script>
-  <!-- THE TWO SCRIPTS BELOW MUST BE LAST -->
-  <script src="https://cdn.jsdelivr.net/gh/antimatter15/vad.js/vad.min.js"></script>
-  <script src="{{ url_for('static', filename='index.js') }}"></script>
+  <button class="mic-button-custom" id="micButton" title="Premi per parlare">
+    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxglgxUT-MedSFFxKkGSQZq1Xk_2Kl7B8b_Q&sip=x480" alt="Microfono">
+  </button>
+  <div class="mic-note" id="micNote">Premi il microfono e parla italiano</div>
+  <!-- This status is for advanced mode (index.js) -->
+  <div id="status" class="mic-note hidden"></div>
+  <!-- Only for index.js advanced mic, can stay hidden -->
+  <button id="micBtn" class="hidden"></button>
+  <div id="activationStatus" class="hidden"></div>
+  <div id="connectionStatus" class="hidden"></div>
+  <script src="index.js"></script>
 </body>
 </html>
-
