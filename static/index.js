@@ -17,6 +17,7 @@ function showMoveZloop() {
     if (avatarStill && avatarMove) {
         avatarStill.pause();
         avatarStill.style.opacity = '0';
+        avatarMove.loop = true;
         avatarMove.style.opacity = '1';
         avatarMove.currentTime = 0;
         avatarMove.play();
@@ -27,6 +28,7 @@ function endMoveZloop() {
     const avatarStill = document.getElementById('avatar-still');
     const avatarMove = document.getElementById('avatar-move');
     if (avatarStill && avatarMove) {
+        avatarMove.loop = false;
         avatarMove.pause();
         avatarMove.style.opacity = '0';
         avatarStill.currentTime = 0;
