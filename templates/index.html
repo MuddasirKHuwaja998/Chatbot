@@ -51,22 +51,22 @@
       color: #197d4d;
       font-size: 1.15em;
     }
-    .hidden { display: none; }
+    /* Hide advanced fields by default */
+    #status, #micBtn, #activationStatus, #connectionStatus { display: none; }
   </style>
-  <!-- VAD library: https://unpkg.com/voice-activity-detection/dist/vad.js -->
-  <script src="https://unpkg.com/voice-activity-detection/dist/vad.js"></script>
+  <!-- VAD.js library loaded from CDN: -->
+  <script src="https://unpkg.com/vad/dist/vad.min.js"></script>
 </head>
 <body>
   <button class="mic-button-custom" id="micButton" title="Premi per parlare">
     <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxglgxUT-MedSFFxKkGSQZq1Xk_2Kl7B8b_Q&sip=x480" alt="Microfono">
   </button>
   <div class="mic-note" id="micNote">Premi il microfono e parla italiano</div>
-  <!-- This status is for advanced mode (index.js) -->
-  <div id="status" class="mic-note hidden"></div>
-  <!-- Only for index.js advanced mic, can stay hidden -->
-  <button id="micBtn" class="hidden"></button>
-  <div id="activationStatus" class="hidden"></div>
-  <div id="connectionStatus" class="hidden"></div>
+  <!-- Advanced fields for index.js, kept for compatibility -->
+  <div class="mic-note" id="status"></div>
+  <button id="micBtn"></button>
+  <div id="activationStatus"></div>
+  <div id="connectionStatus"></div>
   <script src="index.js"></script>
 </body>
 </html>
