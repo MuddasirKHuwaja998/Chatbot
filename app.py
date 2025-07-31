@@ -1306,7 +1306,7 @@ def chat():
 def tts():
     data = request.json
     text = data.get("text", "")
-    voice_name = "it-IT-Chirp3-HD-Charon"  # Your chosen male Italian voice
+    voice_name = "it-IT-Wavenet-F"  # Your chosen male Italian voice
 
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
 
