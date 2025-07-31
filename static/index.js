@@ -1,6 +1,4 @@
-// OtoBot Professional Italian Voice Assistant (Google Cloud Charon Voice)
-// Advanced VAD (Voice Activity Detection) for instant response
-
+/* global VAD */
 let isRecording = false;
 
 // UI elements
@@ -43,6 +41,7 @@ let audioChunks = [];
 async function startRecording() {
     if (isRecording) return;
 
+    status.style.display = "block";
     status.textContent = "🎤 Parla ora...";
     micBtn.classList.add('recording');
     isRecording = true;
@@ -59,7 +58,6 @@ async function startRecording() {
 
         let silenceTimer = null;
         vad.on('voice_stop', () => {
-            // User stopped talking, wait 1s to be sure, then stop recording
             if (!silenceTimer) {
                 silenceTimer = setTimeout(() => {
                     if (isRecording && mediaRecorder.state === "recording") {
@@ -71,7 +69,6 @@ async function startRecording() {
             }
         });
         vad.on('voice_start', () => {
-            // User started talking again, clear silence timer
             if (silenceTimer) {
                 clearTimeout(silenceTimer);
                 silenceTimer = null;
@@ -134,8 +131,6 @@ async function startRecording() {
         };
 
         mediaRecorder.start();
-
-        // Remove the old setTimeout for 8 seconds!
 
         micBtn.onclick = () => {
             if (isRecording && mediaRecorder.state === "recording") {
