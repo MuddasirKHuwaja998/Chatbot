@@ -1157,7 +1157,7 @@ def get_gemini_conversation(user_message):
         return None
         
     try:
-        model = GenerativeModel("gemini-1.5-flash")  # Updated model name
+        model = GenerativeModel("gemini-2.0-flash-001")  # Latest available model
         
         prompt = f"""
         IMPORTANTE: Rispondi SEMPRE e SOLO in italiano professionale e cordiale. Mai in inglese.
