@@ -13,3 +13,4 @@ rapidfuzz==3.6.2
 pytz==2024.1
 google-cloud-texttospeech==2.16.0
 google-cloud-speech==2.26.0
+google-cloud-aiplatform
