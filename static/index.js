@@ -38,7 +38,6 @@ function endMoveZloop() {
 }
 function speakWithGoogleTTS(text) {
     micBtn.classList.remove('pulse-green');
-    showMoveZloop();
     fetch('/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -50,15 +49,23 @@ function speakWithGoogleTTS(text) {
         const audio = new Audio(url);
         let safetyTimer = setTimeout(() => {
             endMoveZloop();
-        }, 1200000); // 2 MINUTI
+        }, 1200000); // 2 minuti
         audio.play();
+        
+        // Aspetta 1 secondo prima di far partire il video move
+        setTimeout(() => {
+            showMoveZloop();
+        }, 1000);
+        
         audio.onended = function() {
             clearTimeout(safetyTimer);
             endMoveZloop();
+            micBtn.classList.remove('pulse-green');
         };
         audio.onerror = function() {
             clearTimeout(safetyTimer);
             endMoveZloop();
+            micBtn.classList.remove('pulse-green');
         };
     });
 }
