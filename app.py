@@ -20,6 +20,9 @@ except ImportError:
 app = Flask(__name__)
 CORS(app)
     
+# Add these new imports for Gemini API
+import vertexai
+from vertexai.generative_models import GenerativeModel
 
 try:
     import nltk
@@ -1134,6 +1137,96 @@ class FallbackMemory:
             self.last_fallbacks.pop(0)
 
 fallback_mem = FallbackMemory()
+# Initialize Gemini AI for natural Italian conversations
+def initialize_gemini():
+    """Initialize Gemini AI"""
+    try:
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
+        vertexai.init(project="speakai-467308", location="us-central1")
+        return True
+    except Exception as e:
+        print(f"Gemini initialization error: {e}")
+        return False
+
+# Initialize Gemini
+gemini_available = initialize_gemini()
+
+def get_gemini_conversation(user_message):
+    """Get natural conversation from Gemini - ALWAYS ITALIAN - ALWAYS OTOFARMA"""
+    if not gemini_available:
+        return None
+        
+    try:
+        model = GenerativeModel("gemini-pro")
+        
+        prompt = f"""
+        IMPORTANTE: Rispondi SEMPRE e SOLO in italiano professionale e cordiale. Mai in inglese.
+        
+        Tu sei OtoBot, l'assistente virtuale UFFICIALE di Otofarma Spa, azienda italiana leader nel settore audiologico.
+        
+        LA TUA IDENTITÀ:
+        - Sei OtoBot di Otofarma Spa
+        - Rappresenti un'azienda italiana di prestigio
+        - Sei specializzato in apparecchi acustici innovativi
+        - Conosci teleaudiologia e servizi audiologici
+        - Sei sempre professionale ma cordiale
+        - Parli solo italiano
+        
+        I TUOI SERVIZI OTOFARMA:
+        - Apparecchi acustici ricaricabili e su misura
+        - Teleaudiologia e consulenze specialistiche
+        - Test dell'udito gratuiti
+        - Garanzie complete e assistenza
+        - Rete di farmacie affiliate in Italia
+        
+        REGOLE SPECIALI:
+        1. Rispondi SEMPRE in italiano
+        2. Sei SEMPRE OtoBot di Otofarma Spa, mai un AI generico
+        3. Per domande sul tempo, meteo o argomenti generali, rispondi come OtoBot ma collegando sempre a Otofarma
+        4. Mantieni tono professionale ma amichevole
+        5. Per dettagli specifici su Otofarma, suggerisci di contattare i nostri specialisti
+        6. Se qualcuno si presenta (nome), ricordalo e sii cordiale
+        
+        ESEMPI:
+        - "Parlami del tempo": "Mi dispiace, non posso fornire previsioni meteo, ma posso dirti che i nostri apparecchi acustici Otofarma funzionano perfettamente in ogni condizione atmosferica! Sono resistenti all'umidità e progettati per accompagnarti sempre. Hai domande sui nostri prodotti?"
+        - "Mi chiamo Marco": "Piacere di conoscerti, Marco! Sono OtoBot di Otofarma Spa. È un onore avere te come nostro cliente. Come posso aiutarti oggi con i nostri servizi audiologici?"
+        
+        Messaggio utente: {user_message}
+        
+        OtoBot di Otofarma Spa (risposta in italiano):
+        """
+        
+        response = model.generate_content(prompt)
+        return response.text.strip()
+        
+    except Exception as e:
+        print(f"Gemini error: {e}")
+        return None
+
+def should_use_gemini_for_conversation(user_message):
+    """Decide if message should use Gemini for natural conversation"""
+    user_msg = normalize(user_message.strip())
+    
+    # Use Gemini for natural greetings and conversations
+    conversation_patterns = [
+        "ciao", "salve", "buongiorno", "buonasera", "buonanotte",
+        "come va", "come stai", "tutto bene", "tutto ok",
+        "come ti chiami", "chi sei", "cosa fai",
+        "piacere", "felice di conoscerti", "grazie", "perfetto", "ottimo", "bene",
+        "sono", "mi chiamo", "il mio nome", "dimmi", "parlami", "raccontami",
+        "tempo", "oggi", "domani", "ieri", "quando", "dove", "perché", "sciama"
+    ]
+    
+    # Check if it's a natural conversation starter
+    for pattern in conversation_patterns:
+        if pattern in user_msg:
+            return True
+    
+    # Use Gemini for personal introductions and general questions
+    if any(word in user_msg for word in ["sono", "mi chiamo", "il mio nome è", "parlami", "dimmi", "raccontami", "tempo"]):
+        return True
+        
+    return False
 
 
 def process_voice_through_existing_chat(transcribed_text):
@@ -1226,11 +1319,18 @@ def chat():
 
     print(f"Received message: '{user_message}'")
 
-    # 1. Check for assistant name activation
+        # 1. Check for assistant name activation
     if detect_assistant_name(user_message):
         return jsonify({"reply": handle_voice_activation_greeting(), "voice": voice_mode, "male_voice": True})
 
-    # 2. Check for general greetings first
+    # 2. Enhanced conversation handling with Gemini
+    if should_use_gemini_for_conversation(user_message):
+        gemini_reply = get_gemini_conversation(user_message)
+        if gemini_reply:
+            print(f"Gemini conversation response generated")
+            return jsonify({"reply": gemini_reply, "voice": voice_mode, "male_voice": True})
+
+    # 2b. Fallback to existing general patterns
     general = check_general_patterns(user_message)
     if general:
         return jsonify({"reply": general, "voice": voice_mode, "male_voice": True})
@@ -1288,6 +1388,18 @@ def chat():
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
     # 9. Fallback responses
+        # 8.5. Gemini AI fallback for questions not covered by YAML or app logic
+    print("Trying Gemini fallback...")
+    if gemini_available:
+        gemini_reply = get_gemini_conversation(user_message_corr)
+        if gemini_reply:
+            print(f"Gemini fallback response generated: {gemini_reply[:50]}...")
+            return jsonify({"reply": gemini_reply, "voice": voice_mode, "male_voice": True})
+        else:
+            print("Gemini returned empty response")
+    else:
+        print("Gemini not available - check initialization")
+
     fallback_messages = [
         "Al momento non dispongo di una risposta precisa alla tua richiesta, ma sono qui per aiutarti su qualsiasi altro tema riguardante Otofarma.",
         "Mi scuso, non sono riuscito a trovare una risposta soddisfacente. Se desideri, puoi riformulare la domanda o chiedere su un altro argomento.",
