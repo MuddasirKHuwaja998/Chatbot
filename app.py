@@ -1142,7 +1142,7 @@ def initialize_gemini():
     """Initialize Gemini AI"""
     try:
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
-        vertexai.init(project="speakai-467308", location="us-central1")
+        vertexai.init(project="speakai-467308", location="us-east4") # Changed location
         return True
     except Exception as e:
         print(f"Gemini initialization error: {e}")
@@ -1157,7 +1157,7 @@ def get_gemini_conversation(user_message):
         return None
         
     try:
-        model = GenerativeModel("gemini-pro")
+        model = GenerativeModel("gemini-1.5-flash")  # Updated model name
         
         prompt = f"""
         IMPORTANTE: Rispondi SEMPRE e SOLO in italiano professionale e cordiale. Mai in inglese.
@@ -1186,10 +1186,6 @@ def get_gemini_conversation(user_message):
         4. Mantieni tono professionale ma amichevole
         5. Per dettagli specifici su Otofarma, suggerisci di contattare i nostri specialisti
         6. Se qualcuno si presenta (nome), ricordalo e sii cordiale
-        
-        ESEMPI:
-        - "Parlami del tempo": "Mi dispiace, non posso fornire previsioni meteo, ma posso dirti che i nostri apparecchi acustici Otofarma funzionano perfettamente in ogni condizione atmosferica! Sono resistenti all'umidità e progettati per accompagnarti sempre. Hai domande sui nostri prodotti?"
-        - "Mi chiamo Marco": "Piacere di conoscerti, Marco! Sono OtoBot di Otofarma Spa. È un onore avere te come nostro cliente. Come posso aiutarti oggi con i nostri servizi audiologici?"
         
         Messaggio utente: {user_message}
         
