@@ -90,9 +90,24 @@ async function startRecording() {
         micVideo.play();
     }
 
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
+        try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: { 
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 44100 
+            } 
+        });
+        
+        // iOS Safari compatibility check
+        let options = {};
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            options = { mimeType: 'audio/webm;codecs=opus' };
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            options = { mimeType: 'audio/mp4' };
+        }
+        
+        mediaRecorder = new MediaRecorder(stream, options);
 
         mediaRecorder.ondataavailable = event => {
             if (event.data.size > 0) {
@@ -155,13 +170,18 @@ async function startRecording() {
             });
         };
 
-        mediaRecorder.start();
-        // la registrazione viene fermata solo da un secondo click
-        micBtn.onclick = () => {
+         mediaRecorder.start();
+        // Store reference for proper cleanup
+        micBtn.removeEventListener('click', toggleRecording);
+        
+        const stopHandler = function() {
             if (isRecording && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
+                // Remove this temporary handler
+                micBtn.removeEventListener('click', stopHandler);
             }
         };
+        micBtn.addEventListener('click', stopHandler);
 
     } catch (error) {
         status.textContent = `❌ Errore microfono: ${error.message}`;
@@ -173,9 +193,11 @@ async function startRecording() {
 function resetMicButton() {
     micBtn.classList.remove('recording', 'processing');
     micBtn.classList.add('pulse-green');
-    micBtn.onclick = toggleRecording;
+    
+    // iOS fix: Just remove and re-add the event listener
+    micBtn.removeEventListener('click', toggleRecording);
+    micBtn.addEventListener('click', toggleRecording);
 }
-
 function toggleRecording() {
     if (!isRecording) {
         startRecording();
@@ -200,7 +222,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    if (micBtn) {
+        if (micBtn) {
+        // iOS audio context initialization
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        
         micBtn.addEventListener('click', toggleRecording);
         micBtn.disabled = false;
         micBtn.style.opacity = '1';
