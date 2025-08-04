@@ -5,9 +5,6 @@
   <title>OtoBot - Assistente Virtuale Otofarma</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/static/icon.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="format-detection" content="telephone=no">
   <style>
     .bg-image {
       position: fixed;
@@ -15,10 +12,7 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background-image: url("/static/bg.png");
-      background-position: center center;
-      background-size: cover;
-      background-repeat: no-repeat;
+      background: url("/static/bg.png") center center / cover no-repeat;
       z-index: 0;
     }
     body {
@@ -34,16 +28,6 @@
       overflow: hidden;
       background: linear-gradient(135deg, #eafaf1 0%, #a8e6cf 100%);
     }
-    /* iOS Safari fixes */
-     video {
-  -webkit-playsinline: true;
-}
-
-@supports (-webkit-touch-callout: none) {
-  .bg-image {
-    background-attachment: scroll;
-  }
-}
     body::before {
       content: "";
       position: fixed;
@@ -305,30 +289,19 @@
       // Funzione per mostrare i video solo quando entrambi sono pronti
       let readyCount = 0;
       function showVideosWhenReady() {
-  readyCount++;
-  console.log('Video ready count:', readyCount); // Debug
-  if (readyCount >= 1) { // Changed from 2 to 1
-    avatarStill.style.visibility = 'visible';
-    avatarMove.style.visibility = 'visible';
-    avatarStill.style.opacity = '1';
-    avatarStill.currentTime = 0;
-    avatarStill.play().catch(e => console.log('Avatar play error:', e));
-  }
-}
-      // Ascolta l'evento canplaythrough per entrambi i video
-      // Multiple event listeners for better compatibility
-avatarStill.addEventListener('canplaythrough', showVideosWhenReady);
-avatarStill.addEventListener('loadeddata', showVideosWhenReady);
-avatarMove.addEventListener('canplaythrough', showVideosWhenReady);
-avatarMove.addEventListener('loadeddata', showVideosWhenReady);
+        readyCount++;
+        if (readyCount === 2) {
+          avatarStill.style.visibility = 'visible';
+          avatarMove.style.visibility = 'visible';
+          avatarStill.style.opacity = '1';
+          avatarStill.currentTime = 0;
+          avatarStill.play();
+        }
+      }
 
-// Fallback timeout if videos don't load
-setTimeout(() => {
-  if (readyCount === 0) {
-    console.log('Forcing avatar display after timeout');
-    showVideosWhenReady();
-  }
-}, 3000);
+      // Ascolta l'evento canplaythrough per entrambi i video
+      avatarStill.addEventListener('canplaythrough', showVideosWhenReady);
+      avatarMove.addEventListener('canplaythrough', showVideosWhenReady);
 
       // Forza la decodifica del primo frame di entrambi i video
       avatarStill.muted = true;
