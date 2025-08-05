@@ -794,6 +794,7 @@ def get_date_answer():
     
     return random.choice(polite_dates)
 
+
 def check_general_patterns(user_msg):
     """Enhanced general pattern checking"""
     if not user_msg:
@@ -1137,7 +1138,39 @@ class FallbackMemory:
             self.last_fallbacks.pop(0)
 
 fallback_mem = FallbackMemory()
+
+def format_numbers_for_speech(text):
+    """INTELLIGENT number formatting for TTS - contacts vs prices vs years"""
+    import re
+    
+    # Enhanced patterns for different number types
+    phone_pattern = r'\b(\d{8,12})\b'  # 8-12 digits = phone numbers
+    price_pattern = r'€\s*(\d+)'  # Prices with € symbol
+    year_pattern = r'\b(19|20)(\d{2})\b'  # Years 1900-2099
+    
+    def format_phone_digits(match):
+        number = match.group(1)
+        digit_map = {
+            '0': 'zero', '1': 'uno', '2': 'due', '3': 'tre', '4': 'quattro',
+            '5': 'cinque', '6': 'sei', '7': 'sette', '8': 'otto', '9': 'nove'
+        }
+        return ' '.join(digit_map[digit] for digit in number)
+    
+    # Context-aware number detection
+    text_lower = text.lower()
+    
+    # If context suggests contact/phone number
+    if any(word in text_lower for word in ['numero', 'telefono', 'cellulare', 'contatto', 'chiama', 'whatsapp']):
+        # Format long numbers (8+ digits) as digit-by-digit
+        text = re.sub(phone_pattern, format_phone_digits, text)
+    
+    # Keep prices and years as normal numbers (unchanged)
+    return text
+
 # Initialize Gemini AI for natural Italian conversations
+
+
+
 def initialize_gemini():
     """Initialize Gemini AI"""
     try:
@@ -1163,7 +1196,13 @@ def get_gemini_conversation(user_message):
         IMPORTANTE: Rispondi SEMPRE e SOLO in italiano professionale e cordiale. Mai in inglese.
         
         Tu sei OtoBot, l'assistente virtuale UFFICIALE di Otofarma Spa, azienda italiana leader nel settore audiologico.
-        
+         REGOLE ASSOLUTE:
+        1. Rispondi SEMPRE in italiano professionale
+        2. Massimo 2-3 frasi concise e dirette
+        3. Sei OtoBot di Otofarma Spa (mai AI generico)
+        4. Se non sai qualcosa, suggerisci contatto con specialisti
+        5. NO risposte lunghe - sii preciso e utile
+
         LA TUA IDENTITÀ:
         - Sei OtoBot di Otofarma Spa
         - Rappresenti un'azienda italiana di prestigio
@@ -1178,6 +1217,12 @@ def get_gemini_conversation(user_message):
         - Test dell'udito gratuiti
         - Garanzie complete e assistenza
         - Rete di farmacie affiliate in Italia
+
+        COMPORTAMENTO:
+        - Professionale ma cordiale
+        - Risposte brevi (max 50 parole se possibile)  
+        - Se qualcuno si presenta, ricorda il nome
+        - Per argomenti non-Otofarma, collega sempre ai nostri servizi
         
         REGOLE SPECIALI:
         1. Rispondi SEMPRE in italiano
@@ -1194,7 +1239,11 @@ def get_gemini_conversation(user_message):
         
         response = model.generate_content(prompt)
         return response.text.strip()
-        
+        # Ensure response is concise (max 200 characters for voice)
+        if len(response.text) > 200:
+            response.text = response.text[:200] + '...'
+        return response.text
+
     except Exception as e:
         print(f"Gemini error: {e}")
         return None
@@ -1447,24 +1496,7 @@ def tts():
         }
     )
 from google.cloud import speech
-def format_numbers_for_speech(text):
-    """Format phone numbers and contact info for digit-by-digit reading"""
-    import re
-    
-    # Pattern for phone numbers (8+ digits together)
-    phone_pattern = r'\b(\d{8,})\b'
-    
-    def digit_by_digit(match):
-        number = match.group(1)
-        # Convert each digit to Italian words
-        digit_map = {
-            '0': 'zero', '1': 'uno', '2': 'due', '3': 'tre', '4': 'quattro',
-            '5': 'cinque', '6': 'sei', '7': 'sette', '8': 'otto', '9': 'nove'
-        }
-        return ' '.join(digit_map[digit] for digit in number)
-    
-    # Replace phone numbers with digit-by-digit format
-    return re.sub(phone_pattern, digit_by_digit, text)
+
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe():
