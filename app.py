@@ -1414,12 +1414,16 @@ def chat():
 def tts():
     data = request.json
     text = data.get("text", "")
-    voice_name = "it-IT-Wavenet-F"  # Your chosen male Italian voice
+    
+    # Format numbers for speech BEFORE TTS
+    formatted_text = format_numbers_for_speech(text)
+    
+    voice_name = "it-IT-Wavenet-F"
 
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
 
     client = texttospeech.TextToSpeechClient()
-    synthesis_input = texttospeech.SynthesisInput(text=text)
+    synthesis_input = texttospeech.SynthesisInput(text=formatted_text)
     voice = texttospeech.VoiceSelectionParams(
         language_code="it-IT",
         name=voice_name
@@ -1443,6 +1447,24 @@ def tts():
         }
     )
 from google.cloud import speech
+def format_numbers_for_speech(text):
+    """Format phone numbers and contact info for digit-by-digit reading"""
+    import re
+    
+    # Pattern for phone numbers (8+ digits together)
+    phone_pattern = r'\b(\d{8,})\b'
+    
+    def digit_by_digit(match):
+        number = match.group(1)
+        # Convert each digit to Italian words
+        digit_map = {
+            '0': 'zero', '1': 'uno', '2': 'due', '3': 'tre', '4': 'quattro',
+            '5': 'cinque', '6': 'sei', '7': 'sette', '8': 'otto', '9': 'nove'
+        }
+        return ' '.join(digit_map[digit] for digit in number)
+    
+    # Replace phone numbers with digit-by-digit format
+    return re.sub(phone_pattern, digit_by_digit, text)
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe():
