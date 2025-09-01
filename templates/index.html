@@ -27,6 +27,7 @@
       align-items: center;
       overflow: hidden;
       background: linear-gradient(135deg, #eafaf1 0%, #a8e6cf 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     body::before {
       content: "";
@@ -75,11 +76,16 @@
       max-height: 48px;
       width: auto;
       filter: drop-shadow(0 2px 12px #2ecc71);
-      opacity: 0.92;
+      opacity: 0.95;
       position: relative;
       z-index: 21;
+      transition: all 0.3s ease;
     }
-    /* Rimuovo la ::after sfumata */
+    .logo-bar img:hover {
+      filter: drop-shadow(0 4px 16px #2ecc71);
+      opacity: 1;
+      transform: scale(1.02);
+    }
     .logo-bar::after {
       content: "";
       position: absolute;
@@ -105,78 +111,127 @@
     #status {
       font-size: 1.2em;
       color: #fff;
-      background: transparent;
-      border-radius: 0;
-      padding: 18px 32px;
+      background: rgba(46,204,113,0.15);
+      border-radius: 25px;
+      padding: 12px 24px;
       margin-top: 10px;
       margin-bottom: 10px;
       min-width: 220px;
       text-align: center;
-      box-shadow: none;
-      border: none;
-      position: relative;
-      z-index: 101;
-      display: none;
+      box-shadow: 0 4px 20px rgba(46,204,113,0.2);
+      border: 1px solid rgba(46,204,113,0.3);
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 150;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+    }
+    #status.success {
+      background: rgba(46,204,113,0.25);
+      border-color: rgba(46,204,113,0.5);
+      color: #fff;
+    }
+    #status.error {
+      background: rgba(231,76,60,0.25);
+      border-color: rgba(231,76,60,0.5);
+      color: #fff;
+    }
+    #status.processing {
+      background: rgba(52,152,219,0.25);
+      border-color: rgba(52,152,219,0.5);
+      color: #fff;
     }
     #micBtn {
       width: 95px;
       height: 95px;
       border-radius: 50%;
-      border: 2.5px solid rgba(46,204,113,0.33);
-      background: #fff;
+      border: 3px solid rgba(46,204,113,0.4);
+      background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%);
       color: #fff;
       font-size: 2.8em;
       cursor: pointer;
-      box-shadow: 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71;
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      outline: 0.15vh solid rgba(46,204,113,0.10);
-      transition: background 0.7s cubic-bezier(0.33,1,0.68,1), box-shadow 0.7s cubic-bezier(0.33,1,0.68,1), border 0.7s cubic-bezier(0.33,1,0.68,1), transform 0.35s cubic-bezier(0.33,1,0.68,1);
+      box-shadow: 0 8px 32px 0 rgba(46,204,113,0.25), 0 4px 16px rgba(46,204,113,0.15);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      outline: none;
+      transition: all 0.4s cubic-bezier(0.23,1,0.32,1);
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
-      opacity: 0.97;
+      opacity: 0.98;
       position: fixed;
       left: 50%;
       bottom: 32px;
       transform: translateX(-50%);
       z-index: 200;
     }
-
     #micBtn.pulse-green {
-      box-shadow: 0 0 0 0 rgba(46,204,113,0.7), 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71;
-      animation: pulse-green 1.2s infinite;
+      animation: pulse-green 1.5s infinite ease-in-out;
     }
-
     @keyframes pulse-green {
       0% {
-        box-shadow: 0 0 0 0 rgba(46,204,113,0.7), 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71;
+        box-shadow: 0 0 0 0 rgba(46,204,113,0.8), 0 8px 32px 0 rgba(46,204,113,0.25), 0 4px 16px rgba(46,204,113,0.15);
+        border-color: rgba(46,204,113,0.4);
       }
-      70% {
-        box-shadow: 0 0 0 18px rgba(46,204,113,0.08), 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71;
+      50% {
+        box-shadow: 0 0 0 20px rgba(46,204,113,0.1), 0 8px 32px 0 rgba(46,204,113,0.25), 0 4px 16px rgba(46,204,113,0.15);
+        border-color: rgba(46,204,113,0.6);
       }
       100% {
-        box-shadow: 0 0 0 0 rgba(46,204,113,0.7), 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71;
+        box-shadow: 0 0 0 0 rgba(46,204,113,0.8), 0 8px 32px 0 rgba(46,204,113,0.25), 0 4px 16px rgba(46,204,113,0.15);
+        border-color: rgba(46,204,113,0.4);
       }
     }
     #micBtn:hover {
-      transform: translateX(-50%) scale(1.12);
-      background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(46,204,113,0.13) 100%);
-      box-shadow: 0 1.2vh 3.6vh 0 rgba(33,145,80,0.13), 0 0.2vh 1.6vh 0 rgba(255,255,255,0.13) inset;
-      border: 2.5px solid #2ecc71;
+      transform: translateX(-50%) scale(1.08);
+      background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(46,204,113,0.1) 100%);
+      box-shadow: 0 12px 40px 0 rgba(46,204,113,0.3), 0 6px 20px rgba(46,204,113,0.2);
+      border-color: rgba(46,204,113,0.7);
     }
     #micBtn:active {
-      transform: translateX(-50%) scale(0.97);
+      transform: translateX(-50%) scale(0.95);
       background: linear-gradient(135deg, #2ecc71 0%, #a8e6cf 100%);
-      box-shadow: 0 0 0 12px #42e69533, 0 0.8vh 3.2vh 0 rgba(46,204,113,0.33);
-      border: 2.5px solid #2ecc71;
+      box-shadow: 0 0 0 15px rgba(46,204,113,0.2), 0 8px 30px 0 rgba(46,204,113,0.4);
+      border-color: #2ecc71;
+    }
+    #micBtn.recording {
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      border-color: #e74c3c;
+      animation: recording-pulse 1s infinite ease-in-out;
+    }
+    @keyframes recording-pulse {
+      0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(231,76,60,0.8), 0 8px 32px 0 rgba(231,76,60,0.3);
+      }
+      50% { 
+        box-shadow: 0 0 0 20px rgba(231,76,60,0.1), 0 8px 32px 0 rgba(231,76,60,0.3);
+      }
+    }
+    #micBtn.processing {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      border-color: #3498db;
+      animation: processing-spin 1.5s linear infinite;
+    }
+    @keyframes processing-spin {
+      0% { transform: translateX(-50%) rotate(0deg); }
+      100% { transform: translateX(-50%) rotate(360deg); }
     }
     @media (max-width: 600px) {
-      header { padding-left: 10px; }
-      .logo-img { height: 40px; }
+      .logo-bar { padding-left: 10px; }
+      .logo-bar img { height: 40px; }
       main { margin-top: 30px; }
-      #status { font-size: 1em; padding: 12px 10px; }
+      #status { 
+        font-size: 0.9em; 
+        padding: 10px 16px;
+        top: 10px;
+        min-width: 180px;
+      }
       #micBtn {
         width: 68px;
         height: 68px;
@@ -192,7 +247,6 @@
         height: 480px;
       }
     }
-
     .center-image {
       position: absolute;
       top: 60%;
@@ -215,7 +269,7 @@
       position: relative;
       overflow: hidden;
     }
-    .center-image img {
+    .center-image video {
       width: 600px;
       height: 900px;
       -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 3%, rgba(0,0,0,1) 97%, rgba(0,0,0,0) 100%),
@@ -227,99 +281,177 @@
       position: absolute;
       left: 0;
       top: 0;
+      transition: opacity 0.5s ease;
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(135deg, #eafaf1 0%, #a8e6cf 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+    }
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(46,204,113,0.3);
+      border-top: 3px solid #2ecc71;
+      border-radius: 50%;
+      animation: loading-spin 1s linear infinite;
+    }
+    @keyframes loading-spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
-  <!-- Loghi background rimossi -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+  </div>
+  
   <div class="bg-image"></div>
+  <div class="white-fade-box"></div>
+  
   <div class="logo-bar">
     <img src="/static/logo.png" alt="Otofarma Logo" />
   </div>
-  <div id="status">Inizializzazione assistente vocale PROFESSIONALE ITALIANO...</div>
+  
+  <div id="status">🎧 Inizializzazione assistente vocale professionale...</div>
   
   <main>
     <div id="micBtn" title="Clicca per parlare con OtoBot">
-      <video id="micVideo" src="/static/miclogo.mov" width="100%" height="100%" muted playsinline style="border-radius:50%;display:block;background:#fff;"></video>
+      <video id="micVideo" src="/static/miclogo.mov" width="100%" height="100%" muted playsinline style="border-radius:50%;display:block;background:transparent;object-fit:cover;"></video>
     </div>
   </main>
-  <script src="/static/index.js"></script>
-  <!-- Precaricamento risorse -->
-  <script>
-    // Preload immagini e video
-    const preloadUrls = [
-      "/static/bg.png",
-      "/static/logo.png",
-      "/static/miclogo.mov",
-      "/static/stillZloop.webm",
-      "/static/moveZloop.webm"
-    ];
-    preloadUrls.forEach(url => {
-      if (url.endsWith('.png')) {
-        const img = new Image();
-        img.src = url;
-      } else if (url.endsWith('.mov') || url.endsWith('.webm')) {
-        const video = document.createElement('video');
-        video.src = url;
-        video.preload = 'auto';
-        video.muted = true;
-        video.play().then(() => video.pause()).catch(() => {});
-      }
-    });
-  </script>
-  <!-- Avatar loop visualization -->
+
   <div class="center-image">
-    <div class="avatar-fade" style="position:relative;width:100%;height:100%;">
-      <video id="avatar-still" src="/static/stillZloop.webm" autoplay loop muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;"></video>
-      <video id="avatar-move" src="/static/moveZloop.webm" muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;" ></video>
+    <div class="avatar-fade">
+      <video id="avatar-still" src="/static/stillZloop.webm" autoplay loop muted playsinline preload="auto" style="opacity:0;"></video>
+      <video id="avatar-move" src="/static/moveZloop.webm" muted playsinline preload="auto" style="opacity:0;"></video>
     </div>
   </div>
+
+  <script src="/static/index.js"></script>
+  
   <script>
-    // Nuova logica avatar: loop video stillZloop, al click bottone riproduci moveZloop, poi torna a loop stillZloop
-    document.addEventListener('DOMContentLoaded', function() {
-      const avatarStill = document.getElementById('avatar-still');
-      const avatarMove = document.getElementById('avatar-move');
-      const micBtn = document.getElementById('micBtn');
-      const micVideo = document.getElementById('micVideo');
+    // Professional video loading system with error handling
+    class VideoManager {
+      constructor() {
+        this.loadedVideos = 0;
+        this.totalVideos = 3;
+        this.isReady = false;
+      }
 
-      // Forza il caricamento esplicito
-      avatarStill.load();
-      avatarMove.load();
+      preloadVideo(src, onLoad, onError) {
+        const video = document.createElement('video');
+        video.preload = 'auto';
+        video.muted = true;
+        
+        const loadPromise = new Promise((resolve, reject) => {
+          video.oncanplaythrough = () => {
+            video.oncanplaythrough = null;
+            video.onerror = null;
+            resolve(video);
+          };
+          
+          video.onerror = () => {
+            video.oncanplaythrough = null;
+            video.onerror = null;
+            reject(new Error(`Failed to load: ${src}`));
+          };
+          
+          video.src = src;
+          video.load();
+        });
 
-      // Funzione per mostrare i video solo quando entrambi sono pronti
-      let readyCount = 0;
-      function showVideosWhenReady() {
-        readyCount++;
-        if (readyCount === 2) {
-          avatarStill.style.visibility = 'visible';
-          avatarMove.style.visibility = 'visible';
+        loadPromise.then(onLoad).catch(onError);
+        return loadPromise;
+      }
+
+      init() {
+        const videos = [
+          '/static/miclogo.mov',
+          '/static/stillZloop.webm', 
+          '/static/moveZloop.webm'
+        ];
+
+        const loadPromises = videos.map(src => 
+          this.preloadVideo(
+            src,
+            () => {
+              this.loadedVideos++;
+              console.log(`✅ Video loaded: ${src} (${this.loadedVideos}/${this.totalVideos})`);
+              if (this.loadedVideos === this.totalVideos) {
+                this.onAllVideosLoaded();
+              }
+            },
+            (error) => {
+              console.warn(`⚠️ Video failed to load: ${src}`, error);
+              this.loadedVideos++;
+              if (this.loadedVideos === this.totalVideos) {
+                this.onAllVideosLoaded();
+              }
+            }
+          )
+        );
+
+        // Fallback timeout
+        setTimeout(() => {
+          if (!this.isReady) {
+            console.log('⏰ Video loading timeout, proceeding anyway');
+            this.onAllVideosLoaded();
+          }
+        }, 5000);
+      }
+
+      onAllVideosLoaded() {
+        if (this.isReady) return;
+        this.isReady = true;
+
+        console.log('🎬 All videos processed, initializing interface');
+        
+        // Hide loading overlay
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) {
+          loadingOverlay.classList.add('hidden');
+          setTimeout(() => loadingOverlay.remove(), 500);
+        }
+
+        // Initialize avatar videos
+        const avatarStill = document.getElementById('avatar-still');
+        const avatarMove = document.getElementById('avatar-move');
+        
+        if (avatarStill && avatarMove) {
           avatarStill.style.opacity = '1';
           avatarStill.currentTime = 0;
-          avatarStill.play();
+          avatarStill.play().catch(console.warn);
+        }
+
+        // Update status
+        const status = document.getElementById('status');
+        if (status) {
+          status.textContent = '🎧 Pronto per la registrazione vocale';
+          status.className = 'success';
         }
       }
+    }
 
-      // Ascolta l'evento canplaythrough per entrambi i video
-      avatarStill.addEventListener('canplaythrough', showVideosWhenReady);
-      avatarMove.addEventListener('canplaythrough', showVideosWhenReady);
-
-      // Forza la decodifica del primo frame di entrambi i video
-      avatarStill.muted = true;
-      avatarMove.muted = true;
-      avatarStill.play().then(() => avatarStill.pause()).catch(() => {});
-      avatarMove.play().then(() => avatarMove.pause()).catch(() => {});
-
-      if (avatarStill && avatarMove && micBtn) {
-        // Riproduci il video miclogo.mov al click del pulsante
-        micBtn.addEventListener('click', function() {
-          if (micVideo) {
-            micVideo.currentTime = 0;
-            micVideo.play();
-          }
-        });
-      }
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      const videoManager = new VideoManager();
+      videoManager.init();
     });
   </script>
 </body>
 </html>
-
