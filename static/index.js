@@ -1,5 +1,5 @@
-// OtoBot Professional Italian Voice Assistant (Google Cloud Enhanced)
-// Medical/Enterprise Version: Backend Speech-to-Text with Professional UI
+// OtoBot Professional Italian Voice Assistant (Google Cloud Charon Voice)
+// Medical/Enterprise Version: Backend Speech-to-Text
 
 let isRecording = false;
 
@@ -9,180 +9,90 @@ const status = document.getElementById('status');
 const activationStatus = document.getElementById('activationStatus');
 const connectionStatus = document.getElementById('connectionStatus');
 
-// Professional status management
-class StatusManager {
-    static updateStatus(message, type = 'default') {
-        if (!status) return;
-        
-        status.textContent = message;
-        status.className = type;
-        
-        // Auto-hide success messages
-        if (type === 'success') {
-            setTimeout(() => {
-                if (status.className === 'success') {
-                    status.textContent = '🎧 Pronto per nuova conversazione';
-                    status.className = 'default';
-                }
-            }, 3000);
-        }
-    }
-
-    static showError(message) {
-        this.updateStatus(`❌ ${message}`, 'error');
-    }
-
-    static showSuccess(message) {
-        this.updateStatus(`✅ ${message}`, 'success');
-    }
-
-    static showProcessing(message) {
-        this.updateStatus(`⏳ ${message}`, 'processing');
-    }
-}
-
-// Enhanced avatar video control with error handling
+// --- Voice Synthesis via Backend Google TTS ---
+// --- Avatar video control ---
 function showMoveZloop() {
     const avatarStill = document.getElementById('avatar-still');
     const avatarMove = document.getElementById('avatar-move');
-    
     if (avatarStill && avatarMove) {
-        try {
-            avatarStill.pause();
-            avatarStill.style.opacity = '0';
-            avatarMove.loop = true;
-            avatarMove.style.opacity = '1';
-            avatarMove.currentTime = 0;
-            avatarMove.play().catch(error => {
-                console.warn('⚠️ Avatar move video play failed:', error);
-            });
-        } catch (error) {
-            console.warn('⚠️ Avatar transition failed:', error);
-        }
+        avatarStill.pause();
+        avatarStill.style.opacity = '0';
+        avatarMove.loop = true;
+        avatarMove.style.opacity = '1';
+        avatarMove.currentTime = 0;
+        avatarMove.play();
     }
 }
 
 function endMoveZloop() {
     const avatarStill = document.getElementById('avatar-still');
     const avatarMove = document.getElementById('avatar-move');
-    
     if (avatarStill && avatarMove) {
-        try {
-            avatarMove.loop = false;
-            avatarMove.pause();
-            avatarMove.style.opacity = '0';
-            avatarStill.currentTime = 0;
-            avatarStill.style.opacity = '1';
-            avatarStill.play().catch(error => {
-                console.warn('⚠️ Avatar still video play failed:', error);
-            });
-        } catch (error) {
-            console.warn('⚠️ Avatar transition failed:', error);
-        }
+        avatarMove.loop = false;
+        avatarMove.pause();
+        avatarMove.style.opacity = '0';
+        avatarStill.currentTime = 0;
+        avatarStill.play();
+        avatarStill.style.opacity = '1';
     }
 }
-
-// Professional TTS with enhanced feedback
 function speakWithGoogleTTS(text) {
     micBtn.classList.remove('pulse-green');
-    
-    StatusManager.showProcessing('Generazione vocale in corso...');
-    
     fetch('/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text })
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        return response.blob();
-    })
+    .then(response => response.blob())
     .then(blob => {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
-        
         let safetyTimer = setTimeout(() => {
-            console.warn('⚠️ TTS safety timeout triggered');
             endMoveZloop();
-            StatusManager.updateStatus('🎧 Pronto per nuova conversazione');
-        }, 120000); // 2 minutes safety
+        }, 1200000); // 2 minuti
+        audio.play();
         
-        audio.play().then(() => {
-            StatusManager.updateStatus('🗣️ Riproduzione in corso...');
-            // Start avatar animation after 1 second
-            setTimeout(showMoveZloop, 1000);
-        }).catch(error => {
-            console.error('❌ Audio play failed:', error);
-            StatusManager.showError('Errore riproduzione audio');
-            clearTimeout(safetyTimer);
-        });
+        // Aspetta 1 secondo prima di far partire il video move
+        setTimeout(() => {
+            showMoveZloop();
+        }, 1000);
         
         audio.onended = function() {
             clearTimeout(safetyTimer);
             endMoveZloop();
             micBtn.classList.remove('pulse-green');
-            StatusManager.showSuccess('Conversazione completata');
-            URL.revokeObjectURL(url); // Clean up
         };
-        
-        audio.onerror = function(error) {
-            console.error('❌ Audio error:', error);
+        audio.onerror = function() {
             clearTimeout(safetyTimer);
             endMoveZloop();
             micBtn.classList.remove('pulse-green');
-            StatusManager.showError('Errore durante la riproduzione');
-            URL.revokeObjectURL(url); // Clean up
         };
-    })
-    .catch(error => {
-        console.error('❌ TTS request failed:', error);
-        StatusManager.showError('Errore nel servizio vocale');
-        endMoveZloop();
-        micBtn.classList.remove('pulse-green');
     });
 }
 
-// Enhanced audio recording with professional feedback
+// --- Audio Recording and Backend Transcription ---
 let mediaRecorder;
 let audioChunks = [];
 
 async function startRecording() {
     if (isRecording) return;
 
-    StatusManager.updateStatus('🎤 Parla chiaramente...', 'processing');
+    status.textContent = "🎤 Parla ora...";
     micBtn.classList.add('recording');
-    micBtn.classList.remove('pulse-green');
     isRecording = true;
     audioChunks = [];
     
-    // Enhanced mic video handling
+    // Avvia il video miclogo.mov in loop
     const micVideo = document.getElementById('micVideo');
     if (micVideo) {
-        try {
-            micVideo.currentTime = 0;
-            micVideo.loop = true;
-            micVideo.play().catch(error => {
-                console.warn('⚠️ Mic video play failed:', error);
-            });
-        } catch (error) {
-            console.warn('⚠️ Mic video error:', error);
-        }
+        micVideo.currentTime = 0;
+        micVideo.loop = true;
+        micVideo.play();
     }
 
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                sampleRate: 44100
-            }
-        });
-        
-        mediaRecorder = new MediaRecorder(stream, {
-            mimeType: 'audio/webm;codecs=opus'
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
 
         mediaRecorder.ondataavailable = event => {
             if (event.data.size > 0) {
@@ -191,85 +101,62 @@ async function startRecording() {
         };
 
         mediaRecorder.onstop = async () => {
-            StatusManager.showProcessing('Elaborazione riconoscimento vocale...');
+            status.textContent = "⏳ Trascrizione in corso...";
             micBtn.classList.remove('recording');
             micBtn.classList.add('processing');
             isRecording = false;
             
-            // Stop mic video
+            // Ferma il video miclogo.mov
+            const micVideo = document.getElementById('micVideo');
             if (micVideo) {
-                try {
-                    micVideo.pause();
-                    micVideo.currentTime = 0;
-                    micVideo.loop = false;
-                } catch (error) {
-                    console.warn('⚠️ Mic video stop error:', error);
-                }
+                micVideo.pause();
+                micVideo.currentTime = 0;
+                micVideo.loop = false;
             }
-
-            // Stop all tracks to release microphone
-            stream.getTracks().forEach(track => track.stop());
 
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             const formData = new FormData();
             formData.append('audio', audioBlob, 'input.webm');
 
-            try {
-                const response = await fetch('/transcribe', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-                
+            fetch('/transcribe', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
                 if (data.transcript && data.transcript.length > 0) {
-                    StatusManager.showProcessing('Generazione risposta intelligente...');
-                    
-                    const chatResponse = await fetch('/chat', {
+                    status.textContent = "🗣️ Risposta vocale in corso...";
+                    fetch('/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             message: data.transcript,
                             voice: true
                         })
-                    });
-
-                    if (!chatResponse.ok) {
-                        throw new Error(`Chat HTTP ${chatResponse.status}`);
-                    }
-
-                    const chatData = await chatResponse.json();
-                    
-                    if (chatData.reply) {
-                        speakWithGoogleTTS(chatData.reply);
-                    } else {
-                        StatusManager.showError('Nessuna risposta disponibile');
+                    })
+                    .then(response => response.json())
+                    .then(chatData => {
+                        if (chatData.reply) {
+                            speakWithGoogleTTS(chatData.reply);
+                            status.textContent = "✅ Pronto per nuova conversazione";
+                        } else {
+                            status.textContent = "❌ Nessuna risposta trovata.";
+                        }
                         resetMicButton();
-                    }
+                    });
                 } else {
-                    StatusManager.showError('Messaggio vocale non rilevato');
+                    status.textContent = "❌ Nessuna voce rilevata o trascrizione fallita.";
                     resetMicButton();
                 }
-            } catch (error) {
-                console.error('❌ Processing error:', error);
-                StatusManager.showError('Errore nell\'elaborazione vocale');
+            })
+            .catch(() => {
+                status.textContent = "❌ Errore nella trascrizione.";
                 resetMicButton();
-            }
-        };
-
-        mediaRecorder.onerror = (error) => {
-            console.error('❌ MediaRecorder error:', error);
-            StatusManager.showError('Errore nella registrazione');
-            resetMicButton();
+            });
         };
 
         mediaRecorder.start();
-        
-        // Override click handler during recording
+        // la registrazione viene fermata solo da un secondo click
         micBtn.onclick = () => {
             if (isRecording && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
@@ -277,8 +164,7 @@ async function startRecording() {
         };
 
     } catch (error) {
-        console.error('❌ Microphone access error:', error);
-        StatusManager.showError(`Errore microfono: ${error.message}`);
+        status.textContent = `❌ Errore microfono: ${error.message}`;
         resetMicButton();
         isRecording = false;
     }
@@ -300,43 +186,31 @@ function toggleRecording() {
     }
 }
 
-// Professional initialization with enhanced error handling
+// --- Initialization ---
 document.addEventListener('DOMContentLoaded', function() {
-    // Check browser compatibility
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        StatusManager.showError('Browser non supportato per registrazione audio');
+        status.textContent = "❌ Microfono non supportato dal browser.";
         if (micBtn) micBtn.disabled = true;
         return;
     }
 
-    // Check HTTPS requirement
     if (!(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-        StatusManager.showError('Richiesto HTTPS per funzionalità audio');
+        status.textContent = "❌ Richiesto HTTPS. Accedi tramite https:// o localhost";
         if (micBtn) micBtn.disabled = true;
         return;
     }
 
-    // Initialize microphone button
     if (micBtn) {
         micBtn.addEventListener('click', toggleRecording);
         micBtn.disabled = false;
         micBtn.style.opacity = '1';
         micBtn.style.cursor = 'pointer';
-        micBtn.classList.add('pulse-green');
     }
 
-    // Update connection status
-    if (connectionStatus) {
-        connectionStatus.textContent = "🟢 Sistema Professionale Attivo";
-        connectionStatus.className = "connection-status online";
-    }
+    connectionStatus.textContent = "🟢 Pronto (TTS Google Cloud)";
+    connectionStatus.className = "connection-status online";
 
     if (activationStatus) {
-        activationStatus.textContent = "🎧 Assistente vocale pronto";
+        activationStatus.textContent = "🎧 Pronto per la registrazione vocale";
     }
-
-    // Initialize with success status
-    StatusManager.showSuccess('Sistema inizializzato correttamente');
-    
-    console.log('🚀 OtoBot Professional Assistant initialized');
 });
