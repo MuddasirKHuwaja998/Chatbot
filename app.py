@@ -109,7 +109,7 @@ def detect_enhanced_voice_activation(text):
         
     text_clean = normalize(text.strip())
     
-    # Check enhanced patterns
+    # Check enhanced patterns0
     for pattern in ENHANCED_ACTIVATION_PATTERNS:
         if re.search(pattern, text_clean, re.IGNORECASE):
             return True
@@ -806,24 +806,21 @@ def check_general_patterns(user_msg):
     if detect_assistant_name(msg):
         return None
     
-    # Check greetings
+    # Stricter greeting matching: only match exact short greetings or "come va"/"come stai" as whole phrase
     for pattern, reply in CUSTOM_GREETINGS:
-        # Exact match for short greetings
-        if len(msg.split()) <= 2 and pattern in msg:
+        # Only match if the message is exactly the greeting or a very close fuzzy match
+        if msg == pattern:
             return reply
-            
-        # Fuzzy match for longer patterns
         if rapidfuzz_available and len(pattern) > 3:
-            if fuzz.partial_ratio(pattern, msg) > 85:
+            if fuzz.ratio(pattern, msg) > 90:
                 return reply
-    
+
     # Check for standalone greetings
     tokens = msg.split()
     if len(tokens) == 1 and tokens[0] in ["ciao", "salve", "buongiorno", "buonasera", "buonanotte"]:
         return "Salve! Sono qui per aiutarti in tutto ciò che riguarda Otofarma."
-    
-    return None
 
+    return None
 # Pharmacy-related functions (unchanged but with better error handling)
 pharmacies = []
 if os.path.isfile(PHARMACY_CSV_PATH):
@@ -1217,7 +1214,7 @@ def get_gemini_conversation(user_message):
         - Test dell'udito gratuiti
         - Garanzie complete e assistenza
         - Rete di farmacie affiliate in Italia
-
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
         COMPORTAMENTO:
         - Professionale ma cordiale
         - Risposte brevi (max 50 parole se possibile)  
@@ -1238,11 +1235,30 @@ def get_gemini_conversation(user_message):
         """
         
         response = model.generate_content(prompt)
-        return response.text.strip()
+        gemini_text = response.text.strip()
+
+                # Fix: If Gemini returns nonsense or too-short answers, use creative fallback
+        nonsense_patterns = [
+            r"^(a+h+|h+a+|e+h+|h+e+|h+a+i+|a+i+|e+i+|i+a+|h+)+[.!?]*$",  # ahhh, haai, eh, etc.
+            r"^[a-z]{1,4}[.!?]*$"  # 1-4 letter "words" only
+        ]
+        if len(gemini_text) < 8 or any(re.match(pat, gemini_text, re.IGNORECASE) for pat in nonsense_patterns):
+            # Extract a main keyword from the question
+            user_kw = ""
+            user_words = re.findall(r'\w+', normalize(user_message))
+            for w in user_words:
+                if w not in {"ciao", "salve", "buongiorno", "buonasera", "buonanotte", "come", "va", "stai", "sei", "sono", "grazie", "bot", "otobot", "otofarma", "assistente"} and len(w) > 3:
+                    user_kw = w
+                    break
+            if user_kw:
+                return f"Mi dispiace, non ho informazioni precise su '{user_kw}'. Ti consiglio di contattare uno specialista Otofarma oppure chiedere in modo diverso. Sono sempre qui per aiutarti!"
+            else:
+                return "Mi dispiace, non ho informazioni precise su questa domanda. Puoi riformulare o chiedere altro? Sono sempre qui per aiutarti!"
+
         # Ensure response is concise (max 200 characters for voice)
-        if len(response.text) > 200:
-            response.text = response.text[:200] + '...'
-        return response.text
+        if len(gemini_text) > 200:
+            gemini_text = gemini_text[:200] + '...'
+        return gemini_text
 
     except Exception as e:
         print(f"Gemini error: {e}")
@@ -1456,6 +1472,33 @@ def chat():
         "Sono qui per offrirti il massimo supporto: puoi essere più specifico nella tua richiesta?"
     ]
     
+        # Improved professional fallback with keyword mention
+    user_kw = ""
+    user_words = re.findall(r'\w+', normalize(user_message_corr))
+    for w in user_words:
+        if w not in {"ciao", "salve", "buongiorno", "buonasera", "buonanotte", "come", "va", "stai", "sei", "sono", "grazie", "bot", "otobot", "otofarma", "assistente"} and len(w) > 3:
+            user_kw = w
+            break
+
+    if user_kw:
+        fallback_messages = [
+            f"Mi dispiace, non ho ancora conoscenze specifiche su '{user_kw}'. Ti consiglio di chiedere a uno specialista Otofarma o riformulare la domanda.",
+            f"Non dispongo di informazioni dettagliate su '{user_kw}', ma sono qui per aiutarti su altri temi Otofarma.",
+            f"Al momento non ho dati su '{user_kw}'. Se vuoi, posso aiutarti su altri servizi o prodotti Otofarma.",
+            f"Non ho una risposta precisa su '{user_kw}', ma puoi sempre contattare il nostro team di esperti Otofarma.",
+            f"Mi scuso, non ho trovato dettagli su '{user_kw}'. Sono qui per aiutarti su qualsiasi altro argomento Otofarma."
+        ]
+    else:
+        fallback_messages = [
+            "Al momento non dispongo di una risposta precisa alla tua richiesta, ma sono qui per aiutarti su qualsiasi altro tema riguardante Otofarma.",
+            "Mi scuso, non sono riuscito a trovare una risposta soddisfacente. Se desideri, puoi riformulare la domanda o chiedere su un altro argomento.",
+            "Domanda interessante! Tuttavia, non ho informazioni puntuali su questo punto. Sono a disposizione per altre domande.",
+            "La tua richiesta è stata ricevuta, ma non dispongo di dettagli specifici. Puoi fornire ulteriori informazioni o chiedere altro?",
+            "Non trovo una risposta adeguata in questo momento. Ti invito a riformulare o a chiedere su altri temi.",
+            "Mi dispiace, non ho trovato la risposta richiesta. Se vuoi puoi essere più dettagliato oppure chiedere su altri servizi Otofarma.",
+            "Se hai bisogno di informazioni su servizi, apparecchi acustici o farmacie, chiedimi pure senza esitare.",
+            "Sono qui per offrirti il massimo supporto: puoi essere più specifico nella tua richiesta?"
+        ]
     reply = fallback_mem.get_unique(fallback_messages)
     return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 # Google Cloud TTS endpoint for Italian male voice
@@ -1526,3 +1569,5 @@ def transcribe():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
+
