@@ -1427,19 +1427,42 @@ def voice_activation():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Main chat endpoint with enhanced intelligence"""
+    """Main chat endpoint with advanced appointment booking priority"""
     user_message = request.json.get("message", "")
     voice_mode = request.json.get("voice", True)
-    
-    # Enhanced voice activation detection
-    if detect_enhanced_voice_activation(user_message):
-        print("🔥 Hey OtoBot detected in chat!")
-        return jsonify({"reply": handle_voice_activation_greeting(), "voice": voice_mode, "male_voice": True})
     user_lat = request.json.get("lat", None)
     user_lon = request.json.get("lon", None)
-    
 
     print(f"Received message: '{user_message}'")
+
+    # 1. Appointment booking logic FIRST (before Gemini, before everything)
+    appointment_keywords = [
+        "prenota", "prenotare", "appuntamento", "visita", "richiedo", "richiedere", "voglio", "vorrei", "prenotazione"
+    ]
+    if any(kw in normalize(user_message) for kw in appointment_keywords):
+        info = extract_appointment_info_smart(user_message)
+        missing = []
+        if not info.get("name"):
+            missing.append("nome completo")
+        if not info.get("phone"):
+            missing.append("numero di telefono")
+        if not info.get("date"):
+            missing.append("data preferita")
+        if missing:
+            reply = (
+                "Per prenotare la visita, ho bisogno dei seguenti dati: "
+                + ", ".join(missing)
+                + ". Puoi fornirmeli?"
+            )
+            print("Appointment booking: missing info", missing)
+            return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
+        send_appointment_email(info["name"], info["phone"], info["date"])
+        reply = (
+            f"Grazie {info['name']}! La tua richiesta di appuntamento per il giorno {info['date']} è stata inviata al team Otofarma. "
+            "Verrai contattato per conferma. Se hai altre esigenze, sono sempre qui per aiutarti!"
+        )
+        print("Appointment booking: email sent", info)
+        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
         # 1. Check for assistant name activation
     if detect_assistant_name(user_message):
@@ -1479,31 +1502,7 @@ def chat():
     # ...inside def chat(): after user_message_corr is defined...
 
     # --- Advanced Appointment Booking Logic ---
-    appointment_keywords = [
-        "prenota", "prenotare", "appuntamento", "visita", "richiedo", "richiedere", "voglio", "vorrei", "prenotazione"
-    ]
-    if any(kw in normalize(user_message_corr) for kw in appointment_keywords):
-        info = extract_appointment_info_smart(user_message_corr)
-        missing = []
-        if not info.get("name"):
-            missing.append("nome completo")
-        if not info.get("phone"):
-            missing.append("numero di telefono")
-        if not info.get("date"):
-            missing.append("data preferita")
-        if missing:
-            reply = (
-                "Per prenotare la visita, ho bisogno dei seguenti dati: "
-                + ", ".join(missing)
-                + ". Puoi fornirmeli?"
-            )
-            return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
-        send_appointment_email(info["name"], info["phone"], info["date"])
-        reply = (
-            f"Grazie {info['name']}! La tua richiesta di appuntamento per il giorno {info['date']} è stata inviata al team Otofarma. "
-            "Verrai contattato per conferma. Se hai altre esigenze, sono sempre qui per aiutarti!"
-        )
-        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
+   
 
     # 5. Check for office hours (before YAML to avoid conflicts)
     if detect_office_hours_question(user_message_corr):
