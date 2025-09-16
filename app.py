@@ -12,7 +12,125 @@ import json
 from google.cloud import texttospeech
 from google.cloud import speech
 from flask import Flask, render_template, request, jsonify
+# ...existing imports...
 
+import smtplib
+from email.mime.text import MIMEText
+
+APPOINTMENTS_FILE = "appointments.json"
+COMPANY_EMAIL = "engr.muddasir01@gmail.com"
+SENDER_EMAIL = "otofarmaibot@gmail.com"
+SENDER_PASSWORD = "bjsnqdouzolnqjry"  # No spaces
+
+def save_appointment(name, phone, date, reason):
+    """Save appointment to local file (JSON)"""
+    import json, os
+    if os.path.exists(APPOINTMENTS_FILE):
+        with open(APPOINTMENTS_FILE, "r", encoding="utf-8") as f:
+            appointments = json.load(f)
+    else:
+        appointments = {}
+    appointments[name.lower()] = {
+        "phone": phone,
+        "date": date,
+        "reason": reason
+    }
+    with open(APPOINTMENTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(appointments, f, ensure_ascii=False, indent=2)
+
+def get_appointment(name):
+    """Retrieve appointment by name"""
+    import json, os
+    if os.path.exists(APPOINTMENTS_FILE):
+        with open(APPOINTMENTS_FILE, "r", encoding="utf-8") as f:
+            appointments = json.load(f)
+        return appointments.get(name.lower())
+    return None
+
+def send_appointment_email(patient_name, patient_phone, patient_date, patient_reason):
+    """Send official appointment email in Italian"""
+    subject = f"Nuova Prenotazione Visita - {patient_name}"
+    body = (
+        f"Gentile Team Otofarma,\n\n"
+        f"È stata richiesta una nuova prenotazione da:\n"
+        f"Nome paziente: {patient_name}\n"
+        f"Telefono: {patient_phone}\n"
+        f"Data preferita: {patient_date}\n"
+        f"Motivo/Problema: {patient_reason}\n\n"
+        f"Si prega di contattare il paziente per confermare l'appuntamento e ricordare la visita.\n\n"
+        f"Questa email è generata automaticamente dall'Assistente Virtuale Otofarma AI Bot.\n"
+        f"Grazie per la collaborazione.\n\n"
+        f"Cordiali saluti,\nOtofarma AI Bot"
+    )
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = SENDER_EMAIL
+    msg["To"] = COMPANY_EMAIL
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.sendmail(SENDER_EMAIL, COMPANY_EMAIL, msg.as_string())
+
+def extract_appointment_info_with_gemini(user_message):
+    """
+    Use Gemini to robustly extract name, phone, date, reason from user message.
+    Returns a dict with missing fields as None.
+    """
+    if not gemini_available:
+        # fallback to regex
+        return extract_appointment_info(user_message)
+    try:
+        model = GenerativeModel("gemini-2.0-flash-001")
+        prompt = f"""
+        Estrai i seguenti dati dal messaggio utente (in italiano):
+        - Nome completo del paziente
+        - Numero di telefono
+        - Data preferita per l'appuntamento
+        - Motivo o problema audiologico
+
+        Rispondi SOLO in formato JSON come esempio:
+        {{
+            "name": "...",
+            "phone": "...",
+            "date": "...",
+            "reason": "..."
+        }}
+
+        Messaggio utente: {user_message}
+        """
+        response = model.generate_content(prompt)
+        import json
+        info = json.loads(response.text.strip())
+        return info
+    except Exception as e:
+        print(f"Gemini extraction error: {e}")
+        # fallback to regex
+        return extract_appointment_info(user_message)
+
+def extract_appointment_info(user_message):
+    """
+    Fallback: Extracts name, phone, date, reason from user message using robust patterns.
+    Returns a dict with missing fields as None.
+    """
+    import re
+    msg = user_message.strip().lower()
+    name_pattern = r"(mi chiamo|sono|il mio nome è|nome[:\s]*)\s*([a-zA-Zàèéìòù' ]{3,})"
+    phone_pattern = r"(\d{8,13})"
+    date_pattern = r"(lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica|oggi|domani|dopodomani|[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4}|[0-9]{1,2} [a-z]+|prossimo|settimana|mese|mercoledì|giovedì|venerdì|sabato|domenica)"
+    reason_pattern = r"(problema|motivo|disturbo|sento|ho|avverto|soffro|fastidio|perdita|udito|acustico|orecchio|sentire|sentito|non sento|non riesco|dolore|ronzio|fischio|controllo|test|prenotare|prenotazione|visita|richiesta|richiedo|richiedere|contattare|specialista|audiologo|audiologia|apparecchio)"
+    name_match = re.search(name_pattern, msg)
+    name = name_match.group(2).strip().title() if name_match else None
+    phone_match = re.search(phone_pattern, msg)
+    phone = phone_match.group(1) if phone_match else None
+    date_match = re.search(date_pattern, msg)
+    date = date_match.group(0).strip().title() if date_match else None
+    reason_match = re.search(reason_pattern, msg)
+    reason = reason_match.group(0).strip().capitalize() if reason_match else None
+    return {
+        "name": name,
+        "phone": phone,
+        "date": date,
+        "reason": reason
+    }
 try:
     from flask_cors import CORS
 except ImportError:
@@ -1414,6 +1532,42 @@ def chat():
         return jsonify({"reply": "Questo assistente risponde solo a domande in italiano. Per favore riformula la domanda in italiano.", "voice": voice_mode, "male_voice": True})
 
     print(f"After spell correction: '{user_message_corr}'")
+        # --- Advanced Appointment Booking Logic ---
+    appointment_keywords = [
+        "prenota", "prenotare", "appuntamento", "visita", "richiedo", "richiedere", "voglio", "vorrei", "prenotazione", "test udito", "controllo", "specialista", "audiologo", "audiologia"
+    ]
+    if any(kw in normalize(user_message_corr) for kw in appointment_keywords):
+        info = extract_appointment_info_with_gemini(user_message_corr)
+        missing = []
+        if not info.get("name"):
+            missing.append("nome completo")
+        if not info.get("phone"):
+            missing.append("numero di telefono")
+        if not info.get("date"):
+            missing.append("data preferita")
+        if not info.get("reason"):
+            missing.append("motivo della visita o problema audiologico")
+        if missing:
+            reply = (
+                "Per prenotare correttamente la visita, ho bisogno dei seguenti dati: "
+                + ", ".join(missing)
+                + ". Puoi fornirmeli?"
+            )
+            return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
+        existing = get_appointment(info["name"])
+        if existing:
+            reply = (
+                f"{info['name']}, hai già una prenotazione per il giorno {existing['date']} "
+                f"con motivo: {existing['reason']}. Vuoi modificarla o aggiungere una nuova richiesta?"
+            )
+            return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
+        save_appointment(info["name"], info["phone"], info["date"], info["reason"])
+        send_appointment_email(info["name"], info["phone"], info["date"], info["reason"])
+        reply = (
+            f"Grazie {info['name']}! La tua richiesta di appuntamento per il giorno {info['date']} è stata inviata al team Otofarma. "
+            "Verrai contattato per conferma e promemoria. Se hai altre esigenze, sono sempre qui per aiutarti!"
+        )
+        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
     # 5. Check for office hours (before YAML to avoid conflicts)
     if detect_office_hours_question(user_message_corr):
@@ -1569,5 +1723,4 @@ def transcribe():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
 
