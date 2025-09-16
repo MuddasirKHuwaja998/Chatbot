@@ -12,15 +12,13 @@ import json
 from google.cloud import texttospeech
 from google.cloud import speech
 from flask import Flask, render_template, request, jsonify
-import smtplib
-from email.mime.text import MIMEText
+import sendgrid
+from sendgrid.helpers.mail import Mail
 
-COMPANY_EMAIL = "engr.muddasir01@gmail.com"
-SENDER_EMAIL = "otofarmaibot@gmail.com"
-SENDER_PASSWORD = "wsjtvvydvtatbimw"  # No spaces
+
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY")  #
 
 def send_appointment_email(patient_name, patient_phone, patient_date):
-    """Send official appointment email in Italian (no reason/disease)"""
     subject = f"Nuova Prenotazione Visita - {patient_name}"
     body = (
         f"Gentile Team Otofarma,\n\n"
@@ -33,16 +31,20 @@ def send_appointment_email(patient_name, patient_phone, patient_date):
         f"Grazie per la collaborazione.\n\n"
         f"Cordiali saluti,\nOtofarma AI Bot"
     )
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = SENDER_EMAIL
-    msg["To"] = COMPANY_EMAIL
+    message = Mail(
+        from_email="otofarmaibot@gmail.com",
+        to_emails="engr.muddasir01@gmail.com",
+        subject=subject,
+        plain_text_content=body
+    )
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.sendmail(SENDER_EMAIL, COMPANY_EMAIL, msg.as_string())
+        sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
+        response = sg.send(message)
+        print(f"SendGrid email status: {response.status_code}")
+        if response.status_code >= 400:
+            print(f"SendGrid error body: {response.body}")
     except Exception as e:
-        print(f"Email sending error: {e}")
+        print(f"SendGrid email error: {e}")
 
 def extract_appointment_info_smart(user_message):
     """
