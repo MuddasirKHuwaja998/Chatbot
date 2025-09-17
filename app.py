@@ -52,22 +52,29 @@ def extract_appointment_info_smart(user_message):
     Returns a dict with missing fields as None.
     """
     import re
-    msg = user_message.strip().lower()
+    msg = user_message.strip()
+    msg_lower = msg.lower()
     # Name: looks for "mi chiamo", "sono", "il mio nome è", or capitalized words
-    name_pattern = r"(mi chiamo|sono|il mio nome è|nome[:\s]*)\s*([a-zA-Zàèéìòù' ]{3,})"
-    name_match = re.search(name_pattern, msg)
-    name = name_match.group(2).strip().title() if name_match else None
-    # If not found, try to get first capitalized word (for short messages)
-    if not name:
-        possible_names = re.findall(r"\b([A-Z][a-zàèéìòù']{2,})\b", user_message)
+    name_pattern = r"(mi chiamo|sono|il mio nome è|nome[:\s]*)\s*([A-Za-zÀ-ÿ' ]{3,})"
+    name_match = re.search(name_pattern, msg_lower)
+    name = None
+    if name_match:
+        name = name_match.group(2).strip().title()
+    else:
+        # Try to get first capitalized word (for short messages)
+        possible_names = re.findall(r"\b([A-Z][a-zàèéìòù']{2,})\b", msg)
         if possible_names:
             name = possible_names[0]
-    # Phone: 8-13 digits
-    phone_match = re.search(r"(\d{8,13})", msg)
-    phone = phone_match.group(1) if phone_match else None
+    # Phone: match numbers with or without spaces/dashes, 8-13 digits total
+    phone_match = re.search(r"((?:\d[\s\-]*){8,13})", msg)
+    phone = None
+    if phone_match:
+        phone_candidate = re.sub(r"[\s\-]", "", phone_match.group(1))
+        if 8 <= len(phone_candidate) <= 13:
+            phone = phone_candidate
     # Date: Italian weekdays, dd/mm/yyyy, dd month, oggi, domani, etc.
     date_pattern = r"(lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica|oggi|domani|dopodomani|[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4}|[0-9]{1,2} [a-z]+|prossimo|settimana|mese|[0-9]{1,2} [a-z]+)"
-    date_match = re.search(date_pattern, msg)
+    date_match = re.search(date_pattern, msg_lower)
     date = date_match.group(0).strip().title() if date_match else None
     return {
         "name": name,
@@ -1456,14 +1463,16 @@ def chat():
             )
             print("Appointment booking: missing info", missing)
             return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
+        
         send_appointment_email(info["name"], info["phone"], info["date"])
         reply = (
-            f"Grazie {info['name']}! La tua richiesta di appuntamento per il giorno {info['date']} è stata inviata al team Otofarma. "
-            "Verrai contattato per conferma. Se hai altre esigenze, sono sempre qui per aiutarti!"
+            f"Ciao {info['name']},\n"
+            f"Ho inviato la tua richiesta di appuntamento per il giorno {info['date']} al nostro team Otofarma.\n"
+            f"Riceverai presto una chiamata di conferma al numero {info['phone']}.\n"
+            "Grazie per aver scelto Otofarma! Se hai altre esigenze, sono sempre qui per aiutarti in modo professionale e cordiale."
         )
         print("Appointment booking: email sent", info)
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
-
         # 1. Check for assistant name activation
     if detect_assistant_name(user_message):
         return jsonify({"reply": handle_voice_activation_greeting(), "voice": voice_mode, "male_voice": True})
