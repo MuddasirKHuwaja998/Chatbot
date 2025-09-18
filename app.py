@@ -14,7 +14,51 @@ from google.cloud import speech
 from flask import Flask, render_template, request, jsonify
 import sendgrid
 from sendgrid.helpers.mail import Mail
+import sqlite3
 
+DB_PATH = "appointments.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS appointments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            date TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+def save_appointment_to_db(name, phone, date):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO appointments (name, phone, date) VALUES (?, ?, ?)",
+        (name, phone, date)
+    )
+    conn.commit()
+    conn.close()
+
+def find_appointment(name=None, phone=None):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    query = "SELECT name, phone, date FROM appointments WHERE 1=1"
+    params = []
+    if name:
+        query += " AND name LIKE ?"
+        params.append(f"%{name}%")
+    if phone:
+        query += " AND phone LIKE ?"
+        params.append(f"%{phone}%")
+    c.execute(query, params)
+    result = c.fetchone()
+    conn.close()
+    return result
 
 SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY")  #
 
@@ -47,35 +91,35 @@ def send_appointment_email(patient_name, patient_phone, patient_date):
         print(f"SendGrid email error: {e}")
 
 def extract_appointment_info_smart(user_message):
-    """
-    Extracts name, phone, date from any sentence using robust patterns.
-    Returns a dict with missing fields as None.
-    """
     import re
+    from datetime import datetime
     msg = user_message.strip()
     msg_lower = msg.lower()
-    # Name: looks for "mi chiamo", "sono", "il mio nome è", or capitalized words
+    # Name extraction
     name_pattern = r"(mi chiamo|sono|il mio nome è|nome[:\s]*)\s*([A-Za-zÀ-ÿ' ]{3,})"
     name_match = re.search(name_pattern, msg_lower)
     name = None
     if name_match:
         name = name_match.group(2).strip().title()
     else:
-        # Try to get first capitalized word (for short messages)
         possible_names = re.findall(r"\b([A-Z][a-zàèéìòù']{2,})\b", msg)
         if possible_names:
             name = possible_names[0]
-    # Phone: match numbers with or without spaces/dashes, 8-13 digits total
+    # Phone extraction
     phone_match = re.search(r"((?:\d[\s\-]*){8,13})", msg)
     phone = None
     if phone_match:
         phone_candidate = re.sub(r"[\s\-]", "", phone_match.group(1))
         if 8 <= len(phone_candidate) <= 13:
             phone = phone_candidate
-    # Date: Italian weekdays, dd/mm/yyyy, dd month, oggi, domani, etc.
+    # Date extraction
     date_pattern = r"(lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica|oggi|domani|dopodomani|[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4}|[0-9]{1,2} [a-z]+|prossimo|settimana|mese|[0-9]{1,2} [a-z]+)"
     date_match = re.search(date_pattern, msg_lower)
     date = date_match.group(0).strip().title() if date_match else None
+    # If date missing, use current year and month
+    if not date:
+        now = datetime.now()
+        date = f"{now.day} {now.strftime('%B')} {now.year}"
     return {
         "name": name,
         "phone": phone,
@@ -1325,7 +1369,12 @@ def get_gemini_conversation(user_message):
 
         # Ensure response is concise (max 200 characters for voice)
         if len(gemini_text) > 200:
-            gemini_text = gemini_text[:200] + '...'
+             # Cut at last period before 200 chars
+            last_period = gemini_text[:200].rfind('.')
+            if last_period != -1:
+               gemini_text = gemini_text[:last_period+1]
+            else:
+             gemini_text = gemini_text[:200] + '...'
         return gemini_text
 
     except Exception as e:
@@ -1441,6 +1490,31 @@ def chat():
     user_lon = request.json.get("lon", None)
 
     print(f"Received message: '{user_message}'")
+    check_keywords = [
+        "ho appuntamento", "il mio appuntamento", "la mia prenotazione", "quando è il mio appuntamento",
+        "ho una prenotazione", "controlla appuntamento", "verifica appuntamento", "ho prenotato",
+        "sono prenotato", "sono registrato", "sono in lista", "mio appuntamento", "mia prenotazione",
+        "ho già prenotato", "ho già appuntamento", "sono in agenda"
+    ]
+  
+    if any(kw in normalize(user_message) for kw in check_keywords):
+        info = extract_appointment_info_smart(user_message)
+         # Privacy: require both name and phone
+        if info.get("name") and info.get("phone"):
+          found = find_appointment(name=info.get("name"), phone=info.get("phone"))
+        if found:
+            reply = (
+                f"Sì, {found[0]}, hai già un appuntamento prenotato per il giorno {found[2]}.\n"
+                f"Verrai contattato al numero {found[1]} per la conferma.\n"
+                "Grazie per aver scelto Otofarma!"
+            )
+        else:
+            reply = (
+                "Per motivi di privacy, servono sia il nome che il numero di telefono per verificare la prenotazione."
+                "Non trovo una prenotazione a tuo nome o numero. "
+                "Se pensi di aver prenotato, controlla di aver fornito nome e telefono corretti."
+            )
+        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
     # 1. Appointment booking logic FIRST (before Gemini, before everything)
     appointment_keywords = [
@@ -1465,6 +1539,7 @@ def chat():
             return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
         
         send_appointment_email(info["name"], info["phone"], info["date"])
+        save_appointment_to_db(info["name"], info["phone"], info["date"])
         reply = (
             f"Ciao {info['name']},\n"
             f"Ho inviato la tua richiesta di appuntamento per il giorno {info['date']} al nostro team Otofarma.\n"
@@ -1667,4 +1742,3 @@ def transcribe():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
