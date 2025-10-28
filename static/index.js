@@ -6,8 +6,11 @@ let isRecording = false;
 // UI elements
 const micBtn = document.getElementById('micBtn');
 const status = document.getElementById('status');
-const activationStatus = document.getElementById('activationStatus');
-const connectionStatus = document.getElementById('connectionStatus');
+
+// Helper function to safely update status
+function updateStatus(text) {
+    if (status) status.textContent = text;
+}
 
 // --- Voice Synthesis via Backend Google TTS ---
 // --- Avatar video control ---
@@ -77,7 +80,7 @@ let audioChunks = [];
 async function startRecording() {
     if (isRecording) return;
 
-    status.textContent = "🎤 Parla ora...";
+    updateStatus("🎤 Parla ora...");
     micBtn.classList.add('recording');
     isRecording = true;
     audioChunks = [];
@@ -90,9 +93,24 @@ async function startRecording() {
         micVideo.play();
     }
 
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
+        try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: { 
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 44100 
+            } 
+        });
+        
+        // iOS Safari compatibility check
+        let options = {};
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            options = { mimeType: 'audio/webm;codecs=opus' };
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            options = { mimeType: 'audio/mp4' };
+        }
+        
+        mediaRecorder = new MediaRecorder(stream, options);
 
         mediaRecorder.ondataavailable = event => {
             if (event.data.size > 0) {
@@ -101,7 +119,7 @@ async function startRecording() {
         };
 
         mediaRecorder.onstop = async () => {
-            status.textContent = "⏳ Trascrizione in corso...";
+            updateStatus("⏳ Trascrizione in corso...");
             micBtn.classList.remove('recording');
             micBtn.classList.add('processing');
             isRecording = false;
@@ -125,7 +143,7 @@ async function startRecording() {
             .then(response => response.json())
             .then(data => {
                 if (data.transcript && data.transcript.length > 0) {
-                    status.textContent = "🗣️ Risposta vocale in corso...";
+                    updateStatus("🗣️ Risposta vocale in corso...");
                     fetch('/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -138,33 +156,38 @@ async function startRecording() {
                     .then(chatData => {
                         if (chatData.reply) {
                             speakWithGoogleTTS(chatData.reply);
-                            status.textContent = "✅ Pronto per nuova conversazione";
+                            updateStatus("✅ Pronto per nuova conversazione");
                         } else {
-                            status.textContent = "❌ Nessuna risposta trovata.";
+                            updateStatus("❌ Nessuna risposta trovata.");
                         }
                         resetMicButton();
                     });
                 } else {
-                    status.textContent = "❌ Nessuna voce rilevata o trascrizione fallita.";
+                    updateStatus("❌ Nessuna voce rilevata o trascrizione fallita.");
                     resetMicButton();
                 }
             })
             .catch(() => {
-                status.textContent = "❌ Errore nella trascrizione.";
+                updateStatus("❌ Errore nella trascrizione.");
                 resetMicButton();
             });
         };
 
-        mediaRecorder.start();
-        // la registrazione viene fermata solo da un secondo click
-        micBtn.onclick = () => {
+         mediaRecorder.start();
+        // Store reference for proper cleanup
+        micBtn.removeEventListener('click', toggleRecording);
+        
+        const stopHandler = function() {
             if (isRecording && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
+                // Remove this temporary handler
+                micBtn.removeEventListener('click', stopHandler);
             }
         };
+        micBtn.addEventListener('click', stopHandler);
 
     } catch (error) {
-        status.textContent = `❌ Errore microfono: ${error.message}`;
+        updateStatus(`❌ Errore microfono: ${error.message}`);
         resetMicButton();
         isRecording = false;
     }
@@ -173,9 +196,11 @@ async function startRecording() {
 function resetMicButton() {
     micBtn.classList.remove('recording', 'processing');
     micBtn.classList.add('pulse-green');
-    micBtn.onclick = toggleRecording;
+    
+    // iOS fix: Just remove and re-add the event listener
+    micBtn.removeEventListener('click', toggleRecording);
+    micBtn.addEventListener('click', toggleRecording);
 }
-
 function toggleRecording() {
     if (!isRecording) {
         startRecording();
@@ -189,26 +214,38 @@ function toggleRecording() {
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', function() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        status.textContent = "❌ Microfono non supportato dal browser.";
+        updateStatus("❌ Microfono non supportato dal browser.");
         if (micBtn) micBtn.disabled = true;
         return;
     }
 
     if (!(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-        status.textContent = "❌ Richiesto HTTPS. Accedi tramite https:// o localhost";
+        updateStatus("❌ Richiesto HTTPS. Accedi tramite https:// o localhost");
         if (micBtn) micBtn.disabled = true;
         return;
     }
 
-    if (micBtn) {
+        if (micBtn) {
+        // iOS audio context initialization
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        
         micBtn.addEventListener('click', toggleRecording);
         micBtn.disabled = false;
         micBtn.style.opacity = '1';
         micBtn.style.cursor = 'pointer';
     }
 
-    connectionStatus.textContent = "🟢 Pronto (TTS Google Cloud)";
-    connectionStatus.className = "connection-status online";
+    // Optional status elements
+    const connectionStatus = document.getElementById('connectionStatus');
+    const activationStatus = document.getElementById('activationStatus');
+    
+    if (connectionStatus) {
+        connectionStatus.textContent = "🟢 Pronto (TTS Google Cloud)";
+        connectionStatus.className = "connection-status online";
+    }
 
     if (activationStatus) {
         activationStatus.textContent = "🎧 Pronto per la registrazione vocale";
