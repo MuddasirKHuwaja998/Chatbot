@@ -518,12 +518,14 @@ CORPORATE_PATTERNS = [
     (r"\b(gaetano)\b", "frontend_dev"),
     (r"\b(team.*tecnico|team.*sviluppo|technical team|dev team)\b", "technical_team"),
     
-    # AI Creator patterns
+    # AI Creator patterns - ENHANCED FOR BETTER DETECTION
     (r"\b(chi.*creato|chi.*sviluppato|chi.*programmato|chi.*fatto|chi.*costruito)\b.*\b(te|tu|ai|bot|otobot|intelligenza)\b", "creator"),
+    (r"\b(come.*sei.*stato.*creato|come.*sei.*nato|come.*funzioni|chi.*ti.*ha.*creato|chi.*ti.*ha.*fatto)\b", "creator"),
     (r"\b(who.*created|who.*developed|who.*programmed|who.*made|who.*built)\b.*\b(you|ai|bot)\b", "creator"),
     (r"\b(sviluppatore.*ai|ai.*specialist|ai.*developer|intelligenza.*artificiale)\b", "creator"),
     (r"\b(muddasir|khuwaja)\b", "creator"),
-    (r"\b(come.*funzioni|architettura|come.*lavori|tecnologia|algoritmi|neural)\b", "architecture")
+    (r"\b(come.*funzioni|architettura|come.*lavori|tecnologia|algoritmi|neural)\b", "architecture"),
+    (r"\b(how.*were.*you.*created|how.*were.*you.*made|how.*do.*you.*work)\b", "creator")
 ]
 
 # Load YAML Q&A pairs with better error handling
@@ -1276,11 +1278,12 @@ def is_pharmacy_question(msg):
     # Primary pharmacy keywords (high confidence)
     primary_keywords = ["farmacia", "farmacie", "otofarma"]
     
-    # Location/search intent keywords
+    # Location/search intent keywords - ENHANCED FOR "WHAT/WHICH" QUESTIONS
     location_keywords = [
         "dove", "trovare", "vicino", "cerca", "cerco", "mostra", "dimmi", "tell me",
         "trova", "locate", "position", "posizione", "locazione", "zona", "quartiere",
-        "ci sono", "sono", "esistono", "availability", "disponibili", "presenti"
+        "ci sono", "sono", "esistono", "availability", "disponibili", "presenti",
+        "quali", "what", "which", "cosa", "che", "elenca", "list", "lista", "elenco"
     ]
     
     # City/region keywords
@@ -1304,7 +1307,7 @@ def is_pharmacy_question(msg):
     has_place = any(kw in msg_lc for kw in place_keywords)
     has_contact_intent = any(kw in msg_lc for kw in contact_keywords)
     
-    # Advanced pattern matching for voice queries
+    # Advanced pattern matching for voice queries - ENHANCED FOR "WHAT/WHICH" QUESTIONS
     voice_patterns = [
         r"\b(dove\s+(sono|si\s+trovano|posso\s+trovare).*(farmaci|otofarma))\b",
         r"\b(farmaci.*\s+(milano|roma|napoli|torino|firenze|bologna|venezia|genova|palermo|bari|catania|brescia|verona|padova|trieste|taranto|reggio|modena|prato|parma))\b",
@@ -1313,7 +1316,16 @@ def is_pharmacy_question(msg):
         r"\b(mostra.*farmaci)\b",
         r"\b(dimmi.*farmaci)\b",
         r"\b(qual.*farmaci.*vicin)\b",
-        r"\b(dove.*otofarma)\b"
+        r"\b(dove.*otofarma)\b",
+        # NEW PATTERNS FOR "WHAT/WHICH ARE PHARMACIES"
+        r"\b(quali?\s+(sono|sono\s+le)\s+farmaci)\b",
+        r"\b(what\s+are\s+.*(pharmacy|pharmacies))\b",
+        r"\b(which\s+.*(pharmacy|pharmacies))\b",
+        r"\b(cosa\s+sono\s+.*farmaci)\b",
+        r"\b(che\s+farmaci)\b",
+        r"\b(elenco.*farmaci)\b",
+        r"\b(lista.*farmaci)\b",
+        r"\b(elenca.*farmaci)\b"
     ]
     
     # Check voice patterns
@@ -1471,7 +1483,7 @@ def pharmacies_by_city(city_name):
     ]
 
 def format_pharmacies_list(ph_list, city_name, user_msg=None):
-    """Professional voice-optimized pharmacy list response"""
+    """Professional voice-optimized pharmacy list response with formal Italian"""
     if not ph_list:
         return f"Mi dispiace, non ho trovato farmacie Otofarma a {city_name}. Posso cercare in un'altra città se desideri."
     
@@ -1480,7 +1492,7 @@ def format_pharmacies_list(ph_list, city_name, user_msg=None):
     
     # Professional voice-friendly introduction
     intro_templates = [
-        f"Perfetto! Ho trovato {total} farmaci{'e' if total == 1 else 'e'} Otofarma a {city_formatted}.",
+        f"Perfetto! Ho trovato {total} farmaci{'a' if total == 1 else 'e'} Otofarma a {city_formatted}.",
         f"Eccellente! A {city_formatted} sono presenti {total} farmaci{'a' if total == 1 else 'e'} Otofarma affiliate.",
         f"Ottimo! Risultano {total} farmaci{'a' if total == 1 else 'e'} Otofarma registrate per {city_formatted}."
     ]
@@ -1494,28 +1506,28 @@ def format_pharmacies_list(ph_list, city_name, user_msg=None):
     tel = best_ph.get("Telefono", best_ph.get("telefono", ""))
     email = best_ph.get("Email", best_ph.get("email", ""))
     
-    # Professional voice response
+    # Professional voice response WITHOUT BULLET POINTS - using formal Italian
     response_parts = [
         random.choice(intro_templates),
         "",
-        "Ecco i dettagli della farmacia principale della zona:",
+        "Ecco i dettagli della farmacia principale della zona.",
         "",
-        f"📍 {name}",
-        f"📍 Indirizzo: {address}"
+        f"Nome: {name}",
+        f"Indirizzo: {address}"
     ]
     
     if cap and prov:
-        response_parts.append(f"📍 {cap} {city_formatted}, {prov}")
+        response_parts.append(f"Codice postale: {cap}, {city_formatted}, provincia di {prov}")
     elif cap:
-        response_parts.append(f"📍 CAP: {cap}")
+        response_parts.append(f"Codice postale: {cap}")
     elif prov:
-        response_parts.append(f"📍 Provincia: {prov}")
+        response_parts.append(f"Provincia di {prov}")
     
     if tel and tel != "N/A" and tel.strip():
-        response_parts.append(f"📞 Telefono: {tel}")
+        response_parts.append(f"Telefono di contatto: {tel}")
     
     if email and email != "N/A" and email.strip() and "@" in email:
-        response_parts.append(f"📧 Email: {email}")
+        response_parts.append(f"Indirizzo email: {email}")
     
     response_parts.extend([
         "",
@@ -1524,18 +1536,19 @@ def format_pharmacies_list(ph_list, city_name, user_msg=None):
         f"Se desideri informazioni su altre farmacie a {city_formatted} o hai bisogno di dettagli specifici, chiedimi pure!"
     ])
     
-    return "\n".join(response_parts)
-    
-    reply_lines.extend(block)
-    
+    # Add information about multiple pharmacies if applicable
     if total > 1:
-        reply_lines.append("")
-        reply_lines.append(f"Se vuoi conoscere altre farmacie a {city_formatted} chiedimi pure oppure specifica la zona che preferisci")
+        response_parts.extend([
+            "",
+            f"Sono disponibili altre {total-1} farmacie Otofarma a {city_formatted}. Se vuoi conoscere altre farmacie in questa città, chiedimi pure specificando la zona che preferisci."
+        ])
     
-    reply_lines.append("Puoi trovare tutte le farmacie Otofarma vicine a te anche tramite la mappa nella nostra app!")
-    reply_lines.append("Per qualsiasi altra informazione sono a tua disposizione.")
+    response_parts.extend([
+        "",
+        "Puoi trovare tutte le farmacie Otofarma vicine a te anche tramite la mappa nella nostra app!"
+    ])
     
-    return "\n".join(reply_lines)
+    return "\n".join(response_parts)
 
 def format_pharmacy_answer(ph, field_intents):
     """Format single pharmacy response"""
@@ -1810,8 +1823,19 @@ def get_gemini_conversation(user_message):
         return None
 
 def should_use_gemini_for_conversation(user_message):
-    """Decide if message should use Gemini for natural conversation"""
+    """Decide if message should use Gemini for natural conversation - EXCLUDES CREATOR QUESTIONS"""
     user_msg = normalize(user_message.strip())
+    
+    # NEVER use Gemini for creator questions - these have dedicated corporate responses
+    creator_indicators = [
+        "chi creato", "chi sviluppato", "come sei stato creato", "chi ti ha creato",
+        "who created", "how were you created", "chi ti ha fatto", "come funzioni"
+    ]
+    
+    # Block Gemini if it's a creator question
+    for indicator in creator_indicators:
+        if indicator in user_msg:
+            return False
     
     # Use Gemini for natural greetings and conversations
     conversation_patterns = [
