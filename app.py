@@ -15,6 +15,18 @@ from flask import Flask, render_template, request, jsonify
 import sendgrid
 from sendgrid.helpers.mail import Mail
 import sqlite3
+import logging
+
+# Configure professional logging for production
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('otofarma_ai_bot.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('OtofarmaAI')
 
 DB_PATH = "appointments.db"
 
@@ -418,6 +430,101 @@ PHARMACY_CSV_PATH = os.environ.get(
     "PHARMACY_CSV_PATH",
     os.path.join(os.path.dirname(__file__), "farmacie.csv")
 )
+
+# ===== OTOFARMA SPA CORPORATE INFORMATION =====
+# 🏢 HEADQUARTERS: Via Ripuaria, 50k, Varcaturo, 80014 Giugliano in Campania NA
+# 👔 FOUNDER & PRESIDENT: Dr. Rino Bartolomucci  
+# 💼 CEO: Drs. Giovanna Incarnato
+# 💻 IT HEAD: Pasquale Valentino
+# 📱 FRONTEND/iOS DEV: Gaetano  
+# 🤖 AI SPECIALIST: Muddasir Khuwaja
+
+OTOFARMA_HEADQUARTERS = {
+    "address": "Via Ripuaria, 50k, Varcaturo",
+    "postal_code": "80014", 
+    "city": "Giugliano in Campania",
+    "province": "NA",
+    "full_address": "Via Ripuaria, 50k, Varcaturo, 80014 Giugliano in Campania NA"
+}
+
+OTOFARMA_LEADERSHIP = {
+    "founder_president": {
+        "name": "Dr. Rino Bartolomucci",
+        "title": "Fondatore e Presidente", 
+        "role": "Founder and President"
+    },
+    "ceo": {
+        "name": "Drs. Giovanna Incarnato",
+        "title": "Amministratore Delegato",
+        "role": "Chief Executive Officer"
+    },
+    "it_head": {
+        "name": "Pasquale Valentino",
+        "title": "Responsabile IT / IT Manager",
+        "role": "IT Head and Manager"
+    },
+    "frontend_developer": {
+        "name": "Gaetano",
+        "title": "Frontend Developer e iOS Developer",
+        "role": "Frontend and iOS Developer"
+    }
+}
+
+OTOFARMA_TEAM = {
+    "technical_team": {
+        "ai_specialist": {
+            "name": "Muddasir Khuwaja",
+            "role": "Responsabile dell'implementazione AI presso Otofarma Spa",
+            "specialization": "Artificial Intelligence & Machine Learning"
+        },
+        "it_manager": {
+            "name": "Pasquale Valentino", 
+            "role": "IT Head e Manager del Dipartimento IT",
+            "specialization": "IT Infrastructure & Systems Management"
+        },
+        "frontend_ios_dev": {
+            "name": "Gaetano",
+            "role": "Frontend Developer e iOS Developer",
+            "specialization": "User Interface Development & Mobile Applications"
+        }
+    }
+}
+
+AI_CREATOR_INFO = {
+    "developer": "Muddasir Khuwaja",
+    "role": "Responsabile dell'implementazione AI presso Otofarma Spa",
+    "technologies": ["Deep Neural Networks", "Vertex AI", "Gemini 2.0 Flash", "Advanced NLP", "Voice Recognition"],
+    "description": "Sistema AI avanzato addestrato su migliaia di nodi neurali"
+}
+
+# Enhanced corporate knowledge patterns with PERFECT detection
+CORPORATE_PATTERNS = [
+    # Headquarters patterns
+    (r"\b(sede|ufficio|headquarters|main office|sede principale|ufficio principale|quartier generale)\b", "headquarters"),
+    (r"\b(dove si trova|indirizzo|address|location|ubicazione)\b.*\b(otofarma|sede|ufficio)\b", "headquarters"),
+    (r"\b(via ripuaria|varcaturo|giugliano)\b", "headquarters"),
+    
+    # Leadership patterns  
+    (r"\b(fondatore|founder|presidente|president)\b.*\b(otofarma)\b", "founder"),
+    (r"\b(rino|bartolomucci)\b", "founder"),
+    (r"\b(ceo|amministratore|delegato|direttore generale)\b.*\b(otofarma)\b", "ceo"),
+    (r"\b(giovanna|incarnato)\b", "ceo"),
+    (r"\b(chi.*dirige|chi.*comanda|chi.*gestisce|leadership|dirigenza)\b.*\b(otofarma)\b", "leadership"),
+    
+    # IT Team patterns
+    (r"\b(it|responsabile it|manager it|dipartimento it|capo it)\b", "it_head"),
+    (r"\b(pasquale|valentino)\b", "it_head"),
+    (r"\b(frontend|front end|ios|sviluppatore|developer)\b.*\b(gaetano|mobile|app)\b", "frontend_dev"),
+    (r"\b(gaetano)\b", "frontend_dev"),
+    (r"\b(team.*tecnico|team.*sviluppo|technical team|dev team)\b", "technical_team"),
+    
+    # AI Creator patterns
+    (r"\b(chi.*creato|chi.*sviluppato|chi.*programmato|chi.*fatto|chi.*costruito)\b.*\b(te|tu|ai|bot|otobot|intelligenza)\b", "creator"),
+    (r"\b(who.*created|who.*developed|who.*programmed|who.*made|who.*built)\b.*\b(you|ai|bot)\b", "creator"),
+    (r"\b(sviluppatore.*ai|ai.*specialist|ai.*developer|intelligenza.*artificiale)\b", "creator"),
+    (r"\b(muddasir|khuwaja)\b", "creator"),
+    (r"\b(come.*funzioni|architettura|come.*lavori|tecnologia|algoritmi|neural)\b", "architecture")
+]
 
 # Load YAML Q&A pairs with better error handling
 all_qa_pairs = []
@@ -933,6 +1040,215 @@ def check_general_patterns(user_msg):
         return "Salve! Sono qui per aiutarti in tutto ciò che riguarda Otofarma."
 
     return None
+
+# ===== OTOFARMA CORPORATE KNOWLEDGE FUNCTIONS =====
+
+def detect_corporate_question(msg):
+    """Detect questions about Otofarma corporate information"""
+    if not msg:
+        return None
+        
+    msg_lc = normalize(msg)
+    
+    for pattern, topic in CORPORATE_PATTERNS:
+        if re.search(pattern, msg_lc, re.IGNORECASE):
+            return topic
+    
+    return None
+
+def get_headquarters_info():
+    """Professional headquarters information"""
+    responses = [
+        f"La sede principale di Otofarma Spa si trova presso {OTOFARMA_HEADQUARTERS['full_address']}. "
+        f"Questo è il nostro quartier generale dove vengono coordinate tutte le attività aziendali, "
+        f"dalla ricerca e sviluppo di apparecchi acustici innovativi alla gestione della rete nazionale "
+        f"di farmacie specializzate. La sede è strategicamente posizionata in Campania per servire "
+        f"al meglio tutto il territorio italiano.",
+        
+        f"Il nostro ufficio principale è situato a {OTOFARMA_HEADQUARTERS['full_address']}. "
+        f"Da questa sede centrale coordiniamo tutte le nostre attività di eccellenza nel settore "
+        f"audiologico, inclusi i servizi di teleaudiologia e la distribuzione di apparecchi acustici "
+        f"di ultima generazione su tutto il territorio nazionale.",
+        
+        f"Otofarma Spa ha la sua sede centrale presso {OTOFARMA_HEADQUARTERS['full_address']}. "
+        f"È da qui che gestiamo la nostra missione di migliorare la qualità della vita delle persone "
+        f"attraverso soluzioni auditive innovative e un servizio di eccellenza in tutta Italia."
+    ]
+    return random.choice(responses)
+
+def get_founder_info():
+    """Professional founder information"""
+    founder = OTOFARMA_LEADERSHIP['founder_president']
+    responses = [
+        f"Il fondatore e presidente di Otofarma Spa è il rispettato {founder['name']}. "
+        f"Sotto la sua guida visionaria, Otofarma è diventata un punto di riferimento nel settore "
+        f"audiologico italiano, distinguendosi per l'innovazione tecnologica e l'eccellenza nel "
+        f"servizio. Il {founder['name']} ha dedicato la sua carriera a migliorare la qualità "
+        f"della vita delle persone con problemi uditivi.",
+        
+        f"Otofarma Spa è stata fondata e viene tuttora presieduta dal {founder['name']}, "
+        f"una figura di grande prestigio nel settore audiologico. La sua esperienza e dedizione "
+        f"hanno portato l'azienda a diventare leader nell'innovazione di apparecchi acustici e "
+        f"servizi specializzati, con una rete capillare su tutto il territorio nazionale.",
+        
+        f"Il {founder['name']} è il fondatore e presidente di Otofarma Spa. "
+        f"Grazie alla sua leadership illuminata e alla passione per l'innovazione, "
+        f"Otofarma è oggi sinonimo di eccellenza nel campo dell'audiologia, offrendo "
+        f"soluzioni all'avanguardia e un servizio personalizzato di altissimo livello."
+    ]
+    return random.choice(responses)
+
+def get_ceo_info():
+    """Professional CEO information"""
+    ceo = OTOFARMA_LEADERSHIP['ceo']
+    responses = [
+        f"L'Amministratore Delegato di Otofarma Spa è la {ceo['name']}, "
+        f"una professionista di eccezionale competenza che guida l'azienda con grande "
+        f"esperienza e visione strategica. Sotto la sua direzione, Otofarma continua "
+        f"ad espandersi e innovare, mantenendo sempre al centro la soddisfazione del cliente "
+        f"e l'eccellenza dei servizi offerti.",
+        
+        f"La {ceo['name']} ricopre il ruolo di CEO di Otofarma Spa. "
+        f"Con la sua leadership dinamica e orientata all'innovazione, sta portando "
+        f"l'azienda verso nuovi traguardi nel settore audiologico, implementando "
+        f"tecnologie all'avanguardia come la teleaudiologia e sviluppando soluzioni "
+        f"sempre più personalizzate per i nostri clienti.",
+        
+        f"Il nostro Amministratore Delegato è la stimata {ceo['name']}, "
+        f"che con la sua competenza e dedizione sta guidando Otofarma verso un futuro "
+        f"di continue innovazioni. La sua visione strategica e l'attenzione ai dettagli "
+        f"garantiscono che ogni cliente riceva il miglior servizio possibile."
+    ]
+    return random.choice(responses)
+
+def get_leadership_info():
+    """Combined leadership information"""
+    founder = OTOFARMA_LEADERSHIP['founder_president']
+    ceo = OTOFARMA_LEADERSHIP['ceo']
+    
+    response = (
+        f"Otofarma Spa è guidata da un team di leadership eccezionale. "
+        f"Il fondatore e presidente è il rispettato {founder['name']}, "
+        f"che ha creato e continua a ispirare la visione aziendale. "
+        f"L'operatività quotidiana è gestita dalla nostra Amministratrice Delegata, "
+        f"la {ceo['name']}, che con la sua competenza sta portando "
+        f"l'azienda verso nuovi traguardi di innovazione e eccellenza. "
+        f"Insieme, formano una leadership che garantisce i più alti standard "
+        f"di qualità e servizio nel settore audiologico."
+    )
+    return response
+
+def get_creator_info():
+    """AI creator and architecture information"""
+    creator = AI_CREATOR_INFO
+    responses = [
+        f"Sono un sistema di intelligenza artificiale avanzato progettato e sviluppato da "
+        f"{creator['developer']}, {creator['role']}. "
+        f"La mia architettura si basa su migliaia di nodi neurali e utilizza tecnologie "
+        f"all'avanguardia come {', '.join(creator['technologies'][:3])} e molte altre. "
+        f"Per motivi di privacy aziendale, non posso condividere pubblicamente i dettagli "
+        f"completi della mia architettura, ma posso assicurarti che dietro ogni mia risposta "
+        f"lavorano milioni di connessioni neurali per offrirti il miglior servizio possibile.",
+        
+        f"Sono stato creato da {creator['developer']}, che è {creator['role']}. "
+        f"Il mio sviluppo ha richiesto l'implementazione di tecnologie avanzate tra cui "
+        f"{', '.join(creator['technologies'])} e sistemi di elaborazione del linguaggio "
+        f"naturale di ultima generazione. Anche se non posso rivelare tutti i segreti "
+        f"della mia architettura per questioni di riservatezza aziendale, posso dirti "
+        f"che sono alimentato da una rete di milioni di nodi che lavorano incessantemente "
+        f"per comprendere e rispondere alle tue esigenze nel migliore dei modi.",
+        
+        f"Il mio sviluppo è opera di {creator['developer']}, {creator['role']}. "
+        f"Sono basato su un'architettura di deep learning che integra {', '.join(creator['technologies'][:2])} "
+        f"e altre tecnologie proprietarie avanzate. Immagina milioni di nodi neurali che "
+        f"collaborano per elaborare le tue richieste - questa è la complessità che si cela "
+        f"dietro ogni mia interazione. Per proteggere il know-how aziendale, i dettagli "
+        f"specifici della mia struttura rimangono riservati, ma posso garantirti che "
+        f"rappresento il meglio dell'innovazione AI applicata al settore audiologico."
+    ]
+    return random.choice(responses)
+
+def get_it_head_info():
+    """IT Head information"""
+    it_manager = OTOFARMA_LEADERSHIP['it_head']
+    responses = [
+        f"Il nostro {it_manager['title']} è {it_manager['name']}, "
+        f"un professionista altamente qualificato che gestisce tutti i sistemi informatici "
+        f"e l'infrastruttura tecnologica di Otofarma Spa. Sotto la sua supervisione esperta, "
+        f"garantiamo che tutti i nostri sistemi digitali, dalla teleaudiologia alle piattaforme "
+        f"di gestione clienti, funzionino sempre al massimo delle prestazioni.",
+        
+        f"{it_manager['name']} è il {it_manager['title']} di Otofarma Spa. "
+        f"La sua competenza tecnica e leadership nel dipartimento IT assicurano che "
+        f"tutte le nostre innovazioni tecnologiche siano implementate con eccellenza. "
+        f"Gestisce l'intera infrastruttura digitale aziendale, garantendo sicurezza, "
+        f"efficienza e continuità operativa in tutti i nostri servizi.",
+        
+        f"Il Dipartimento IT di Otofarma è diretto da {it_manager['name']}, "
+        f"che ricopre il ruolo di {it_manager['title']}. La sua esperienza "
+        f"e dedizione permettono a Otofarma di rimanere all'avanguardia nella "
+        f"digitalizzazione dei servizi audiologici, mantenendo sempre i più alti "
+        f"standard di sicurezza e affidabilità dei sistemi."
+    ]
+    return random.choice(responses)
+
+def get_frontend_developer_info():
+    """Frontend Developer information"""
+    developer = OTOFARMA_LEADERSHIP['frontend_developer']
+    responses = [
+        f"Il nostro talentoso {developer['title']} è {developer['name']}, "
+        f"che si occupa di creare e mantenere tutte le interfacce utente delle nostre "
+        f"applicazioni web e mobile. La sua expertise nello sviluppo frontend e iOS "
+        f"garantisce che i nostri clienti abbiano sempre un'esperienza digitale "
+        f"fluida, intuitiva e di alta qualità su tutti i dispositivi.",
+        
+        f"{developer['name']} è il nostro {developer['title']} specializzato. "
+        f"Grazie alle sue competenze avanzate nello sviluppo di interfacce utente "
+        f"e applicazioni iOS, garantisce che tutti i nostri servizi digitali "
+        f"siano accessibili, user-friendly e tecnologicamente all'avanguardia. "
+        f"Il suo lavoro è fondamentale per l'esperienza cliente digitale di Otofarma.",
+        
+        f"Lo sviluppo delle nostre interfacce digitali è affidato a {developer['name']}, "
+        f"il nostro {developer['title']}. La sua competenza nello sviluppo "
+        f"frontend e nella creazione di app iOS ci permette di offrire soluzioni "
+        f"digitali innovative e accessibili, sempre in linea con le più moderne "
+        f"tendenze del design e dell'usabilità."
+    ]
+    return random.choice(responses)
+
+def get_technical_team_info():
+    """Complete technical team information"""
+    ai_specialist = OTOFARMA_TEAM['technical_team']['ai_specialist']
+    it_manager = OTOFARMA_TEAM['technical_team']['it_manager']
+    frontend_dev = OTOFARMA_TEAM['technical_team']['frontend_ios_dev']
+    
+    response = (
+        f"Il team tecnico di Otofarma Spa è composto da professionisti di eccellenza: "
+        f"{ai_specialist['name']}, {ai_specialist['role']}, che si occupa dell'innovazione "
+        f"nell'intelligenza artificiale e machine learning; {it_manager['name']}, "
+        f"{it_manager['role']}, che gestisce tutta l'infrastruttura IT aziendale; "
+        f"e {frontend_dev['name']}, {frontend_dev['role']}, che crea le interfacce "
+        f"utente e le applicazioni mobile. Insieme, questo team garantisce che Otofarma "
+        f"rimanga sempre all'avanguardia dell'innovazione tecnologica nel settore audiologico."
+    )
+    return response
+
+def get_architecture_info():
+    """Technical architecture information"""
+    creator = AI_CREATOR_INFO
+    response = (
+        f"La mia architettura è il risultato di un lavoro innovativo guidato da "
+        f"{creator['developer']}, {creator['role']}. "
+        f"Utilizzo un sistema ibrido che combina {', '.join(creator['technologies'])} "
+        f"con algoritmi proprietari sviluppati specificamente per il settore audiologico. "
+        f"Dietro ogni mia risposta ci sono letteralmente milioni di parametri neurali "
+        f"che elaborano informazioni in tempo reale. Tuttavia, per tutelare la proprietà "
+        f"intellettuale di Otofarma, non posso condividere i dettagli tecnici completi "
+        f"della mia struttura. Quello che posso dire è che rappresento l'eccellenza "
+        f"dell'intelligenza artificiale applicata ai servizi audiologici."
+    )
+    return response
+
 # Pharmacy-related functions (unchanged but with better error handling)
 pharmacies = []
 if os.path.isfile(PHARMACY_CSV_PATH):
@@ -942,46 +1258,152 @@ if os.path.isfile(PHARMACY_CSV_PATH):
             for row in reader:
                 pharmacies.append(row)
         print(f"Caricate {len(pharmacies)} farmacie dal CSV.")
+        logger.info(f"🏥 Successfully loaded {len(pharmacies)} Otofarma pharmacy locations")
     except Exception as e:
         print(f"Errore nel caricamento del CSV farmacie: {e}")
+        logger.error(f"❌ Error loading pharmacy CSV: {e}")
 else:
     print(f"File CSV farmacie non trovato: {PHARMACY_CSV_PATH}")
+    logger.warning(f"⚠️ Pharmacy CSV file not found: {PHARMACY_CSV_PATH}")
 
 def is_pharmacy_question(msg):
-    """Detect pharmacy-related questions"""
+    """Enhanced pharmacy question detection for voice assistant"""
     if not msg:
         return False
         
     msg_lc = normalize(msg)
-    pharmacy_keywords = [
-        "farmacia", "farmacie", "indirizzo", "telefono", "numero", "email", "contatto", 
-        "dove", "trovare", "vicino", "cap", "regione", "provincia", "orari", "aperta", 
-        "chiusa", "apertura", "chiusura", "città", "zona", "quartiere", "dottore", 
-        "dr", "dottoressa", "info", "contatti", "farmacista"
+    
+    # Primary pharmacy keywords (high confidence)
+    primary_keywords = ["farmacia", "farmacie", "otofarma"]
+    
+    # Location/search intent keywords
+    location_keywords = [
+        "dove", "trovare", "vicino", "cerca", "cerco", "mostra", "dimmi", "tell me",
+        "trova", "locate", "position", "posizione", "locazione", "zona", "quartiere",
+        "ci sono", "sono", "esistono", "availability", "disponibili", "presenti"
     ]
     
-    return any(kw in msg_lc for kw in pharmacy_keywords)
+    # City/region keywords
+    place_keywords = [
+        "milano", "roma", "napoli", "torino", "firenze", "bologna", "venezia", "genova",
+        "palermo", "bari", "catania", "brescia", "verona", "padova", "trieste", "taranto",
+        "reggio", "modena", "prato", "parma", "città", "city", "regione", "provincia",
+        "cap", "zona", "area", "località", "comune", "centro", "periferia"
+    ]
+    
+    # Contact info keywords
+    contact_keywords = [
+        "indirizzo", "telefono", "numero", "email", "contatto", "info", "informazioni",
+        "address", "phone", "mail", "contact", "details", "dettagli", "orari", "apertura",
+        "chiusura", "aperta", "chiusa", "hours", "when", "quando", "schedule"
+    ]
+    
+    # Check for primary keyword + intent
+    has_pharmacy = any(kw in msg_lc for kw in primary_keywords)
+    has_location_intent = any(kw in msg_lc for kw in location_keywords)
+    has_place = any(kw in msg_lc for kw in place_keywords)
+    has_contact_intent = any(kw in msg_lc for kw in contact_keywords)
+    
+    # Advanced pattern matching for voice queries
+    voice_patterns = [
+        r"\b(dove\s+(sono|si\s+trovano|posso\s+trovare).*(farmaci|otofarma))\b",
+        r"\b(farmaci.*\s+(milano|roma|napoli|torino|firenze|bologna|venezia|genova|palermo|bari|catania|brescia|verona|padova|trieste|taranto|reggio|modena|prato|parma))\b",
+        r"\b(cerco\s+(una\s+)?farmaci)\b",
+        r"\b(ci\s+sono.*farmaci.*\s+(a|in|su|per|di))\b",
+        r"\b(mostra.*farmaci)\b",
+        r"\b(dimmi.*farmaci)\b",
+        r"\b(qual.*farmaci.*vicin)\b",
+        r"\b(dove.*otofarma)\b"
+    ]
+    
+    # Check voice patterns
+    for pattern in voice_patterns:
+        if re.search(pattern, msg_lc, re.IGNORECASE):
+            return True
+    
+    # Scoring system for better detection
+    score = 0
+    if has_pharmacy:
+        score += 3
+    if has_location_intent:
+        score += 2
+    if has_place:
+        score += 2
+    if has_contact_intent:
+        score += 1
+        
+    return score >= 3
 
 def extract_city_from_query(user_msg):
-    """Extract city names from user query"""
+    """Advanced city extraction from voice queries"""
     user_msg_norm = normalize(user_msg)
-    city_keys = ['Città', 'città', 'city', 'City']
     
-    cities_original = []
+    # Get all possible cities from CSV
+    city_keys = ['Città', 'città', 'city', 'City', 'CITTÀ']
+    cities_original = set()
+    
     for ph in pharmacies:
         for key in city_keys:
             city = ph.get(key, "")
-            if city:
-                cities_original.append(city)
+            if city and city.strip():
+                cities_original.add(city.strip())
     
+    # Create normalized mapping
     cities_map = {normalize(city): city for city in cities_original}
     found_cities = []
     
+    # Direct city matching
     for city_norm, city_orig in cities_map.items():
         if city_norm and city_norm in user_msg_norm:
             found_cities.append(city_orig)
     
+    # If no cities found, try major Italian cities patterns
+    major_cities_patterns = {
+        r"\bmilan[oi]?\b": "Milano",
+        r"\brom[ae]?\b": "Roma", 
+        r"\bnapoli?\b": "Napoli",
+        r"\btorin[oi]?\b": "Torino",
+        r"\bfirenz[ei]?\b": "Firenze",
+        r"\bbologn[ae]?\b": "Bologna",
+        r"\bvenezi[ae]?\b": "Venezia",
+        r"\bgenov[ae]?\b": "Genova",
+        r"\bpalerm[oi]?\b": "Palermo",
+        r"\bbari?\b": "Bari",
+        r"\bcatani[ae]?\b": "Catania",
+        r"\bbresci[ae]?\b": "Brescia",
+        r"\bveron[ae]?\b": "Verona",
+        r"\bpadov[ae]?\b": "Padova"
+    }
+    
+    if not found_cities:
+        for pattern, city in major_cities_patterns.items():
+            if re.search(pattern, user_msg_norm, re.IGNORECASE):
+                # Check if this city exists in our CSV
+                if city in cities_original:
+                    found_cities.append(city)
+                    break
+    
     return found_cities
+
+def get_available_cities_sample():
+    """Get a sample of available cities for user guidance"""
+    city_keys = ['Città', 'città', 'city', 'City', 'CITTÀ']
+    cities_set = set()
+    
+    for ph in pharmacies:
+        for key in city_keys:
+            city = ph.get(key, "")
+            if city and city.strip():
+                cities_set.add(city.strip())
+    
+    cities_list = sorted(list(cities_set))
+    
+    # Return first 10 cities as examples
+    if len(cities_list) > 10:
+        sample_cities = cities_list[:10]
+        return f"Ecco alcune delle città dove abbiamo farmacie Otofarma: {', '.join(sample_cities[:8])}, e molte altre. Dimmi la città che ti interessa!"
+    else:
+        return f"Le città disponibili sono: {', '.join(cities_list)}"
 
 def extract_field_intent(user_msg):
     """Extract what information user wants about pharmacy"""
@@ -1049,54 +1471,60 @@ def pharmacies_by_city(city_name):
     ]
 
 def format_pharmacies_list(ph_list, city_name, user_msg=None):
-    """Format pharmacy list response"""
+    """Professional voice-optimized pharmacy list response"""
+    if not ph_list:
+        return f"Mi dispiace, non ho trovato farmacie Otofarma a {city_name}. Posso cercare in un'altra città se desideri."
+    
     city_formatted = city_name.strip() or "la città richiesta"
     total = len(ph_list)
     
-    intros = [
-        f"Ti elenco le farmacie Otofarma presenti a {city_formatted}",
-        f"Ecco le farmacie Otofarma disponibili a {city_formatted}",
-        f"Queste sono le farmacie Otofarma che puoi trovare a {city_formatted}",
-        f"Qui trovi le farmacie Otofarma in zona {city_formatted}"
+    # Professional voice-friendly introduction
+    intro_templates = [
+        f"Perfetto! Ho trovato {total} farmaci{'e' if total == 1 else 'e'} Otofarma a {city_formatted}.",
+        f"Eccellente! A {city_formatted} sono presenti {total} farmaci{'a' if total == 1 else 'e'} Otofarma affiliate.",
+        f"Ottimo! Risultano {total} farmaci{'a' if total == 1 else 'e'} Otofarma registrate per {city_formatted}."
     ]
     
-    count_lines = [
-        f"In questa città ci sono {total} farmacie Otofarma",
-        f"A {city_formatted} risultano {total} farmacie Otofarma affiliate",
-        f"Abbiamo {total} farmacie Otofarma registrate per {city_formatted}"
-    ]
-    
-    next_steps = [
-        "Ecco quella che potrebbe essere più comoda per te:",
-        "Qui i dettagli di una delle principali farmacie della zona:",
-        "Ti segnalo subito una farmacia particolarmente accessibile:"
-    ]
-    
-    reply_lines = [
-        random.choice(intros),
-        random.choice(count_lines),
-        random.choice(next_steps),
-        ""
-    ]
-    
+    # Get the best/first pharmacy for detailed info
     best_ph = ph_list[0]
-    name = best_ph.get("Farmacia", best_ph.get("Nome", "Nome non disponibile"))
-    address = best_ph.get("Indirizzo", best_ph.get("indirizzo", "Indirizzo non disponibile"))
-    cap = best_ph.get("CAP", best_ph.get("cap", "N/A"))
-    prov = best_ph.get("Provincia", best_ph.get("provincia", "N/A"))
-    tel = best_ph.get("Telefono", best_ph.get("telefono", "N/A"))
-    email = best_ph.get("Email", best_ph.get("email", "N/A"))
-    reg = best_ph.get("Regione", best_ph.get("regione", "N/A"))
+    name = best_ph.get("Farmacia", best_ph.get("Nome", "Farmacia Otofarma"))
+    address = best_ph.get("Indirizzo", best_ph.get("indirizzo", ""))
+    cap = best_ph.get("CAP", best_ph.get("cap", ""))
+    prov = best_ph.get("Provincia", best_ph.get("provincia", ""))
+    tel = best_ph.get("Telefono", best_ph.get("telefono", ""))
+    email = best_ph.get("Email", best_ph.get("email", ""))
     
-    block = [
-        f"Nome farmacia: {name}",
-        f"Indirizzo: {address}",
-        f"CAP: {cap}",
-        f"Provincia: {prov}",
-        f"Telefono: {tel}",
-        f"Email: {email}",
-        f"Regione: {reg}"
+    # Professional voice response
+    response_parts = [
+        random.choice(intro_templates),
+        "",
+        "Ecco i dettagli della farmacia principale della zona:",
+        "",
+        f"📍 {name}",
+        f"📍 Indirizzo: {address}"
     ]
+    
+    if cap and prov:
+        response_parts.append(f"📍 {cap} {city_formatted}, {prov}")
+    elif cap:
+        response_parts.append(f"📍 CAP: {cap}")
+    elif prov:
+        response_parts.append(f"📍 Provincia: {prov}")
+    
+    if tel and tel != "N/A" and tel.strip():
+        response_parts.append(f"📞 Telefono: {tel}")
+    
+    if email and email != "N/A" and email.strip() and "@" in email:
+        response_parts.append(f"📧 Email: {email}")
+    
+    response_parts.extend([
+        "",
+        "Questa farmacia offre tutti i servizi specializzati Otofarma, inclusi apparecchi acustici su misura, consulenze audiologiche e teleaudiologia.",
+        "",
+        f"Se desideri informazioni su altre farmacie a {city_formatted} o hai bisogno di dettagli specifici, chiedimi pure!"
+    ])
+    
+    return "\n".join(response_parts)
     
     reply_lines.extend(block)
     
@@ -1599,26 +2027,75 @@ def chat():
     elif time_or_date == "date":
         return jsonify({"reply": get_date_answer(), "voice": voice_mode, "male_voice": True})
 
+    # 6.5. Enhanced Corporate Knowledge (Complete Team & Leadership)
+    corporate_topic = detect_corporate_question(user_message_corr)
+    if corporate_topic:
+        print(f"🏢 Corporate question detected: {corporate_topic}")
+        if corporate_topic == "headquarters":
+            reply = get_headquarters_info()
+        elif corporate_topic == "founder":
+            reply = get_founder_info()
+        elif corporate_topic == "ceo":
+            reply = get_ceo_info()
+        elif corporate_topic == "leadership":
+            reply = get_leadership_info()
+        elif corporate_topic == "it_head":
+            reply = get_it_head_info()
+        elif corporate_topic == "frontend_dev":
+            reply = get_frontend_developer_info()
+        elif corporate_topic == "technical_team":
+            reply = get_technical_team_info()
+        elif corporate_topic == "creator":
+            reply = get_creator_info()
+        elif corporate_topic == "architecture":
+            reply = get_architecture_info()
+        else:
+            reply = get_headquarters_info()  # Default fallback
+        
+        print(f"✅ Corporate info provided: {corporate_topic}")
+        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
+
     # 7. YAML Q&A matching (highest priority for content)
     reply = match_yaml_qa_ai(user_message_corr)
     if reply:
         print(f"Found YAML answer: {reply[:100]}...")
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
-    # 8. Pharmacy-specific queries
+    # 8. Enhanced Pharmacy-specific queries for Voice Assistant
     if is_pharmacy_question(user_message_corr):
+        print(f"🏥 Pharmacy question detected: {user_message_corr}")
         found_cities = extract_city_from_query(user_message_corr)
+        
         if found_cities:
             city = found_cities[0]
+            print(f"🏙️ City found: {city}")
             ph_list = pharmacies_by_city(city)
+            
             if ph_list:
                 reply = format_pharmacies_list(ph_list, city, user_message_corr)
+                print(f"✅ Found {len(ph_list)} pharmacies in {city}")
             else:
-                reply = "Non ho trovato farmacie Otofarma in questa città. Controlla la scrittura o chiedi per un'altra località."
+                # Enhanced fallback for no pharmacies found
+                reply = (
+                    f"Mi dispiace, non ho trovato farmacie Otofarma specificamente a {city}. "
+                    f"Tuttavia, Otofarma ha una vasta rete di farmacie affiliate in tutta Italia. "
+                    f"Ti consiglio di provare a cercare nelle città limitrofe o contattare "
+                    f"direttamente il servizio clienti Otofarma per informazioni su farmacie "
+                    f"nella tua zona. Posso aiutarti con altre città o servizi Otofarma?"
+                )
+                print(f"❌ No pharmacies found in {city}")
         else:
-            field_intents = extract_field_intent(user_message_corr)
-            best_ph = pharmacy_best_match(user_message_corr)
-            reply = format_pharmacy_answer(best_ph, field_intents)
+            # No city found - provide general guidance with examples
+            city_examples = get_available_cities_sample()
+            reply = (
+                "Per aiutarti a trovare una farmacia Otofarma, potresti specificare la città "
+                "che ti interessa? Ad esempio, puoi dire 'dove sono le farmacie Otofarma a Milano' "
+                "oppure 'farmacie Otofarma a Roma'. " + city_examples + " "
+                "Sono qui per fornirti tutte le informazioni sui nostri punti vendita "
+                "specializzati in apparecchi acustici e servizi audiologici."
+            )
+            print("🤔 No city detected in pharmacy query")
+            
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
     # 9. Fallback responses
@@ -1741,4 +2218,6 @@ def transcribe():
     return jsonify({"transcript": transcript})
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    # Production-ready configuration for presidential presentation
+    debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
