@@ -144,23 +144,64 @@ async function startRecording() {
             .then(data => {
                 if (data.transcript && data.transcript.length > 0) {
                     updateStatus("🗣️ Risposta vocale in corso...");
-                    fetch('/chat', {
+                    
+                    // ENHANCED: Check for voice activation first (Hey OtoBot detection)
+                    fetch('/voice_activation', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            message: data.transcript,
-                            voice: true
+                            message: data.transcript
                         })
                     })
                     .then(response => response.json())
-                    .then(chatData => {
-                        if (chatData.reply) {
-                            speakWithGoogleTTS(chatData.reply);
-                            updateStatus("✅ Pronto per nuova conversazione");
+                    .then(activationData => {
+                        // If voice activation detected, use that response
+                        if (activationData.activated && activationData.reply) {
+                            speakWithGoogleTTS(activationData.reply);
+                            updateStatus("✅ OtoBot attivato! Pronto per nuova conversazione");
+                            resetMicButton();
                         } else {
-                            updateStatus("❌ Nessuna risposta trovata.");
+                            // Otherwise, proceed with normal chat flow
+                            fetch('/chat', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    message: data.transcript,
+                                    voice: true
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(chatData => {
+                                if (chatData.reply) {
+                                    speakWithGoogleTTS(chatData.reply);
+                                    updateStatus("✅ Pronto per nuova conversazione");
+                                } else {
+                                    updateStatus("❌ Nessuna risposta trovata.");
+                                }
+                                resetMicButton();
+                            });
                         }
-                        resetMicButton();
+                    })
+                    .catch(() => {
+                        // Fallback to normal chat if voice activation fails
+                        fetch('/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                message: data.transcript,
+                                voice: true
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(chatData => {
+                            if (chatData.reply) {
+                                speakWithGoogleTTS(chatData.reply);
+                                updateStatus("✅ Pronto per nuova conversazione");
+                            } else {
+                                updateStatus("❌ Nessuna risposta trovata.");
+                            }
+                            resetMicButton();
+                        });
                     });
                 } else {
                     updateStatus("❌ Nessuna voce rilevata o trascrizione fallita.");
