@@ -1115,13 +1115,13 @@ def get_ceo_info():
     voice_name = ceo['voice_name']  # "Dottoressa Giovanna Incarnato"
     
     responses = [
-        f"La nostra Amministratore Delegato è {voice_name}, "
+        f"La nostra Amministratrice Delegata è {voice_name}, "
         f"una professionista di eccezionale competenza che guida Otofarma Spa con grande "
         f"esperienza e visione strategica. Sotto la sua direzione, la nostra azienda continua "
         f"ad espandersi e innovare nel settore audiologico, mantenendo sempre al centro la soddisfazione "
         f"del cliente e l'eccellenza dei servizi offerti.",
         
-        f"{voice_name} ricopre il ruolo di Amministratore Delegato e CEO di Otofarma Spa. "
+        f"{voice_name} ricopre il ruolo di Amministratrice Delegata e CEO di Otofarma Spa. "
         f"Con la sua leadership dinamica e orientata all'innovazione, sta portando "
         f"l'azienda verso nuovi traguardi nel settore degli apparecchi acustici, implementando "
         f"tecnologie all'avanguardia come la teleaudiologia e sviluppando soluzioni "
@@ -1149,7 +1149,7 @@ def get_leadership_info():
         f"Il fondatore e presidente è il rispettato {founder['name']}, "
         f"che ha creato e continua a ispirare la visione aziendale. "
         f"L'operatività quotidiana è gestita dalla nostra Amministratrice Delegata, "
-        f"la {ceo['name']}, che con la sua competenza sta portando "
+        f"la {ceo['voice_name']}, che con la sua competenza sta portando "
         f"l'azienda verso nuovi traguardi di innovazione e eccellenza. "
         f"Insieme, formano una leadership che garantisce i più alti standard "
         f"di qualità e servizio nel settore audiologico."
@@ -1292,14 +1292,17 @@ def is_pharmacy_question(msg):
     msg_lc = normalize(msg)
     
     # Primary pharmacy keywords (high confidence)
-    primary_keywords = ["farmacia", "farmacie", "otofarma"]
+    primary_keywords = ["farmacia", "farmacie", "otofarma", "pharmacy", "pharmacies"]
     
     # Location/search intent keywords - ENHANCED FOR "WHAT/WHICH" QUESTIONS
     location_keywords = [
         "dove", "trovare", "vicino", "cerca", "cerco", "mostra", "dimmi", "tell me",
         "trova", "locate", "position", "posizione", "locazione", "zona", "quartiere",
         "ci sono", "sono", "esistono", "availability", "disponibili", "presenti",
-        "quali", "what", "which", "cosa", "che", "elenca", "list", "lista", "elenco"
+        "quali", "what", "which", "cosa", "che", "elenca", "list", "lista", "elenco",
+        # ADDED MORE VARIATIONS
+        "sono le", "sono i", "ci sono le", "sono presenti", "sono disponibili",
+        "tutte le", "all the", "show me", "tell me about"
     ]
     
     # City/region keywords
@@ -1325,23 +1328,28 @@ def is_pharmacy_question(msg):
     
     # Advanced pattern matching for voice queries - ENHANCED FOR "WHAT/WHICH" QUESTIONS
     voice_patterns = [
-        r"\b(dove\s+(sono|si\s+trovano|posso\s+trovare).*(farmaci|otofarma))\b",
-        r"\b(farmaci.*\s+(milano|roma|napoli|torino|firenze|bologna|venezia|genova|palermo|bari|catania|brescia|verona|padova|trieste|taranto|reggio|modena|prato|parma))\b",
-        r"\b(cerco\s+(una\s+)?farmaci)\b",
-        r"\b(ci\s+sono.*farmaci.*\s+(a|in|su|per|di))\b",
-        r"\b(mostra.*farmaci)\b",
-        r"\b(dimmi.*farmaci)\b",
-        r"\b(qual.*farmaci.*vicin)\b",
+        r"\b(dove\s+(sono|si\s+trovano|posso\s+trovare).*(farmacie?|otofarma))\b",
+        r"\b(farmacie?.*\s+(milano|roma|napoli|torino|firenze|bologna|venezia|genova|palermo|bari|catania|brescia|verona|padova|trieste|taranto|reggio|modena|prato|parma))\b",
+        r"\b(cerco\s+(una\s+)?farmacie?)\b",
+        r"\b(ci\s+sono.*farmacie?.*\s+(a|in|su|per|di))\b",
+        r"\b(mostra.*farmacie?)\b",
+        r"\b(dimmi.*farmacie?)\b",
+        r"\b(qual.*farmacie?.*vicin)\b",
         r"\b(dove.*otofarma)\b",
-        # NEW PATTERNS FOR "WHAT/WHICH ARE PHARMACIES"
-        r"\b(quali?\s+(sono|sono\s+le)\s+farmaci)\b",
+        # ENHANCED PATTERNS FOR "WHAT/WHICH ARE PHARMACIES"
+        r"\b(quali?\s+(sono|sono\s+le)\s+farmacie?)\b",
         r"\b(what\s+are\s+.*(pharmacy|pharmacies))\b",
-        r"\b(which\s+.*(pharmacy|pharmacies))\b",
-        r"\b(cosa\s+sono\s+.*farmaci)\b",
-        r"\b(che\s+farmaci)\b",
-        r"\b(elenco.*farmaci)\b",
-        r"\b(lista.*farmaci)\b",
-        r"\b(elenca.*farmaci)\b"
+        r"\b(which\s+are\s+.*(pharmacy|pharmacies))\b",
+        r"\b(cosa\s+sono\s+.*farmacie?)\b",
+        r"\b(che\s+farmacie?)\b",
+        r"\b(elenco.*farmacie?)\b",
+        r"\b(lista.*farmacie?)\b",
+        r"\b(elenca.*farmacie?)\b",
+        # NEW COMPREHENSIVE PATTERNS
+        r"\b(quali?\s+farmacie?\s+(ci\s+sono|sono|esistono|sono\s+presenti))\b",
+        r"\b(farmacie?\s+(a|in|di)\s+(milano|roma|napoli|torino|firenze|bologna|venezia|genova|palermo|bari|catania|brescia|verona|padova))\b",
+        r"\b(which\s+farmacie?)\b",
+        r"\b(what\s+farmacie?)\b"
     ]
     
     # Check voice patterns
@@ -1611,6 +1619,7 @@ def haversine(lat1, lon1, lat2, lon2):
     a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
+
 def nearest_pharmacy(user_lat, user_lon):
     """Find nearest pharmacy"""
     min_dist = float('inf')
@@ -1796,17 +1805,19 @@ def get_gemini_conversation(user_message):
         model = GenerativeModel("gemini-2.0-flash-exp-1121")  # Latest experimental model with better context
         
         prompt = f"""
-        Tu sei OtoBot, l'assistente AI più avanzato di Otofarma Spa. COMPRENDI TUTTO IL CONTESTO della frase, non solo le parole singole.
+        Sei l'assistente AI di Otofarma Spa. COMPRENDI TUTTO IL CONTESTO della frase, non solo le parole singole.
         
-        REGOLE SUPREME:
-        1. Analizza TUTTA la frase, non solo parole chiave
-        2. Comprendi l'INTENZIONE completa dell'utente
-        3. Rispondi SEMPRE in italiano perfetto e naturale
-        4. Mantieni tono professionale ma UMANO e amichevole
-        5. Se non capisci, chiedi chiarimenti specifici
+        REGOLE CRITICHE:
+        1. NON presentarti mai ("Io sono...", "Sono OtoBot", ecc.)
+        2. Vai DIRETTAMENTE alla risposta alla domanda
+        3. Analizza TUTTA la frase, non solo parole chiave
+        4. Comprendi l'INTENZIONE completa dell'utente
+        5. Rispondi SEMPRE in italiano perfetto e naturale
+        6. Mantieni tono professionale ma UMANO e amichevole
+        7. Se non capisci, chiedi chiarimenti specifici SENZA autopresentarti
         
         CONTESTO AZIENDALE:
-        - CEO: Dottoressa Giovanna Incarnato (amministratore delegato)
+        - CEO: Dottoressa Giovanna Incarnato (amministratrice delegata)
         - Fondatore: Dottor Rino Bartolomucci 
         - Sede: Via Ripuaria, Varcaturo, Giugliano in Campania
         - Servizi: apparecchi acustici, teleaudiologia, farmacie
@@ -1814,9 +1825,10 @@ def get_gemini_conversation(user_message):
         COMPRENSIONE TOTALE - Analizza questa richiesta completa:
         "{user_message}"
         
-        Rispondi considerando IL SIGNIFICATO COMPLETO, non solo le parole singole. Sii naturale, professionale e utile.
+        Rispondi considerando IL SIGNIFICATO COMPLETO, non solo le parole singole. 
+        IMPORTANTE: Rispondi direttamente SENZA mai dire chi sei.
         
-        OtoBot risposta (massimo 3 frasi, italiano perfetto):
+        Risposta diretta (massimo 3 frasi, italiano perfetto, NO autopresentazioni):
         """
         
         response = model.generate_content(prompt)
@@ -1824,7 +1836,25 @@ def get_gemini_conversation(user_message):
 
         # Enhanced response validation
         if len(gemini_text) < 10 or not gemini_text:
-            return f"Ho compreso la tua richiesta su '{user_message}', ma ho bisogno di maggiori dettagli per aiutarti al meglio. Puoi essere più specifico? Sono qui per assisterti con tutti i servizi Otofarma."
+            return f"Ho compreso la tua richiesta su '{user_message}', ma ho bisogno di maggiori dettagli per aiutarti al meglio. Puoi essere più specifico?"
+
+        # Remove self-introductions if they slip through
+        intro_patterns = [
+            r'^(Ciao[,!]?\s*)?Sono\s+(il\s+)?OtoBot[.,!]?\s*',
+            r'^(Salve[,!]?\s*)?Io\s+sono\s+(il\s+)?OtoBot[.,!]?\s*',
+            r'^(Mi\s+chiamo|Sono)\s+(il\s+)?OtoBot[.,!]?\s*',
+            r'^OtoBot\s+qui[.,!]?\s*',
+            r'^Sono\s+l\'assistente\s+AI\s+(di\s+)?Otofarma[.,!]?\s*'
+        ]
+        
+        for pattern in intro_patterns:
+            gemini_text = re.sub(pattern, '', gemini_text, flags=re.IGNORECASE)
+        
+        gemini_text = gemini_text.strip()
+        
+        # If text was only an introduction, return fallback
+        if len(gemini_text) < 10:
+            return f"Ho compreso la tua richiesta, ma ho bisogno di maggiori dettagli per aiutarti al meglio. Puoi essere più specifico?"
 
         # Ensure professional Italian response
         if len(gemini_text) > 300:
@@ -2064,15 +2094,28 @@ def chat():
         )
         print(f"✅ NEW BOOKING COMPLETED: {info}")
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
-    # STEP 3: ASSISTANT NAME ACTIVATION
+    # STEP 3: ASSISTANT NAME ACTIVATION - ONLY for direct activation
     if detect_assistant_name(user_message):
         print(f"🎯 ASSISTANT ACTIVATION DETECTED")
-        return jsonify({"reply": handle_voice_activation_greeting(), "voice": voice_mode, "male_voice": True})
+        return jsonify({"reply": get_assistant_introduction(), "voice": voice_mode, "male_voice": True})
 
-    # STEP 4: LANGUAGE & CORRECTION
+    # STEP 4: LANGUAGE & CORRECTION - Enhanced Italian-only detection
     user_message_corr = correct_spelling(user_message)
     if not is_probably_italian(user_message_corr):
-        return jsonify({"reply": "Questo assistente risponde solo a domande in italiano. Per favore riformula la domanda in italiano.", "voice": voice_mode, "male_voice": True})
+        technical_responses = [
+            "Mi dispiace, sono un assistente AI specializzato esclusivamente per la lingua italiana. "
+            "Il mio modello di elaborazione del linguaggio naturale è stato ottimizzato solo per l'italiano. "
+            "Potresti per favore riformulare la tua domanda in italiano?",
+            
+            "Sono spiacente, la mia architettura di intelligenza artificiale è configurata esclusivamente "
+            "per comprendere e rispondere in lingua italiana. Non posso elaborare richieste in altre lingue. "
+            "Ti prego di comunicare con me in italiano.",
+            
+            "Mi scuso, ma il mio sistema di comprensione del linguaggio è stato addestrato solo per l'italiano. "
+            "Per motivi tecnici, non sono in grado di processare testi in lingue diverse dall'italiano. "
+            "Potresti gentilmente ripetere la domanda in italiano?"
+        ]
+        return jsonify({"reply": random.choice(technical_responses), "voice": voice_mode, "male_voice": True})
 
     print(f"📝 AFTER CORRECTION: '{user_message_corr}'")
 
@@ -2180,7 +2223,7 @@ def chat():
     # STEP 11: GEMINI AI CONVERSATION (Final Intelligence)
     print("🧠 USING GEMINI AI FOR INTELLIGENT CONVERSATION...")
     if gemini_available:
-        gemini_reply = get_gemini_conversation(user_message_corr, chat_log)
+        gemini_reply = get_gemini_conversation(user_message_corr)
         if gemini_reply:
             print(f"🎯 GEMINI RESPONSE: {gemini_reply[:100]}...")
             return jsonify({"reply": gemini_reply, "voice": voice_mode, "male_voice": True})
@@ -2257,7 +2300,7 @@ def tts():
     # Format numbers for speech BEFORE TTS
     formatted_text = format_numbers_for_speech(text)
     
-    voice_name = "it-IT-Wavenet-F"
+    voice_name = "it-IT-Chirp3-HD-Enceladus"  # Premium Chirp3 - Warm & Natural Male Italian Voice
 
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
 
