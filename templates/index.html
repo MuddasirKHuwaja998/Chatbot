@@ -3,14 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>OtoBot - Assistente Virtuale Otofarma</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/static/icon.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="OtoBot">
-  <meta name="apple-touch-fullscreen" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="format-detection" content="telephone=no">
   <style>
     .bg-image {
       position: fixed;
@@ -18,10 +12,7 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background-image: url("/static/bg.png");
-      background-position: center center;
-      background-size: cover;
-      background-repeat: no-repeat;
+      background: url("/static/bg.png") center center / cover no-repeat;
       z-index: 0;
     }
     body {
@@ -36,29 +27,6 @@
       align-items: center;
       overflow: hidden;
       background: linear-gradient(135deg, #eafaf1 0%, #a8e6cf 100%);
-    }
-    /* iOS Safari fixes */
-    video {
-      -webkit-playsinline: true;
-    }
-
-    @supports (-webkit-touch-callout: none) {
-      .bg-image {
-        background-attachment: scroll;
-      }
-      
-      /* iOS-specific viewport fix */
-      body {
-        height: 100vh;
-        height: -webkit-fill-available;
-      }
-      
-      /* iOS audio/video interaction requirement */
-      video, audio {
-        -webkit-user-select: none;
-        user-select: none;
-        -webkit-touch-callout: none;
-      }
     }
     body::before {
       content: "";
@@ -272,7 +240,7 @@
   
   <main>
     <div id="micBtn" title="Clicca per parlare con OtoBot">
-      <video id="micVideo" src="/static/miclogo.mov" width="100%" height="100%" muted playsinline preload="metadata" webkit-playsinline="true" controls="false" disablepictureinpicture="true" x5-playsinline="true" x-webkit-airplay="allow" style="border-radius:50%;display:block;background:#fff;"></video>
+      <video id="micVideo" src="/static/miclogo.mov" width="100%" height="100%" muted playsinline style="border-radius:50%;display:block;background:#fff;"></video>
     </div>
   </main>
   <script src="/static/index.js"></script>
@@ -293,28 +261,17 @@
       } else if (url.endsWith('.mov') || url.endsWith('.webm')) {
         const video = document.createElement('video');
         video.src = url;
-        video.preload = 'metadata';
+        video.preload = 'auto';
         video.muted = true;
-        video.playsInline = true;
-        video.setAttribute('webkit-playsinline', 'true');
-        video.setAttribute('playsinline', 'true');
-        video.setAttribute('disablepictureinpicture', 'true');
-        video.setAttribute('x5-playsinline', 'true');
-        video.setAttribute('x-webkit-airplay', 'allow');
-        video.setAttribute('controls', 'false');
-        // iOS-compatible preloading
-        video.load();
-        if (!(/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream)) {
-          video.play().then(() => video.pause()).catch(() => {});
-        }
+        video.play().then(() => video.pause()).catch(() => {});
       }
     });
   </script>
   <!-- Avatar loop visualization -->
   <div class="center-image">
     <div class="avatar-fade" style="position:relative;width:100%;height:100%;">
-      <video id="avatar-still" src="/static/stillZloop.webm" muted playsinline preload="metadata" webkit-playsinline="true" controls="false" disablepictureinpicture="true" x5-playsinline="true" x-webkit-airplay="allow" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;"></video>
-      <video id="avatar-move" src="/static/moveZloop.webm" muted playsinline preload="metadata" webkit-playsinline="true" controls="false" disablepictureinpicture="true" x5-playsinline="true" x-webkit-airplay="allow" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;" ></video>
+      <video id="avatar-still" src="/static/stillZloop.webm" autoplay loop muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;"></video>
+      <video id="avatar-move" src="/static/moveZloop.webm" muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;" ></video>
     </div>
   </div>
   <script>
@@ -325,49 +282,26 @@
       const micBtn = document.getElementById('micBtn');
       const micVideo = document.getElementById('micVideo');
 
-      // iOS-compatible video initialization
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      
-      // Force explicit loading
+      // Forza il caricamento esplicito
       avatarStill.load();
       avatarMove.load();
-      if (micVideo) micVideo.load();
 
-      // Function to show videos when ready
+      // Funzione per mostrare i video solo quando entrambi sono pronti
       let readyCount = 0;
       function showVideosWhenReady() {
         readyCount++;
-        console.log('Video ready count:', readyCount);
-        if (readyCount >= 1) {
+        if (readyCount === 2) {
           avatarStill.style.visibility = 'visible';
           avatarMove.style.visibility = 'visible';
           avatarStill.style.opacity = '1';
           avatarStill.currentTime = 0;
-          
-          // iOS-compatible play
-          const playPromise = avatarStill.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(e => {
-              console.log('Avatar play blocked (iOS autoplay policy):', e.message);
-              // This is normal on iOS - video will play on user interaction
-            });
-          }
+          avatarStill.play();
         }
       }
-      // Ascolta l'evento canplaythrough per entrambi i video
-      // Multiple event listeners for better compatibility
-avatarStill.addEventListener('canplaythrough', showVideosWhenReady);
-avatarStill.addEventListener('loadeddata', showVideosWhenReady);
-avatarMove.addEventListener('canplaythrough', showVideosWhenReady);
-avatarMove.addEventListener('loadeddata', showVideosWhenReady);
 
-// Fallback timeout if videos don't load
-setTimeout(() => {
-  if (readyCount === 0) {
-    console.log('Forcing avatar display after timeout');
-    showVideosWhenReady();
-  }
-}, 3000);
+      // Ascolta l'evento canplaythrough per entrambi i video
+      avatarStill.addEventListener('canplaythrough', showVideosWhenReady);
+      avatarMove.addEventListener('canplaythrough', showVideosWhenReady);
 
       // Forza la decodifica del primo frame di entrambi i video
       avatarStill.muted = true;
@@ -376,35 +310,15 @@ setTimeout(() => {
       avatarMove.play().then(() => avatarMove.pause()).catch(() => {});
 
       if (avatarStill && avatarMove && micBtn) {
-        // iOS-compatible button interaction
-        function handleMicButtonClick() {
+        // Riproduci il video miclogo.mov al click del pulsante
+        micBtn.addEventListener('click', function() {
           if (micVideo) {
             micVideo.currentTime = 0;
-            const playPromise = micVideo.play();
-            if (playPromise !== undefined) {
-              playPromise.catch(e => {
-                console.log('Mic video play error:', e.message);
-              });
-            }
+            micVideo.play();
           }
-          
-          // Initialize avatar videos on first interaction (iOS requirement)
-          if (isIOS && readyCount === 0) {
-            showVideosWhenReady();
-          }
-        }
-        
-        // Add both click and touch events for iOS compatibility
-        micBtn.addEventListener('click', handleMicButtonClick);
-        if (isIOS) {
-          micBtn.addEventListener('touchstart', function(e) {
-            e.preventDefault(); // Prevent double-tap zoom
-            handleMicButtonClick();
-          }, { passive: false });
-        }
+        });
       }
     });
   </script>
 </body>
 </html>
-
