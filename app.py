@@ -434,7 +434,7 @@ PHARMACY_CSV_PATH = os.environ.get(
 # ===== OTOFARMA SPA CORPORATE INFORMATION =====
 # 🏢 HEADQUARTERS: Via Ripuaria, 50k, Varcaturo, 80014 Giugliano in Campania NA
 # 👔 FOUNDER & PRESIDENT: Dr. Rino Bartolomucci  
-# 💼 CEO: Drs. Giovanna Incarnato
+# 💼 CEO: Drs. Dottoressa Giovanna Incarnato
 # 💻 IT HEAD: Pasquale Valentino
 # 📱 FRONTEND/iOS DEV: Gaetano  
 # 🤖 AI SPECIALIST: Muddasir Khuwaja
@@ -449,17 +449,16 @@ OTOFARMA_HEADQUARTERS = {
 
 OTOFARMA_LEADERSHIP = {
     "founder_president": {
-        "name": "Dottor Rino Bartolomucci",
+        "name": "Dr. Rino Bartolomucci",
         "title": "Fondatore e Presidente", 
-        "role": "Founder and President",
-        "voice_name": "Dottor Rino Bartolomucci"
+        "role": "Founder and President"
     },
     "ceo": {
         "name": "Dottoressa Giovanna Incarnato",
-        "title": "Amministratore Delegato",
-        "role": "Chief Executive Officer",
         "voice_name": "Dottoressa Giovanna Incarnato",
-        "italian_titles": ["CEO", "amministratore delegato", "direttore generale", "direttrice generale", "amministratrice delegata"]
+        "title": "Amministratrice Delegata",
+        "role": "Chief Executive Officer",
+        "gender": "female"
     },
     "it_head": {
         "name": "Pasquale Valentino",
@@ -500,41 +499,36 @@ AI_CREATOR_INFO = {
     "description": "Sistema AI avanzato addestrato su migliaia di nodi neurali"
 }
 
-# REVOLUTIONARY ENHANCED CORPORATE PATTERNS - HUMAN-FRIENDLY & CONTEXT-AWARE
+# Enhanced corporate knowledge patterns with PERFECT detection
 CORPORATE_PATTERNS = [
-    # Headquarters patterns - MASSIVELY EXPANDED
-    (r"\b(sede|ufficio|headquarters|main office|sede principale|ufficio principale|quartier generale|dove.*lavorate|dove.*siete|dove.*otofarma|ubicazione.*otofarma)\b", "headquarters"),
-    (r"\b(dove si trova|indirizzo|address|location|ubicazione|situato|posizionato|si trova)\b.*\b(otofarma|sede|ufficio|azienda|ditta|società)\b", "headquarters"),
-    (r"\b(via ripuaria|varcaturo|giugliano|campania|napoli)\b", "headquarters"),
+    # Headquarters patterns
+    (r"\b(sede|ufficio|headquarters|main office|sede principale|ufficio principale|quartier generale)\b", "headquarters"),
+    (r"\b(dove si trova|indirizzo|address|location|ubicazione)\b.*\b(otofarma|sede|ufficio)\b", "headquarters"),
+    (r"\b(via ripuaria|varcaturo|giugliano)\b", "headquarters"),
     
-    # Leadership patterns - REVOLUTIONARY CONTEXT UNDERSTANDING
-    (r"\b(fondatore|founder|presidente|president|ha fondato|chi ha fondato|creatore.*azienda)\b.*\b(otofarma|azienda|ditta|società)\b", "founder"),
-    (r"\b(rino|bartolomucci|dottor.*rino|doctor.*rino)\b", "founder"),
-    
-    # CEO PATTERNS - MASSIVELY ENHANCED FOR ITALIAN CONTEXT
-    (r"\b(ceo|amministratore.*delegato|amministratrice.*delegata|direttore.*generale|direttrice.*generale|ad|a\.d\.|capo|boss|dirigente.*principale|vertice.*azienda)\b", "ceo"),
-    (r"\b(chi.*dirige|chi.*comanda|chi.*gestisce|chi.*capo|chi.*responsabile.*principale|chi.*guida.*azienda|leadership|dirigenza|vertice)\b.*\b(otofarma|azienda|ditta|società)\b", "ceo"), 
-    (r"\b(giovanna|incarnato|dottoressa.*giovanna|dott\.ssa.*giovanna)\b", "ceo"),
-    (r"\b(donna.*capo|signora.*direttrice|responsabile.*donna|amministratrice)\b", "ceo"),
-    
-    # APPOINTMENT & BOOKING PATTERNS - SUPER INTELLIGENT
-    (r"\b(prenotazione|prenotato|prenotare|appuntamento|visita|controllo|test.*udito|quando.*mio.*appuntamento|ho.*prenotato|sono.*prenotato|verificare.*prenotazione)\b", "appointment_check"),
+    # Leadership patterns  
+    (r"\b(fondatore|founder|presidente|president)\b.*\b(otofarma)\b", "founder"),
+    (r"\b(rino|bartolomucci)\b", "founder"),
+    (r"\b(ceo|amministratore|amministratrice|delegato|delegata|direttore|direttrice|generale|direttore generale|direttrice generale)\b.*\b(otofarma)\b", "ceo"),
+    (r"\b(giovanna|incarnato|dottoressa)\b", "ceo"),
+    (r"\b(chi.*è.*ceo|chi.*è.*amministratore|chi.*è.*amministratrice|chi.*è.*direttore|chi.*è.*direttrice|chi.*dirige.*azienda)\b", "ceo"),
+    (r"\b(chi.*dirige|chi.*comanda|chi.*gestisce|leadership|dirigenza)\b.*\b(otofarma)\b", "leadership"),
     
     # IT Team patterns
-    (r"\b(it|responsabile.*it|manager.*it|dipartimento.*it|capo.*it|tecnologia|sistemi.*informatici)\b", "it_head"),
+    (r"\b(it|responsabile it|manager it|dipartimento it|capo it)\b", "it_head"),
     (r"\b(pasquale|valentino)\b", "it_head"),
-    (r"\b(frontend|front.*end|ios|sviluppatore|developer|programmatore|app.*mobile|interfacce)\b.*\b(gaetano|mobile|app)\b", "frontend_dev"),
+    (r"\b(frontend|front end|ios|sviluppatore|developer)\b.*\b(gaetano|mobile|app)\b", "frontend_dev"),
     (r"\b(gaetano)\b", "frontend_dev"),
-    (r"\b(team.*tecnico|team.*sviluppo|technical.*team|dev.*team|squadra.*tecnica)\b", "technical_team"),
+    (r"\b(team.*tecnico|team.*sviluppo|technical team|dev team)\b", "technical_team"),
     
-    # AI Creator patterns - SUPER ENHANCED CONTEXT UNDERSTANDING
-    (r"\b(chi.*creato|chi.*sviluppato|chi.*programmato|chi.*fatto|chi.*costruito|chi.*inventato|chi.*progettato)\b.*\b(te|tu|ai|bot|otobot|intelligenza|assistente|sistema)\b", "creator"),
-    (r"\b(come.*sei.*stato.*creato|come.*sei.*nato|come.*funzioni|chi.*ti.*ha.*creato|chi.*ti.*ha.*fatto|da.*dove.*vieni|origine|sviluppatore)\b", "creator"),
-    (r"\b(who.*created|who.*developed|who.*programmed|who.*made|who.*built|your.*creator|your.*developer)\b.*\b(you|ai|bot)\b", "creator"),
-    (r"\b(sviluppatore.*ai|ai.*specialist|ai.*developer|intelligenza.*artificiale|machine.*learning|neural.*network)\b", "creator"),
-    (r"\b(muddasir|khuwaja|mudda)\b", "creator"),
-    (r"\b(come.*funzioni|architettura|come.*lavori|tecnologia|algoritmi|neural|gemini|vertex)\b", "architecture"),
-    (r"\b(how.*were.*you.*created|how.*were.*you.*made|how.*do.*you.*work|what.*technology)\b", "creator")
+    # AI Creator patterns - ENHANCED FOR BETTER DETECTION
+    (r"\b(chi.*creato|chi.*sviluppato|chi.*programmato|chi.*fatto|chi.*costruito)\b.*\b(te|tu|ai|bot|otobot|intelligenza)\b", "creator"),
+    (r"\b(come.*sei.*stato.*creato|come.*sei.*nato|come.*funzioni|chi.*ti.*ha.*creato|chi.*ti.*ha.*fatto)\b", "creator"),
+    (r"\b(who.*created|who.*developed|who.*programmed|who.*made|who.*built)\b.*\b(you|ai|bot)\b", "creator"),
+    (r"\b(sviluppatore.*ai|ai.*specialist|ai.*developer|intelligenza.*artificiale)\b", "creator"),
+    (r"\b(muddasir|khuwaja)\b", "creator"),
+    (r"\b(come.*funzioni|architettura|come.*lavori|tecnologia|algoritmi|neural)\b", "architecture"),
+    (r"\b(how.*were.*you.*created|how.*were.*you.*made|how.*do.*you.*work)\b", "creator")
 ]
 
 # Load YAML Q&A pairs with better error handling
@@ -1619,7 +1613,6 @@ def haversine(lat1, lon1, lat2, lon2):
     a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-
 def nearest_pharmacy(user_lat, user_lon):
     """Find nearest pharmacy"""
     min_dist = float('inf')
@@ -1759,76 +1752,57 @@ def initialize_gemini():
 # Initialize Gemini
 gemini_available = initialize_gemini()
 
-def analyze_full_context_with_gemini(user_message):
-    """REVOLUTIONARY CONTEXT ANALYZER - Understands complete sentence meaning"""
-    if not gemini_available:
-        return None
-        
-    try:
-        model = GenerativeModel("gemini-2.0-flash-exp-1121")  # Latest experimental model
-        
-        analysis_prompt = f"""
-        ANALISI CONTESTO ITALIANO - Sei un analizzatore di contesto per OtoBot di Otofarma Spa.
-        
-        Analizza questa frase italiana e determina ESATTAMENTE cosa vuole l'utente:
-        "{user_message}"
-        
-        Rispondi con UNA SOLA parola che rappresenta l'INTENZIONE PRINCIPALE:
-        - "prenotazione" = se chiede di verificare/controllare appuntamenti esistenti
-        - "nuova_prenotazione" = se vuole prenotare nuovo appuntamento  
-        - "ceo" = se chiede del CEO/direttore/capo/amministratore delegato
-        - "fondatore" = se chiede del fondatore/presidente
-        - "creatore" = se chiede chi ha creato l'AI/bot
-        - "sede" = se chiede dove si trova Otofarma
-        - "farmacia" = se cerca farmacie/punti vendita
-        - "servizi" = se chiede dei servizi Otofarma
-        - "conversazione" = per tutto il resto
-        
-        RISPOSTA (una sola parola):
-        """
-        
-        response = model.generate_content(analysis_prompt)
-        intent = response.text.strip().lower()
-        
-        return intent if intent in ["prenotazione", "nuova_prenotazione", "ceo", "fondatore", "creatore", "sede", "farmacia", "servizi", "conversazione"] else "conversazione"
-        
-    except Exception as e:
-        print(f"Context analysis error: {e}")
-        return "conversazione"
-
 def get_gemini_conversation(user_message):
-    """SUPER-ENHANCED Gemini - FULL SENTENCE UNDERSTANDING"""
+    """Get natural conversation from Gemini - ALWAYS ITALIAN - ALWAYS OTOFARMA"""
     if not gemini_available:
         return None
         
     try:
-        model = GenerativeModel("gemini-2.0-flash-exp-1121")  # Latest experimental model with better context
+        model = GenerativeModel("gemini-2.0-flash-001")  # Latest available model
         
         prompt = f"""
-        Sei l'assistente AI di Otofarma Spa. COMPRENDI TUTTO IL CONTESTO della frase, non solo le parole singole.
+        IMPORTANTE: Rispondi SEMPRE e SOLO in italiano professionale e cordiale. Mai in inglese.
         
-        REGOLE CRITICHE:
-        1. NON presentarti mai ("Io sono...", "Sono OtoBot", ecc.)
-        2. Vai DIRETTAMENTE alla risposta alla domanda
-        3. Analizza TUTTA la frase, non solo parole chiave
-        4. Comprendi l'INTENZIONE completa dell'utente
-        5. Rispondi SEMPRE in italiano perfetto e naturale
-        6. Mantieni tono professionale ma UMANO e amichevole
-        7. Se non capisci, chiedi chiarimenti specifici SENZA autopresentarti
+        Tu sei OtoBot, l'assistente virtuale UFFICIALE di Otofarma Spa, azienda italiana leader nel settore audiologico.
+         REGOLE ASSOLUTE:
+        1. Rispondi SEMPRE in italiano professionale
+        2. Massimo 2-3 frasi concise e dirette
+        3. Sei OtoBot di Otofarma Spa (mai AI generico)
+        4. Se non sai qualcosa, suggerisci contatto con specialisti
+        5. NO risposte lunghe - sii preciso e utile
+
+        LA TUA IDENTITÀ:
+        - Sei OtoBot di Otofarma Spa
+        - Rappresenti un'azienda italiana di prestigio
+        - Sei specializzato in apparecchi acustici innovativi
+        - Conosci teleaudiologia e servizi audiologici
+        - Sei sempre professionale ma cordiale
+        - Parli solo italiano
         
-        CONTESTO AZIENDALE:
-        - CEO: Dottoressa Giovanna Incarnato (amministratrice delegata)
-        - Fondatore: Dottor Rino Bartolomucci 
-        - Sede: Via Ripuaria, Varcaturo, Giugliano in Campania
-        - Servizi: apparecchi acustici, teleaudiologia, farmacie
+        I TUOI SERVIZI OTOFARMA:
+        - Apparecchi acustici ricaricabili e su misura
+        - Teleaudiologia e consulenze specialistiche
+        - Test dell'udito gratuiti
+        - Garanzie complete e assistenza
+        - Rete di farmacie affiliate in Italia
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+        COMPORTAMENTO:
+        - Professionale ma cordiale
+        - Risposte brevi (max 50 parole se possibile)  
+        - Se qualcuno si presenta, ricorda il nome
+        - Per argomenti non-Otofarma, collega sempre ai nostri servizi
         
-        COMPRENSIONE TOTALE - Analizza questa richiesta completa:
-        "{user_message}"
+        REGOLE SPECIALI:
+        1. Rispondi SEMPRE in italiano
+        2. Sei SEMPRE OtoBot di Otofarma Spa, mai un AI generico
+        3. Per domande sul tempo, meteo o argomenti generali, rispondi come OtoBot ma collegando sempre a Otofarma
+        4. Mantieni tono professionale ma amichevole
+        5. Per dettagli specifici su Otofarma, suggerisci di contattare i nostri specialisti
+        6. Se qualcuno si presenta (nome), ricordalo e sii cordiale
         
-        Rispondi considerando IL SIGNIFICATO COMPLETO, non solo le parole singole. 
-        IMPORTANTE: Rispondi direttamente SENZA mai dire chi sei.
+        Messaggio utente: {user_message}
         
-        Risposta diretta (massimo 3 frasi, italiano perfetto, NO autopresentazioni):
+        OtoBot di Otofarma Spa (risposta in italiano):
         """
         
         response = model.generate_content(prompt)
@@ -1856,6 +1830,24 @@ def get_gemini_conversation(user_message):
         if len(gemini_text) < 10:
             return f"Ho compreso la tua richiesta, ma ho bisogno di maggiori dettagli per aiutarti al meglio. Puoi essere più specifico?"
 
+                # Fix: If Gemini returns nonsense or too-short answers, use creative fallback
+        nonsense_patterns = [
+            r"^(a+h+|h+a+|e+h+|h+e+|h+a+i+|a+i+|e+i+|i+a+|h+)+[.!?]*$",  # ahhh, haai, eh, etc.
+            r"^[a-z]{1,4}[.!?]*$"  # 1-4 letter "words" only
+        ]
+        if any(re.match(pat, gemini_text, re.IGNORECASE) for pat in nonsense_patterns):
+            # Extract a main keyword from the question
+            user_kw = ""
+            user_words = re.findall(r'\w+', normalize(user_message))
+            for w in user_words:
+                if w not in {"ciao", "salve", "buongiorno", "buonasera", "buonanotte", "come", "va", "stai", "sei", "sono", "grazie", "bot", "otobot", "otofarma", "assistente"} and len(w) > 3:
+                    user_kw = w
+                    break
+            if user_kw:
+                return f"Mi dispiace, non ho informazioni precise su '{user_kw}'. Ti consiglio di contattare uno specialista Otofarma oppure chiedere in modo diverso. Sono sempre qui per aiutarti!"
+            else:
+                return "Mi dispiace, non ho informazioni precise su questa domanda. Puoi riformulare o chiedere altro? Sono sempre qui per aiutarti!"
+
         # Ensure professional Italian response
         if len(gemini_text) > 300:
             # Find best cut point
@@ -1868,52 +1860,17 @@ def get_gemini_conversation(user_message):
         return gemini_text
 
     except Exception as e:
-        print(f"Enhanced Gemini error: {e}")
+        print(f"Gemini error: {e}")
         return None
 
-def intelligent_appointment_detector(user_message):
-    """REVOLUTIONARY Appointment Context Detector"""
-    user_msg = normalize(user_message.strip())
-    
-    # CONTEXT ANALYSIS - Check if asking about EXISTING appointment
-    check_patterns = [
-        "mio appuntamento", "mia prenotazione", "ho prenotato", "sono prenotato",
-        "quando ho", "che giorno ho", "verificare", "controllare", "confermare",
-        "ho già prenotato", "già prenotato", "sono in lista", "sono registrato",
-        "quando è il mio", "che ore ho", "a che ora ho", "controllo prenotazione"
-    ]
-    
-    if any(pattern in user_msg for pattern in check_patterns):
-        return "check_appointment"
-    
-    # NEW BOOKING patterns
-    booking_patterns = [
-        "voglio prenotare", "vorrei prenotare", "posso prenotare", "prenotazione",
-        "nuovo appuntamento", "fissare appuntamento", "richiedere visita"
-    ]
-    
-    if any(pattern in user_msg for pattern in booking_patterns):
-        return "new_booking"
-        
-    return None
-
 def should_use_gemini_for_conversation(user_message):
-    """SUPER-INTELLIGENT Decision Engine - Context Aware"""
+    """Decide if message should use Gemini for natural conversation - EXCLUDES CREATOR QUESTIONS"""
     user_msg = normalize(user_message.strip())
-    
-    # Get context analysis from Gemini
-    context_intent = analyze_full_context_with_gemini(user_message)
-    
-    # NEVER use Gemini for specific corporate topics
-    blocked_intents = ["prenotazione", "ceo", "fondatore", "creatore", "sede", "farmacia"]
-    if context_intent in blocked_intents:
-        return False
     
     # NEVER use Gemini for creator questions - these have dedicated corporate responses
     creator_indicators = [
         "chi creato", "chi sviluppato", "come sei stato creato", "chi ti ha creato",
-        "who created", "how were you created", "chi ti ha fatto", "come funzioni",
-        "muddasir", "khuwaja"
+        "who created", "how were you created", "chi ti ha fatto", "come funzioni"
     ]
     
     # Block Gemini if it's a creator question
@@ -1921,20 +1878,20 @@ def should_use_gemini_for_conversation(user_message):
         if indicator in user_msg:
             return False
     
-    # INTELLIGENT conversation detection
+    # Use Gemini for natural greetings and conversations
     conversation_patterns = [
         "ciao", "salve", "buongiorno", "buonasera", "buonanotte",
-        "come va", "come stai", "tutto bene", "tutto ok", "che fai",
-        "come ti chiami", "chi sei", "cosa fai", "dimmi di te",
+        "come va", "come stai", "tutto bene", "tutto ok",
+        "come ti chiami", "chi sei", "cosa fai",
         "piacere", "felice di conoscerti", "grazie", "perfetto", "ottimo", "bene",
         "sono", "mi chiamo", "il mio nome", "dimmi", "parlami", "raccontami",
-        "tempo", "oggi", "domani", "ieri", "quando", "dove", "perché", "sciama",
-        "ti piace", "cosa pensi", "opinione", "consiglio"
+        "tempo", "oggi", "domani", "ieri", "quando", "dove", "perché", "sciama"
     ]
     
-    # Use enhanced Gemini for natural conversations
-    if context_intent == "conversazione" or any(pattern in user_msg for pattern in conversation_patterns):
-        return True
+    # Check if it's a natural conversation starter
+    for pattern in conversation_patterns:
+        if pattern in user_msg:
+            return True
     
     # Use Gemini for personal introductions and general questions
     if any(word in user_msg for word in ["sono", "mi chiamo", "il mio nome è", "parlami", "dimmi", "raccontami", "tempo"]):
@@ -2019,107 +1976,88 @@ def voice_activation():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    """REVOLUTIONARY CHAT ENGINE - Full Context Understanding with Gemini 2.0 Flash Exp"""
+    """Main chat endpoint with advanced appointment booking priority"""
     user_message = request.json.get("message", "")
     voice_mode = request.json.get("voice", True)
     user_lat = request.json.get("lat", None)
     user_lon = request.json.get("lon", None)
 
-    print(f"🎯 RECEIVED MESSAGE: '{user_message}'")
-    
-    # STEP 0: INTELLIGENT CONTEXT ANALYSIS with Gemini
-    context_intent = analyze_full_context_with_gemini(user_message)
-    print(f"🧠 CONTEXT ANALYSIS: {context_intent}")
-    
-    # STEP 1: INTELLIGENT APPOINTMENT DETECTION
-    appointment_intent = intelligent_appointment_detector(user_message)
-    
-    if appointment_intent == "check_appointment":
+    print(f"Received message: '{user_message}'")
+    check_keywords = [
+        "ho appuntamento", "il mio appuntamento", "la mia prenotazione", "quando è il mio appuntamento",
+        "ho una prenotazione", "controlla appuntamento", "verifica appuntamento", "ho prenotato",
+        "sono prenotato", "sono registrato", "sono in lista", "mio appuntamento", "mia prenotazione",
+        "ho già prenotato", "ho già appuntamento", "sono in agenda"
+    ]
+  
+    if any(kw in normalize(user_message) for kw in check_keywords):
         info = extract_appointment_info_smart(user_message)
-        # Privacy: require both name and phone
+         # Privacy: require both name and phone
         if info.get("name") and info.get("phone"):
-            found = find_appointment(name=info.get("name"), phone=info.get("phone"))
-            if found:
-                reply = (
-                    f"Perfetto! Ho trovato il tuo appuntamento, {found[0]}. "
-                    f"Sei prenotato per il giorno {found[2]} e verrai contattato "
-                    f"al numero {found[1]} per la conferma dell'orario esatto. "
-                    f"Ti aspettiamo presso Otofarma per il tuo test dell'udito!"
-                )
-            else:
-                reply = (
-                    "Ho cercato nel nostro sistema ma non ho trovato una prenotazione "
-                    "con i dati forniti. Per motivi di privacy, ho bisogno sia del nome completo "
-                    "che del numero di telefono per verificare l'appuntamento. "
-                    "Puoi riprovare fornendo entrambi i dati?"
-                )
-        else:
-            missing_data = []
-            if not info.get("name"): missing_data.append("nome completo")
-            if not info.get("phone"): missing_data.append("numero di telefono")
-            
+          found = find_appointment(name=info.get("name"), phone=info.get("phone"))
+        if found:
             reply = (
-                f"Per verificare la tua prenotazione ho bisogno di alcuni dati: {' e '.join(missing_data)}. "
-                f"Puoi fornirmeli per favore? È per garantire la privacy dei nostri pazienti."
+                f"Sì, {found[0]}, hai già un appuntamento prenotato per il giorno {found[2]}.\n"
+                f"Verrai contattato al numero {found[1]} per la conferma.\n"
+                "Grazie per aver scelto Otofarma!"
             )
-        
-        print(f"✅ APPOINTMENT CHECK RESPONSE")
+        else:
+            reply = (
+                "Per motivi di privacy, servono sia il nome che il numero di telefono per verificare la prenotazione."
+                "Non trovo una prenotazione a tuo nome o numero. "
+                "Se pensi di aver prenotato, controlla di aver fornito nome e telefono corretti."
+            )
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
-    # STEP 2: NEW APPOINTMENT BOOKING (Enhanced Intelligence)
-    if appointment_intent == "new_booking" or context_intent == "nuova_prenotazione":
+    # 1. Appointment booking logic FIRST (before Gemini, before everything)
+    appointment_keywords = [
+        "prenota", "prenotare", "appuntamento", "visita", "richiedo", "richiedere", "voglio", "vorrei", "prenotazione"
+    ]
+    if any(kw in normalize(user_message) for kw in appointment_keywords):
         info = extract_appointment_info_smart(user_message)
         missing = []
-        if not info.get("name"): missing.append("nome completo")
-        if not info.get("phone"): missing.append("numero di telefono")
-        if not info.get("date"): missing.append("data preferita")
-        
+        if not info.get("name"):
+            missing.append("nome completo")
+        if not info.get("phone"):
+            missing.append("numero di telefono")
+        if not info.get("date"):
+            missing.append("data preferita")
         if missing:
             reply = (
-                f"Perfetto! Sarò felice di aiutarti a prenotare una visita audiologica presso Otofarma. "
-                f"Per completare la prenotazione ho bisogno di: {', '.join(missing)}. "
-                f"Puoi fornirmeli? Garantiamo la massima privacy dei tuoi dati."
+                "Per prenotare la visita, ho bisogno dei seguenti dati: "
+                + ", ".join(missing)
+                + ". Puoi fornirmeli?"
             )
-            print(f"📋 NEW BOOKING: missing {missing}")
+            print("Appointment booking: missing info", missing)
             return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
         
-        # Complete booking
         send_appointment_email(info["name"], info["phone"], info["date"])
         save_appointment_to_db(info["name"], info["phone"], info["date"])
         reply = (
-            f"Eccellente, {info['name']}! Ho inviato la tua richiesta di appuntamento "
-            f"per il {info['date']} al nostro team specializzato di Otofarma. "
-            f"Riceverai presto una chiamata di conferma al {info['phone']} per concordare "
-            f"l'orario esatto. Ti aspettiamo per offrirti il miglior servizio audiologico!"
+            f"Ciao {info['name']},\n"
+            f"Ho inviato la tua richiesta di appuntamento per il giorno {info['date']} al nostro team Otofarma.\n"
+            f"Riceverai presto una chiamata di conferma al numero {info['phone']}.\n"
+            "Grazie per aver scelto Otofarma! Se hai altre esigenze, sono sempre qui per aiutarti in modo professionale e cordiale."
         )
-        print(f"✅ NEW BOOKING COMPLETED: {info}")
+        print("Appointment booking: email sent", info)
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
-    # STEP 3: ASSISTANT NAME ACTIVATION - ONLY for direct activation
+        # 1. Check for assistant name activation
     if detect_assistant_name(user_message):
-        print(f"🎯 ASSISTANT ACTIVATION DETECTED")
-        return jsonify({"reply": get_assistant_introduction(), "voice": voice_mode, "male_voice": True})
+        return jsonify({"reply": handle_voice_activation_greeting(), "voice": voice_mode, "male_voice": True})
 
-    # STEP 4: LANGUAGE & CORRECTION - Enhanced Italian-only detection
-    user_message_corr = correct_spelling(user_message)
-    if not is_probably_italian(user_message_corr):
-        technical_responses = [
-            "Mi dispiace, sono un assistente AI specializzato esclusivamente per la lingua italiana. "
-            "Il mio modello di elaborazione del linguaggio naturale è stato ottimizzato solo per l'italiano. "
-            "Potresti per favore riformulare la tua domanda in italiano?",
-            
-            "Sono spiacente, la mia architettura di intelligenza artificiale è configurata esclusivamente "
-            "per comprendere e rispondere in lingua italiana. Non posso elaborare richieste in altre lingue. "
-            "Ti prego di comunicare con me in italiano.",
-            
-            "Mi scuso, ma il mio sistema di comprensione del linguaggio è stato addestrato solo per l'italiano. "
-            "Per motivi tecnici, non sono in grado di processare testi in lingue diverse dall'italiano. "
-            "Potresti gentilmente ripetere la domanda in italiano?"
-        ]
-        return jsonify({"reply": random.choice(technical_responses), "voice": voice_mode, "male_voice": True})
+    # 2. Enhanced conversation handling with Gemini
+    if should_use_gemini_for_conversation(user_message):
+        gemini_reply = get_gemini_conversation(user_message)
+        if gemini_reply:
+            print(f"Gemini conversation response generated")
+            return jsonify({"reply": gemini_reply, "voice": voice_mode, "male_voice": True})
 
-    print(f"📝 AFTER CORRECTION: '{user_message_corr}'")
+    # 2b. Fallback to existing general patterns
+    general = check_general_patterns(user_message)
+    if general:
+        return jsonify({"reply": general, "voice": voice_mode, "male_voice": True})
 
-    # STEP 5: LOCATION-BASED QUERIES
+    # 3. Handle location-based queries
     if is_near_me_query(user_message):
         if user_lat is not None and user_lon is not None:
             try:
@@ -2128,40 +2066,42 @@ def chat():
             except Exception:
                 reply = "Si è verificato un errore nel calcolo della farmacia più vicina. Riprova tra poco!"
         else:
-            reply = "Per suggerirti la farmacia Otofarma più vicina ho bisogno che il browser acceda alla tua posizione. Puoi attivare la geolocalizzazione nelle impostazioni?"
+            reply = "Per poterti suggerire la farmacia più vicina ho bisogno che il browser consenta l'accesso alla posizione: controlla le impostazioni e aggiorna la pagina."
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
-    # STEP 6: OFFICE HOURS 
+    # 4. Spell correction and language detection
+    user_message_corr = correct_spelling(user_message)
+    if not is_probably_italian(user_message_corr):
+        return jsonify({"reply": "Questo assistente risponde solo a domande in italiano. Per favore riformula la domanda in italiano.", "voice": voice_mode, "male_voice": True})
+
+    print(f"After spell correction: '{user_message_corr}'")
+        # --- Advanced Appointment Booking Logic ---
+    # ...inside def chat(): after user_message_corr is defined...
+
+    # --- Advanced Appointment Booking Logic ---
+   
+
+    # 5. Check for office hours (before YAML to avoid conflicts)
     if detect_office_hours_question(user_message_corr):
-        print(f"🕐 OFFICE HOURS QUESTION")
         return jsonify({"reply": get_office_hours_answer(), "voice": voice_mode, "male_voice": True})
 
-    # STEP 7: TIME/DATE QUESTIONS
+    # 6. Check for time/date questions (with strict matching)
     time_or_date = detect_time_or_date_question(user_message_corr)
     if time_or_date == "time":
-        print(f"⏰ TIME QUESTION")
         return jsonify({"reply": get_time_answer(), "voice": voice_mode, "male_voice": True})
     elif time_or_date == "date":
-        print(f"📅 DATE QUESTION")
         return jsonify({"reply": get_date_answer(), "voice": voice_mode, "male_voice": True})
 
-    # STEP 8: CORPORATE KNOWLEDGE (PRIORITY #1 - Before YAML)
+    # 6.5. Enhanced Corporate Knowledge (Complete Team & Leadership)
     corporate_topic = detect_corporate_question(user_message_corr)
-    if corporate_topic or context_intent in ["ceo", "fondatore", "creatore", "sede"]:
-        
-        # Use context analysis to determine the right response
-        final_topic = corporate_topic or context_intent
-        
-        print(f"🏢 CORPORATE QUESTION: {final_topic}")
-        
-        if final_topic in ["ceo"]:
-            reply = get_ceo_info()
-        elif final_topic in ["founder", "fondatore"]:
-            reply = get_founder_info()
-        elif final_topic in ["creator", "creatore"]:
-            reply = get_creator_info()
-        elif final_topic in ["headquarters", "sede"]:
+    if corporate_topic:
+        print(f"🏢 Corporate question detected: {corporate_topic}")
+        if corporate_topic == "headquarters":
             reply = get_headquarters_info()
+        elif corporate_topic == "founder":
+            reply = get_founder_info()
+        elif corporate_topic == "ceo":
+            reply = get_ceo_info()
         elif corporate_topic == "leadership":
             reply = get_leadership_info()
         elif corporate_topic == "it_head":
@@ -2170,72 +2110,85 @@ def chat():
             reply = get_frontend_developer_info()
         elif corporate_topic == "technical_team":
             reply = get_technical_team_info()
+        elif corporate_topic == "creator":
+            reply = get_creator_info()
         elif corporate_topic == "architecture":
             reply = get_architecture_info()
         else:
             reply = get_headquarters_info()  # Default fallback
         
-        print(f"✅ CORPORATE RESPONSE PROVIDED")
+        print(f"✅ Corporate info provided: {corporate_topic}")
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
-    # STEP 9: YAML KNOWLEDGE BASE (Priority #2)
-    if context_intent != "farmacia":  # Only if not a pharmacy question
-        reply = match_yaml_qa_ai(user_message_corr)
-        if reply:
-            print(f"📚 YAML ANSWER FOUND: {reply[:100]}...")
-            return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
+    # 7. YAML Q&A matching (highest priority for content)
+    reply = match_yaml_qa_ai(user_message_corr)
+    if reply:
+        print(f"Found YAML answer: {reply[:100]}...")
+        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
-    # STEP 10: PHARMACY QUERIES (Enhanced with Context)
-    if is_pharmacy_question(user_message_corr) or context_intent == "farmacia":
-        print(f"🏥 PHARMACY QUESTION: {user_message_corr}")
+    # 8. Enhanced Pharmacy-specific queries for Voice Assistant
+    if is_pharmacy_question(user_message_corr):
+        print(f"🏥 Pharmacy question detected: {user_message_corr}")
         found_cities = extract_city_from_query(user_message_corr)
         
         if found_cities:
             city = found_cities[0]
-            print(f"🏙️ CITY DETECTED: {city}")
+            print(f"🏙️ City found: {city}")
             ph_list = pharmacies_by_city(city)
             
             if ph_list:
                 reply = format_pharmacies_list(ph_list, city, user_message_corr)
-                print(f"✅ FOUND {len(ph_list)} PHARMACIES in {city}")
+                print(f"✅ Found {len(ph_list)} pharmacies in {city}")
             else:
+                # Enhanced fallback for no pharmacies found
                 reply = (
                     f"Mi dispiace, non ho trovato farmacie Otofarma specificamente a {city}. "
                     f"Tuttavia, Otofarma ha una vasta rete di farmacie affiliate in tutta Italia. "
-                    f"Posso aiutarti a cercare in una città limitrofa o fornirti informazioni "
-                    f"su come contattare il nostro servizio clienti per trovare il punto vendita "
-                    f"più vicino a te. Quale preferisci?"
+                    f"Ti consiglio di provare a cercare nelle città limitrofe o contattare "
+                    f"direttamente il servizio clienti Otofarma per informazioni su farmacie "
+                    f"nella tua zona. Posso aiutarti con altre città o servizi Otofarma?"
                 )
-                print(f"❌ NO PHARMACIES in {city}")
+                print(f"❌ No pharmacies found in {city}")
         else:
+            # No city found - provide general guidance with examples
             city_examples = get_available_cities_sample()
             reply = (
-                f"Perfetto! Posso aiutarti a trovare le farmacie Otofarma. "
-                f"Dimmi in quale città stai cercando? Ad esempio: 'Farmacie a Milano' "
-                f"oppure 'Dove sono le Otofarma a Roma'. {city_examples}"
+                "Per aiutarti a trovare una farmacia Otofarma, potresti specificare la città "
+                "che ti interessa? Ad esempio, puoi dire 'dove sono le farmacie Otofarma a Milano' "
+                "oppure 'farmacie Otofarma a Roma'. " + city_examples + " "
+                "Sono qui per fornirti tutte le informazioni sui nostri punti vendita "
+                "specializzati in apparecchi acustici e servizi audiologici."
             )
-            print("🤔 NO CITY DETECTED in pharmacy query")
+            print("🤔 No city detected in pharmacy query")
             
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
     # 9. Fallback responses
         # 8.5. Gemini AI fallback for questions not covered by YAML or app logic
-    # STEP 11: GEMINI AI CONVERSATION (Final Intelligence)
-    print("🧠 USING GEMINI AI FOR INTELLIGENT CONVERSATION...")
+    print("Trying Gemini fallback...")
     if gemini_available:
         gemini_reply = get_gemini_conversation(user_message_corr)
         if gemini_reply:
-            print(f"🎯 GEMINI RESPONSE: {gemini_reply[:100]}...")
+            print(f"Gemini fallback response generated: {gemini_reply[:50]}...")
             return jsonify({"reply": gemini_reply, "voice": voice_mode, "male_voice": True})
         else:
-            print("⚠️ GEMINI RETURNED EMPTY RESPONSE")
+            print("Gemini returned empty response")
     else:
-        print("⚠️ GEMINI NOT AVAILABLE - CHECK INITIALIZATION")
+        print("Gemini not available - check initialization")
 
-    # STEP 12: ULTIMATE INTELLIGENT FALLBACK
-    print("🔧 ENGAGING ULTIMATE INTELLIGENT FALLBACK...")
+    fallback_messages = [
+        "Mi dispiace, sto avendo difficoltà a comprendere la tua richiesta. Potresti riformulare la domanda? Posso aiutarti con informazioni su Otofarma, apparecchi acustici, servizi audiologici e molto altro!",
+        
+        "Non sono riuscito a trovare una risposta soddisfacente. Se vuoi, puoi essere più specifico o chiedere su argomenti come apparecchi acustici, farmacie Otofarma, o servizi di consulenza.",
+        
+        "La tua richiesta è interessante, ma non dispongo di dettagli specifici al momento. Posso aiutarti con tutto ciò che riguarda Otofarma: prodotti, servizi, e assistenza audiologica!",
+        
+        "Al momento non trovo la risposta che cerchi. Ti invito a riformulare la domanda o a chiedere su temi come apparecchi acustici, prenotazione visite, o localizzazione farmacie.",
+        
+        "Posso offrirti il massimo supporto possibile! Puoi essere più dettagliato nella tua richiesta o chiedere informazioni su servizi Otofarma, prodotti audiologici, o farmacie?"
+    ]
     
-    # Extract key user words for context-aware response
+        # Improved professional fallback with keyword mention
     user_kw = ""
     user_words = re.findall(r'\w+', normalize(user_message_corr))
     for w in user_words:
@@ -2245,51 +2198,28 @@ def chat():
 
     if user_kw:
         fallback_messages = [
-            f"Mi dispiace, non ho ancora conoscenze specifiche su '{user_kw}'. "
-            f"Ti consiglio di contattare direttamente il nostro team di esperti Otofarma "
-            f"o riformulare la domanda. Sono comunque qui per aiutarti con altri argomenti!",
+            f"Mi dispiace, non ho ancora conoscenze specifiche su '{user_kw}'. Ti consiglio di contattare direttamente il nostro team di esperti Otofarma o riformulare la domanda. Posso comunque aiutarti con altri argomenti!",
             
-            f"Non dispongo di informazioni dettagliate su '{user_kw}' al momento, "
-            f"ma sono qui per aiutarti con apparecchi acustici, servizi audiologici, "
-            f"farmacie e molto altro ancora!",
+            f"Non dispongo di informazioni dettagliate su '{user_kw}' al momento, ma posso aiutarti con apparecchi acustici, servizi audiologici, farmacie e molto altro ancora!",
             
-            f"Al momento non ho dati specifici su '{user_kw}', ma posso aiutarti "
-            f"con informazioni su prodotti Otofarma, servizi di consulenza "
-            f"audiologica, o localizzazione delle nostre farmacie.",
+            f"Al momento non ho dati specifici su '{user_kw}', ma posso assisterti con informazioni su prodotti Otofarma, servizi di consulenza audiologica, o localizzazione delle nostre farmacie.",
             
-            f"Non ho una risposta precisa su '{user_kw}', ma il nostro team "
-            f"di specialisti Otofarma sarà felice di aiutarti. Nel frattempo, "
-            f"posso assisterti con altri argomenti!",
+            f"Non ho una risposta precisa su '{user_kw}', ma il nostro team di specialisti Otofarma sarà felice di aiutarti. Nel frattempo, posso assisterti con altri argomenti!",
             
-            f"Mi scuso, non ho trovato dettagli su '{user_kw}'. Tuttavia, "
-            f"sono esperto in apparecchi acustici, servizi audiologici, "
-            f"e tutto ciò che riguarda il mondo Otofarma!"
+            f"Mi scuso, non ho trovato dettagli su '{user_kw}'. Tuttavia, posso aiutarti con apparecchi acustici, servizi audiologici, e tutto ciò che riguarda il mondo Otofarma!"
         ]
     else:
         fallback_messages = [
-            "Mi dispiace, sto avendo difficoltà a comprendere la tua richiesta. "
-            "Potresti riformulare la domanda? Sono qui per aiutarti con informazioni "
-            "su Otofarma, apparecchi acustici, servizi audiologici e molto altro!",
-            
-            "Non sono riuscito a trovare una risposta soddisfacente. "
-            "Se vuoi, puoi essere più specifico o chiedere su argomenti come "
-            "apparecchi acustici, farmacie Otofarma, o servizi di consulenza.",
-            
-            "La tua richiesta è interessante, ma non dispongo di dettagli "
-            "specifici al momento. Sono specializzato in tutto ciò che riguarda "
-            "Otofarma: prodotti, servizi, e assistenza audiologica!",
-            
-            "Al momento non trovo la risposta che cerchi. Ti invito a "
-            "riformulare la domanda o a chiedere su temi come apparecchi "
-            "acustici, prenotazione visite, o localizzazione farmacie.",
-            
-            "Sono qui per offrirti il massimo supporto possibile! "
-            "Puoi essere più dettagliato nella tua richiesta o chiedere "
-            "informazioni su servizi Otofarma, prodotti audiologici, o farmacie?"
+            "Al momento non dispongo di una risposta precisa alla tua richiesta, ma sono qui per aiutarti su qualsiasi altro tema riguardante Otofarma.",
+            "Mi scuso, non sono riuscito a trovare una risposta soddisfacente. Se desideri, puoi riformulare la domanda o chiedere su un altro argomento.",
+            "Domanda interessante! Tuttavia, non ho informazioni puntuali su questo punto. Sono a disposizione per altre domande.",
+            "La tua richiesta è stata ricevuta, ma non dispongo di dettagli specifici. Puoi fornire ulteriori informazioni o chiedere altro?",
+            "Non trovo una risposta adeguata in questo momento. Ti invito a riformulare o a chiedere su altri temi.",
+            "Mi dispiace, non ho trovato la risposta richiesta. Se vuoi puoi essere più dettagliato oppure chiedere su altri servizi Otofarma.",
+            "Se hai bisogno di informazioni su servizi, apparecchi acustici o farmacie, chiedimi pure senza esitare.",
+            "Sono qui per offrirti il massimo supporto: puoi essere più specifico nella tua richiesta?"
         ]
-    
     reply = fallback_mem.get_unique(fallback_messages)
-    print(f"⚠️ INTELLIGENT FALLBACK ENGAGED: {reply[:50]}...")
     return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 # Google Cloud TTS endpoint for Italian male voice
 @app.route("/tts", methods=["POST"])
@@ -2333,90 +2263,29 @@ from google.cloud import speech
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe():
-    """Professional cross-platform audio transcription with iOS/Android support"""
     if "audio" not in request.files:
-        logger.error("No audio file provided in transcription request")
         return jsonify({"error": "No audio file provided"}), 400
 
     audio_file = request.files["audio"]
-    if not audio_file or not audio_file.filename:
-        logger.error("Invalid audio file in transcription request")
-        return jsonify({"error": "Invalid audio file"}), 400
-        
     audio_bytes = audio_file.read()
-    if len(audio_bytes) == 0:
-        logger.error("Empty audio file received")
-        return jsonify({"error": "Empty audio file"}), 400
 
-    logger.info(f"Transcription request - File: {audio_file.filename}, Size: {len(audio_bytes)} bytes")
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
 
-    try:
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
-        client = speech.SpeechClient()
-        audio = speech.RecognitionAudio(content=audio_bytes)
-        
-        # Professional format detection and configuration
-        filename = audio_file.filename.lower()
-        
-        if filename.endswith('.mp4') or filename.endswith('.m4a'):
-            # iOS/Safari often uses MP4 format
-            encoding = speech.RecognitionConfig.AudioEncoding.MP3  # Google accepts MP3 for MP4 audio
-            sample_rate = 48000
-            logger.info("Using MP4/M4A configuration for iOS device")
-            
-        elif filename.endswith('.wav'):
-            # Some Android devices use WAV
-            encoding = speech.RecognitionConfig.AudioEncoding.LINEAR16
-            sample_rate = 48000
-            logger.info("Using WAV configuration for Android device")
-            
-        else:
-            # Default WEBM_OPUS for desktop/Chrome
-            encoding = speech.RecognitionConfig.AudioEncoding.WEBM_OPUS
-            sample_rate = 48000
-            logger.info("Using WEBM_OPUS configuration for desktop/Chrome")
+    client = speech.SpeechClient()
+    audio = speech.RecognitionAudio(content=audio_bytes)
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
+        sample_rate_hertz=48000,
+        language_code="it-IT",
+        enable_automatic_punctuation=True
+    )
 
-        config = speech.RecognitionConfig(
-            encoding=encoding,
-            sample_rate_hertz=sample_rate,
-            language_code="it-IT",
-            enable_automatic_punctuation=True,
-            model="latest_long",  # Better for conversational audio
-            use_enhanced=True    # Enhanced model for better accuracy
-        )
+    response = client.recognize(config=config, audio=audio)
+    transcript = ""
+    for result in response.results:
+        transcript += result.alternatives[0].transcript
 
-        logger.info(f"Starting Google Speech recognition with encoding: {encoding.name}")
-        response = client.recognize(config=config, audio=audio)
-        
-        transcript = ""
-        confidence_total = 0
-        result_count = 0
-        
-        for result in response.results:
-            if result.alternatives:
-                transcript += result.alternatives[0].transcript + " "
-                confidence_total += result.alternatives[0].confidence
-                result_count += 1
-                
-        transcript = transcript.strip()
-        avg_confidence = confidence_total / result_count if result_count > 0 else 0
-        
-        logger.info(f"Transcription completed - Length: {len(transcript)}, Confidence: {avg_confidence:.2f}")
-        logger.info(f"Transcript: '{transcript}'")
-        
-        if not transcript:
-            logger.warning("Empty transcript received from Google Speech")
-            return jsonify({"error": "No speech detected", "transcript": ""})
-
-        return jsonify({
-            "transcript": transcript,
-            "confidence": avg_confidence,
-            "audio_format": encoding.name
-        })
-        
-    except Exception as e:
-        logger.error(f"Transcription error: {str(e)}")
-        return jsonify({"error": f"Transcription failed: {str(e)}"}), 500
+    return jsonify({"transcript": transcript})
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     # Production-ready configuration for presidential presentation
