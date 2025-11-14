@@ -8,20 +8,6 @@
   <style>
     :root {
       --logo-size: clamp(48px, 6vh, 76px);
-      --aura-green: #23d18b;
-      --aura-blue: #2ea8ff;
-      --aura-blue-solid: #1688e0;
-      --aura-softness: clamp(28px, 6vw, 96px);
-      --aura-duration: 1400ms;
-      --aura-duration-fast: 900ms;
-      --aura-scale-x-min: 1.05;
-      --aura-scale-x-max: 1.2;
-      --aura-scale-y-min: 0.82;
-      --aura-scale-y-max: 0.96;
-      --aura-scale-static-x: 1.12;
-      --aura-scale-static-y: 0.88;
-      --underglow-scale-x: 0.78;
-      --underglow-scale-y: 0.6;
     }
     .bg-image {
       position: fixed;
@@ -44,18 +30,9 @@
       align-items: center;
       overflow: hidden;
       background: linear-gradient(135deg, #eafaf1 0%, #a8e6cf 100%);
+      position: relative;
     }
-    body::before {
-      content: "";
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: 100vw;
-      height: 32px;
-      background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.99) 60%, rgba(255,255,255,0.08) 100%);
-      filter: blur(36px);
-      z-index: 1;
-    }
+
     .white-fade-box {
       position: absolute;
       top: 40%;
@@ -119,42 +96,6 @@
       justify-content: center;
       border-radius: 9999px;
       padding: calc(var(--logo-size) * 0.4);
-      isolation: isolate;
-    }
-
-    .logo-aura::before,
-    .logo-aura::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      pointer-events: none;
-      transform-origin: center;
-      will-change: transform, opacity;
-      z-index: 0;
-    }
-
-    .logo-aura::before {
-      inset: calc(var(--aura-softness) * -0.75);
-      background:
-        radial-gradient(ellipse 74% 48% at 50% 45%, var(--aura-core) 0%, rgba(255,255,255,0) 60%),
-        radial-gradient(ellipse 92% 58% at 50% 60%, var(--aura-halo) 0%, rgba(0,0,0,0) 95%);
-      filter: blur(calc(var(--aura-softness) * 0.32));
-      opacity: 0.94;
-      animation: var(--aura-animation, none);
-      transform: scale(var(--aura-scale-static-x, var(--aura-scale-x-min)), var(--aura-scale-static-y, var(--aura-scale-y-min)));
-      transition: background 220ms ease, opacity 220ms ease;
-      z-index: 0;
-    }
-
-    .logo-aura::after {
-      inset: calc(var(--logo-size) * -0.08) calc(var(--logo-size) * -0.22);
-      background: radial-gradient(ellipse 65% 55% at 50% 60%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.45) 40%, rgba(255,255,255,0) 80%);
-      filter: blur(12px);
-      opacity: 0.85;
-      transform: scale(var(--underglow-scale-x), var(--underglow-scale-y));
-      animation: none;
-      z-index: 1;
     }
 
     .logo-aura > img {
@@ -166,51 +107,33 @@
       filter: drop-shadow(0 10px 26px rgba(10, 57, 33, 0.35));
     }
 
-    @keyframes auraPulse {
-      0%   { transform: scale(var(--aura-scale-x-min), var(--aura-scale-y-min)); opacity: 0.65; }
-      50%  { transform: scale(var(--aura-scale-x-max), var(--aura-scale-y-max)); opacity: 1; }
-      100% { transform: scale(var(--aura-scale-x-min), var(--aura-scale-y-min)); opacity: 0.65; }
+    /* Apple Siri-style Edge Animation */
+    .siri-edge {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 99999;
+      opacity: 0;
+      transition: opacity 0.4s ease-out;
     }
 
-    .state-listening {
-      --aura-core: rgba(35,209,139,0.78);
-      --aura-halo: rgba(35,209,139,0.32);
-      --aura-scale-x-min: 1.05;
-      --aura-scale-x-max: 1.2;
-      --aura-scale-y-min: 0.82;
-      --aura-scale-y-max: 0.96;
-      --aura-scale-static-x: 1.12;
-      --aura-scale-static-y: 0.88;
-      --aura-animation: auraPulse var(--aura-duration) ease-in-out infinite;
+    .siri-edge.active {
+      opacity: 1;
+      transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
 
-    .state-recording {
-      --aura-core: rgba(46,168,255,0.9);
-      --aura-halo: rgba(46,168,255,0.4);
-      --aura-scale-x-min: 1.12;
-      --aura-scale-x-max: 1.28;
-      --aura-scale-y-min: 0.84;
-      --aura-scale-y-max: 1.02;
-      --aura-scale-static-x: 1.18;
-      --aura-scale-static-y: 0.92;
-      --aura-animation: auraPulse var(--aura-duration-fast) ease-in-out infinite;
-    }
-
-    .state-processing,
-    .state-playing {
-      --aura-core: rgba(22,136,224,0.95);
-      --aura-halo: rgba(22,136,224,0.65);
-      --aura-scale-static-x: 1.2;
-      --aura-scale-static-y: 0.84;
-      --aura-animation: none;
+    .siri-edge-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     @media (prefers-reduced-motion: reduce) {
-      body,
-      body.state-recording,
-      body.state-processing,
-      body.state-playing {
-        --aura-animation: none !important;
+      .siri-edge {
+        display: none !important;
       }
     }
     main {
@@ -303,6 +226,12 @@
 <body>
   <!-- Loghi background rimossi -->
   <div class="bg-image"></div>
+  
+  <!-- Apple Siri-style Edge Animation -->
+  <div class="siri-edge" id="siriEdge">
+    <canvas class="siri-edge-canvas" id="siriCanvas"></canvas>
+  </div>
+  
   <div class="logo-layer">
     <div class="logo-bar">
       <div class="logo-aura">
