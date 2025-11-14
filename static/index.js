@@ -1,7 +1,7 @@
 // OtoBot Professional Italian Voice Assistant (Hands-free Hotword Flow)
 // Professional Enterprise Version: Windows/iOS/Android Compatible
 
-const HOTWORD = 'ciao';
+const HOTWORD = 'otobot';
 const HOTWORD_DEBOUNCE_MS = 2000;
 const HOTWORD_MATCH = HOTWORD.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const VAD_CONFIG = Object.freeze({
@@ -63,6 +63,279 @@ const stateClassMap = {
 };
 const stateClassValues = Object.values(stateClassMap);
 
+// Apple Siri-style Edge Animation
+let siriEdge = null;
+let siriCanvas = null;
+let siriCtx = null;
+let siriAnimationFrame = null;
+let siriAnimationStartTime = 0;
+let siriAnimationActive = false;
+
+function initSiriEdgeAnimation() {
+    siriEdge = document.getElementById('siriEdge');
+    siriCanvas = document.getElementById('siriCanvas');
+    
+    if (!siriCanvas) return;
+    
+    siriCtx = siriCanvas.getContext('2d');
+    
+    // Set canvas size to match window
+    const resizeCanvas = () => {
+        const dpr = window.devicePixelRatio || 1;
+        siriCanvas.width = window.innerWidth * dpr;
+        siriCanvas.height = window.innerHeight * dpr;
+        siriCanvas.style.width = window.innerWidth + 'px';
+        siriCanvas.style.height = window.innerHeight + 'px';
+        siriCtx.scale(dpr, dpr);
+    };
+    
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+}
+
+function startSiriEdgeAnimation() {
+    if (!siriEdge || !siriCanvas || !siriCtx) return;
+    
+    siriAnimationActive = true;
+    siriAnimationStartTime = performance.now();
+    siriEdge.classList.add('active');
+    
+    if (!siriAnimationFrame) {
+        animateSiriEdge();
+    }
+}
+
+function stopSiriEdgeAnimation() {
+    siriAnimationActive = false;
+    
+    if (siriEdge) {
+        siriEdge.classList.remove('active');
+    }
+    
+    if (siriAnimationFrame) {
+        cancelAnimationFrame(siriAnimationFrame);
+        siriAnimationFrame = null;
+    }
+    
+    if (siriCtx && siriCanvas) {
+        siriCtx.clearRect(0, 0, siriCanvas.width, siriCanvas.height);
+    }
+}
+
+function animateSiriEdge() {
+    if (!siriAnimationActive || !siriCtx || !siriCanvas) {
+        siriAnimationFrame = null;
+        return;
+    }
+    
+    const now = performance.now();
+    const elapsed = now - siriAnimationStartTime;
+    const time = elapsed / 1000;
+    
+    const w = siriCanvas.width / (window.devicePixelRatio || 1);
+    const h = siriCanvas.height / (window.devicePixelRatio || 1);
+    
+    siriCtx.clearRect(0, 0, w, h);
+    
+    // Edge border thickness with initial bump effect
+    const bumpDuration = 400; // ms
+    const bumpIntensity = elapsed < bumpDuration 
+        ? 1 + Math.sin((elapsed / bumpDuration) * Math.PI) * 0.6 
+        : 1;
+    const baseThickness = 4 * bumpIntensity;
+    const maxThickness = 28 * bumpIntensity;
+    
+    // Smooth easing function for fluid animation
+    const smoothstep = (x) => {
+        x = Math.max(0, Math.min(1, x));
+        return x * x * (3 - 2 * x);
+    };
+    
+    const easeInOutCubic = (x) => {
+        return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    };
+    
+    // Dynamic color palette (Siri-inspired)
+    const colors = [
+        { r: 45, g: 175, b: 245 },   // Blue
+        { r: 140, g: 82, b: 255 },   // Purple
+        { r: 255, g: 75, b: 145 },   // Pink
+        { r: 75, g: 215, b: 185 },   // Cyan
+        { r: 255, g: 165, b: 75 }    // Orange
+    ];
+    
+    // Number of gradient points along each edge (increased for smoother animation)
+    const segments = 120;
+    
+    // Draw top edge
+    for (let i = 0; i < segments; i++) {
+        const x = (w / segments) * i;
+        const progress = i / segments;
+        const wave = (Math.sin(time * 1.5 + progress * Math.PI * 3) + 1) / 2;
+        const smoothWave = smoothstep(wave);
+        const thickness = baseThickness + smoothWave * (maxThickness - baseThickness);
+        
+        const colorIndex = (Math.floor(time * 0.8 + progress * colors.length)) % colors.length;
+        const nextColorIndex = (colorIndex + 1) % colors.length;
+        const colorMix = (time * 0.8 + progress * colors.length) % 1;
+        
+        const c1 = colors[colorIndex];
+        const c2 = colors[nextColorIndex];
+        const r = Math.floor(c1.r + (c2.r - c1.r) * colorMix);
+        const g = Math.floor(c1.g + (c2.g - c1.g) * colorMix);
+        const b = Math.floor(c1.b + (c2.b - c1.b) * colorMix);
+        
+        const gradient = siriCtx.createLinearGradient(x, 0, x, thickness * 2);
+        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.9)`);
+        gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.6)`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        
+        siriCtx.fillStyle = gradient;
+        siriCtx.globalCompositeOperation = 'lighter';
+        siriCtx.fillRect(x - 0.5, 0, w / segments + 1.5, thickness * 2);
+    }
+    
+    // Draw bottom edge
+    for (let i = 0; i < segments; i++) {
+        const x = (w / segments) * i;
+        const progress = i / segments;
+        const wave = (Math.sin(time * 1.5 + progress * Math.PI * 3 + Math.PI) + 1) / 2;
+        const smoothWave = easeInOutCubic(wave);
+        const thickness = baseThickness + smoothWave * (maxThickness - baseThickness);
+        
+        const colorIndex = (Math.floor(time * 0.8 + progress * colors.length + 2)) % colors.length;
+        const nextColorIndex = (colorIndex + 1) % colors.length;
+        const colorMix = (time * 0.8 + progress * colors.length + 2) % 1;
+        
+        const c1 = colors[colorIndex];
+        const c2 = colors[nextColorIndex];
+        const r = Math.floor(c1.r + (c2.r - c1.r) * colorMix);
+        const g = Math.floor(c1.g + (c2.g - c1.g) * colorMix);
+        const b = Math.floor(c1.b + (c2.b - c1.b) * colorMix);
+        
+        const gradient = siriCtx.createLinearGradient(x, h, x, h - thickness * 2);
+        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.9)`);
+        gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.6)`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        
+        siriCtx.fillStyle = gradient;
+        siriCtx.globalCompositeOperation = 'lighter';
+        siriCtx.fillRect(x - 0.5, h - thickness * 2, w / segments + 1.5, thickness * 2);
+    }
+    
+    // Draw left edge
+    for (let i = 0; i < segments; i++) {
+        const y = (h / segments) * i;
+        const progress = i / segments;
+        const wave = (Math.sin(time * 1.5 + progress * Math.PI * 3 + Math.PI * 0.5) + 1) / 2;
+        const smoothWave = smoothstep(wave);
+        const thickness = baseThickness + smoothWave * (maxThickness - baseThickness);
+        
+        const colorIndex = (Math.floor(time * 0.8 + progress * colors.length + 1)) % colors.length;
+        const nextColorIndex = (colorIndex + 1) % colors.length;
+        const colorMix = (time * 0.8 + progress * colors.length + 1) % 1;
+        
+        const c1 = colors[colorIndex];
+        const c2 = colors[nextColorIndex];
+        const r = Math.floor(c1.r + (c2.r - c1.r) * colorMix);
+        const g = Math.floor(c1.g + (c2.g - c1.g) * colorMix);
+        const b = Math.floor(c1.b + (c2.b - c1.b) * colorMix);
+        
+        const gradient = siriCtx.createLinearGradient(0, y, thickness * 2, y);
+        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.9)`);
+        gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.6)`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        
+        siriCtx.fillStyle = gradient;
+        siriCtx.globalCompositeOperation = 'lighter';
+        siriCtx.fillRect(0, y - 0.5, thickness * 2, h / segments + 1.5);
+    }
+    
+    // Draw right edge
+    for (let i = 0; i < segments; i++) {
+        const y = (h / segments) * i;
+        const progress = i / segments;
+        const wave = (Math.sin(time * 1.5 + progress * Math.PI * 3 + Math.PI * 1.5) + 1) / 2;
+        const smoothWave = easeInOutCubic(wave);
+        const thickness = baseThickness + smoothWave * (maxThickness - baseThickness);
+        
+        const colorIndex = (Math.floor(time * 0.8 + progress * colors.length + 3)) % colors.length;
+        const nextColorIndex = (colorIndex + 1) % colors.length;
+        const colorMix = (time * 0.8 + progress * colors.length + 3) % 1;
+        
+        const c1 = colors[colorIndex];
+        const c2 = colors[nextColorIndex];
+        const r = Math.floor(c1.r + (c2.r - c1.r) * colorMix);
+        const g = Math.floor(c1.g + (c2.g - c1.g) * colorMix);
+        const b = Math.floor(c1.b + (c2.b - c1.b) * colorMix);
+        
+        const gradient = siriCtx.createLinearGradient(w, y, w - thickness * 2, y);
+        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.9)`);
+        gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.6)`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        
+        siriCtx.fillStyle = gradient;
+        siriCtx.globalCompositeOperation = 'lighter';
+        siriCtx.fillRect(w - thickness * 2, y - 0.5, thickness * 2, h / segments + 1.5);
+    }
+    
+    siriAnimationFrame = requestAnimationFrame(animateSiriEdge);
+}
+
+// Activation Sound (Ultra-modern Siri-style)
+function playActivationSound() {
+    if (!audioContext) return;
+    
+    try {
+        const now = audioContext.currentTime;
+        const duration = 0.2; // Slightly longer for smoother feel
+        
+        // Create three oscillators for richer harmony
+        const osc1 = audioContext.createOscillator();
+        const osc2 = audioContext.createOscillator();
+        const osc3 = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        // Create a subtle filter for warmth
+        const filter = audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(2000, now);
+        filter.Q.setValueAtTime(1, now);
+        
+        // Modern gentle chord (C5, E5, G5 - C major triad)
+        osc1.frequency.setValueAtTime(523.25, now); // C5
+        osc2.frequency.setValueAtTime(659.25, now); // E5
+        osc3.frequency.setValueAtTime(783.99, now); // G5
+        
+        // Ultra-smooth sine waves
+        osc1.type = 'sine';
+        osc2.type = 'sine';
+        osc3.type = 'sine';
+        
+        // Very gentle volume envelope with smooth exponential curves
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.08, now + 0.04); // Softer, gentle attack
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration); // Ultra-smooth decay
+        
+        // Connect audio nodes with filter for warmth
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        osc3.connect(gainNode);
+        gainNode.connect(filter);
+        filter.connect(audioContext.destination);
+        
+        // Play the sound
+        osc1.start(now);
+        osc2.start(now);
+        osc3.start(now);
+        osc1.stop(now + duration);
+        osc2.stop(now + duration);
+        osc3.stop(now + duration);
+    } catch (error) {
+        console.log('[OtoBot Warning]: Could not play activation sound:', error.message);
+    }
+}
+
 function setVoiceState(state) {
     currentState = state;
     const body = document.body;
@@ -72,6 +345,13 @@ function setVoiceState(state) {
     const nextClass = stateClassMap[state];
     if (nextClass) {
         body.classList.add(nextClass);
+    }
+    
+    // Control Siri edge animation based on state
+    if (state === VoiceState.RECORDING || state === VoiceState.PROCESSING || state === VoiceState.PLAYING) {
+        startSiriEdgeAnimation();
+    } else {
+        stopSiriEdgeAnimation();
     }
 }
 
@@ -437,6 +717,7 @@ function handleHotwordResult(event) {
         
         lastHotwordAt = now;
         console.log('[OtoBot]: Hotword detected');
+        playActivationSound();
         startActiveRecording('hotword');
         break;
     }
@@ -772,5 +1053,6 @@ async function initializeHandsFreeFlow() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[OtoBot]: Application starting - Hands-free mode');
     console.log(`[OtoBot]: Device detected - iOS: ${isIOS}, Android: ${isAndroid}, Mobile: ${isMobile}`);
+    initSiriEdgeAnimation();
     initializeHandsFreeFlow();
 });
