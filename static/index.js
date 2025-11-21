@@ -1170,15 +1170,23 @@ async function sendFrameForAnalysis(imageData) {
     try {
         updateStatus('Analizzando immagine...');
         
+        // Convert base64 to blob for file upload
+        const base64Data = imageData.split(',')[1];
+        const binaryData = atob(base64Data);
+        const bytes = new Uint8Array(binaryData.length);
+        for (let i = 0; i < binaryData.length; i++) {
+            bytes[i] = binaryData.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'image/jpeg' });
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('image', blob, 'camera_frame.jpg');
+        formData.append('question', 'Analizza questa immagine dal punto di vista medico e audiologico per Otofarma. Fornisci informazioni utili sui dispositivi medici, farmaci o situazioni visibili.');
+        
         const response = await fetch('/analyze_vision', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                image: imageData,
-                prompt: 'Analizza questa immagine dal punto di vista medico e audiologico per Otofarma. Fornisci informazioni utili sui dispositivi medici, farmaci o situazioni visibili.'
-            })
+            body: formData
         });
         
         if (!response.ok) {
@@ -1187,10 +1195,10 @@ async function sendFrameForAnalysis(imageData) {
         
         const result = await response.json();
         
-        if (result.analysis) {
-            // Speak the analysis result
-            speakText(result.analysis);
-            console.log('[CameraSystem]: Analysis result:', result.analysis);
+        if (result.reply) {
+            // Speak the analysis result using existing voice system
+            speakText(result.reply);
+            console.log('[CameraSystem]: Analysis result:', result.reply);
         } else {
             console.log('[CameraSystem]: No analysis received');
         }
