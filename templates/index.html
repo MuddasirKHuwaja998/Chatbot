@@ -3,19 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <title>OtoBot - Assistente Virtuale Otofarma</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <link rel="icon" type="image/png" href="/static/icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="OtoBot">
+  <meta name="apple-touch-fullscreen" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
   <style>
-    :root {
-      --logo-size: clamp(48px, 6vh, 76px);
-    }
     .bg-image {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: url("/static/bg.png") center center / cover no-repeat;
+      background-image: url("/static/bg.png");
+      background-position: center center;
+      background-size: cover;
+      background-repeat: no-repeat;
       z-index: 0;
     }
     body {
@@ -30,9 +36,41 @@
       align-items: center;
       overflow: hidden;
       background: linear-gradient(135deg, #eafaf1 0%, #a8e6cf 100%);
-      position: relative;
+    }
+    /* iOS Safari fixes */
+    video {
+      -webkit-playsinline: true;
     }
 
+    @supports (-webkit-touch-callout: none) {
+      .bg-image {
+        background-attachment: scroll;
+      }
+      
+      /* iOS-specific viewport fix */
+      body {
+        height: 100vh;
+        height: -webkit-fill-available;
+      }
+      
+      /* iOS audio/video interaction requirement */
+      video, audio {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      height: 32px;
+      background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.99) 60%, rgba(255,255,255,0.08) 100%);
+      filter: blur(36px);
+      z-index: 1;
+    }
     .white-fade-box {
       position: absolute;
       top: 40%;
@@ -49,92 +87,92 @@
       border: 1.5px solid rgba(255,255,255,0.22);
       opacity: 0.98;
     }
-    body {
-      --aura-core: rgba(35,209,139,0.78);
-      --aura-halo: rgba(35,209,139,0.32);
-      --aura-scale-x-min: 1.05;
-      --aura-scale-x-max: 1.2;
-      --aura-scale-y-min: 0.82;
-      --aura-scale-y-max: 0.96;
-      --aura-scale-static-x: 1.12;
-      --aura-scale-static-y: 0.88;
-      --aura-animation: auraPulse var(--aura-duration) ease-in-out infinite;
-    }
-    .logo-layer {
+    /* Camera Icon Styles */
+    #cameraIcon {
       position: fixed;
-      top: max(16px, env(safe-area-inset-top, 0));
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(90vw, 480px);
+      top: 16px;
+      left: 16px;
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 8px;
+      border: 1px solid rgba(46, 204, 113, 0.3);
       display: flex;
-      justify-content: center;
       align-items: center;
-      z-index: 10000;
-      pointer-events: none;
-      isolation: isolate;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 300;
+      color: #2ecc71;
+      box-shadow: 0 2px 8px rgba(46, 204, 113, 0.15);
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    #cameraIcon:hover {
+      background: rgba(46, 204, 113, 0.1);
+      border-color: #2ecc71;
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(46, 204, 113, 0.25);
+    }
+    #cameraIcon.active {
+      background: rgba(46, 204, 113, 0.15);
+      border-color: #2ecc71;
+      color: #27ae60;
+      animation: pulse-camera 2s infinite;
+    }
+    @keyframes pulse-camera {
+      0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); }
+      70% { box-shadow: 0 0 0 8px rgba(46, 204, 113, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+    }
+    @media (max-width: 600px) {
+      #cameraIcon {
+        width: 36px;
+        height: 36px;
+        top: 12px;
+        left: 12px;
+      }
+      #cameraIcon svg {
+        width: 16px;
+        height: 16px;
+      }
     }
     .logo-bar {
-      width: auto;
+      width: 100vw;
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 0;
+      padding-top: 2vh;
+      padding-bottom: 2vh;
       background: transparent;
-      border: none;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border-bottom: none;
       position: relative;
+      z-index: 20;
     }
-    header,
-    .site-header,
-    .app-header {
-      position: relative;
-      z-index: 10;
-    }
-    .logo-aura {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 9999px;
-      padding: calc(var(--logo-size) * 0.4);
-    }
-
-    .logo-aura > img {
-      position: relative;
-      z-index: 2;
-      display: block;
-      height: var(--logo-size);
+    .logo-bar img {
+      height: 6vh;
+      max-height: 48px;
       width: auto;
-      filter: drop-shadow(0 10px 26px rgba(10, 57, 33, 0.35));
+      filter: drop-shadow(0 2px 12px #2ecc71);
+      opacity: 0.92;
+      position: relative;
+      z-index: 21;
     }
-
-    /* Apple Siri-style Edge Animation */
-    .siri-edge {
-      position: fixed;
-      top: 0;
+    /* Rimuovo la ::after sfumata */
+    .logo-bar::after {
+      content: "";
+      position: absolute;
       left: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none;
-      z-index: 99999;
-      opacity: 0;
-      transition: opacity 0.4s ease-out;
-    }
-
-    .siri-edge.active {
-      opacity: 1;
-      transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    }
-
-    .siri-edge-canvas {
+      top: 0;
       width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .siri-edge {
-        display: none !important;
-      }
+      height: 80px;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(46,204,113,0.98) 0%, rgba(255,255,255,0.97) 18%, rgba(255,255,255,0.92) 60%, rgba(255,255,255,0.08) 100%);
+      filter: blur(36px);
+      z-index: 1;
     }
     main {
       display: flex;
@@ -146,36 +184,87 @@
       position: relative;
       z-index: 100;
     }
-    .inline-error {
-      margin-top: 16px;
-      padding: 12px 18px;
-      background: rgba(255,255,255,0.95);
-      border-radius: 12px;
-      border: 1px solid rgba(255,99,132,0.4);
-      color: #8b1f2b;
-      font-size: 0.95em;
-      box-shadow: 0 4px 16px rgba(139,31,43,0.12);
-      max-width: 420px;
-      text-align: center;
-    }
-    .inline-error button {
-      margin-top: 10px;
-      padding: 8px 16px;
-      border-radius: 999px;
-      border: none;
-      background: #2ecc71;
+    #status {
+      font-size: 1.2em;
       color: #fff;
-      cursor: pointer;
-      font-weight: 600;
-      box-shadow: 0 6px 18px rgba(46,204,113,0.25);
+      background: transparent;
+      border-radius: 0;
+      padding: 18px 32px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      min-width: 220px;
+      text-align: center;
+      box-shadow: none;
+      border: none;
+      position: relative;
+      z-index: 101;
+      display: none;
     }
-    .hidden {
-      display: none !important;
+    #micBtn {
+      width: 95px;
+      height: 95px;
+      border-radius: 50%;
+      border: 2.5px solid rgba(46,204,113,0.33);
+      background: #fff;
+      color: #fff;
+      font-size: 2.8em;
+      cursor: pointer;
+      box-shadow: 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      outline: 0.15vh solid rgba(46,204,113,0.10);
+      transition: background 0.7s cubic-bezier(0.33,1,0.68,1), box-shadow 0.7s cubic-bezier(0.33,1,0.68,1), border 0.7s cubic-bezier(0.33,1,0.68,1), transform 0.35s cubic-bezier(0.33,1,0.68,1);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.97;
+      position: fixed;
+      left: 50%;
+      bottom: 32px;
+      transform: translateX(-50%);
+      z-index: 200;
+    }
+
+    #micBtn.pulse-green {
+      box-shadow: 0 0 0 0 rgba(46,204,113,0.7), 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71;
+      animation: pulse-green 1.2s infinite;
+    }
+
+    @keyframes pulse-green {
+      0% {
+        box-shadow: 0 0 0 0 rgba(46,204,113,0.7), 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71;
+      }
+      70% {
+        box-shadow: 0 0 0 18px rgba(46,204,113,0.08), 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71;
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(46,204,113,0.7), 0 8px 32px 0 rgba(46,204,113,0.18), 0 2px 12px #2ecc71;
+      }
+    }
+    #micBtn:hover {
+      transform: translateX(-50%) scale(1.12);
+      background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(46,204,113,0.13) 100%);
+      box-shadow: 0 1.2vh 3.6vh 0 rgba(33,145,80,0.13), 0 0.2vh 1.6vh 0 rgba(255,255,255,0.13) inset;
+      border: 2.5px solid #2ecc71;
+    }
+    #micBtn:active {
+      transform: translateX(-50%) scale(0.97);
+      background: linear-gradient(135deg, #2ecc71 0%, #a8e6cf 100%);
+      box-shadow: 0 0 0 12px #42e69533, 0 0.8vh 3.2vh 0 rgba(46,204,113,0.33);
+      border: 2.5px solid #2ecc71;
     }
     @media (max-width: 600px) {
       header { padding-left: 10px; }
       .logo-img { height: 40px; }
       main { margin-top: 30px; }
+      #status { font-size: 1em; padding: 12px 10px; }
+      #micBtn {
+        width: 68px;
+        height: 68px;
+        font-size: 1.7em;
+        bottom: 16px;
+      }
       .center-image img {
         width: 320px;
         height: 480px;
@@ -226,27 +315,25 @@
 <body>
   <!-- Loghi background rimossi -->
   <div class="bg-image"></div>
-  
-  <!-- Apple Siri-style Edge Animation -->
-  <div class="siri-edge" id="siriEdge">
-    <canvas class="siri-edge-canvas" id="siriCanvas"></canvas>
+  <!-- Camera Icon for Video Analysis -->
+  <div id="cameraIcon" title="Analisi Video Real-Time (come Microsoft Copilot)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M23 7l-7 5 7 5V7z" fill="currentColor"/>
+      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="2" fill="none"/>
+    </svg>
   </div>
+  <!-- Hidden Video Elements for Camera -->
+  <video id="cameraVideo" autoplay muted playsinline style="display: none;"></video>
+  <canvas id="cameraCanvas" style="display: none;"></canvas>
   
-  <div class="logo-layer">
-    <div class="logo-bar">
-      <div class="logo-aura">
-        <img src="/static/logo.png" alt="Otofarma Logo" />
-      </div>
-    </div>
+  <div class="logo-bar">
+    <img src="/static/logo.png" alt="Otofarma Logo" />
   </div>
+  <div id="status">Inizializzazione assistente vocale PROFESSIONALE ITALIANO...</div>
   
   <main>
-    <div id="permissionError" class="inline-error hidden">
-      <p>Il microfono è disattivato. Abilitalo nelle impostazioni del browser e premi “Riprova”.</p>
-      <button id="retryPermissionBtn" type="button">Riprova</button>
-    </div>
-    <div id="unsupportedNotice" class="inline-error hidden">
-      <p>Il tuo browser non supporta l'ascolto vocale automatico. Apri la pagina con un browser più recente per parlare con OtoBot.</p>
+    <div id="micBtn" title="Clicca per parlare con OtoBot">
+      <video id="micVideo" src="/static/miclogo.mov" width="100%" height="100%" muted playsinline preload="metadata" webkit-playsinline="true" controls="false" disablepictureinpicture="true" x5-playsinline="true" x-webkit-airplay="allow" style="border-radius:50%;display:block;background:#fff;"></video>
     </div>
   </main>
   <script src="/static/index.js"></script>
@@ -256,6 +343,7 @@
     const preloadUrls = [
       "/static/bg.png",
       "/static/logo.png",
+      "/static/miclogo.mov",
       "/static/stillZloop.webm",
       "/static/moveZloop.webm"
     ];
@@ -266,52 +354,118 @@
       } else if (url.endsWith('.mov') || url.endsWith('.webm')) {
         const video = document.createElement('video');
         video.src = url;
-        video.preload = 'auto';
+        video.preload = 'metadata';
         video.muted = true;
-        video.play().then(() => video.pause()).catch(() => {});
+        video.playsInline = true;
+        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('disablepictureinpicture', 'true');
+        video.setAttribute('x5-playsinline', 'true');
+        video.setAttribute('x-webkit-airplay', 'allow');
+        video.setAttribute('controls', 'false');
+        // iOS-compatible preloading
+        video.load();
+        if (!(/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream)) {
+          video.play().then(() => video.pause()).catch(() => {});
+        }
       }
     });
   </script>
   <!-- Avatar loop visualization -->
   <div class="center-image">
     <div class="avatar-fade" style="position:relative;width:100%;height:100%;">
-      <video id="avatar-still" src="/static/stillZloop.webm" autoplay loop muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;"></video>
-      <video id="avatar-move" src="/static/moveZloop.webm" muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;" ></video>
+      <video id="avatar-still" src="/static/stillZloop.webm" muted playsinline preload="metadata" webkit-playsinline="true" controls="false" disablepictureinpicture="true" x5-playsinline="true" x-webkit-airplay="allow" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;"></video>
+      <video id="avatar-move" src="/static/moveZloop.webm" muted playsinline preload="metadata" webkit-playsinline="true" controls="false" disablepictureinpicture="true" x5-playsinline="true" x-webkit-airplay="allow" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;" ></video>
     </div>
   </div>
   <script>
-    // Nuova logica avatar: loop video stillZloop e sincronizza moveZloop quando entrambi sono pronti
+    // Nuova logica avatar: loop video stillZloop, al click bottone riproduci moveZloop, poi torna a loop stillZloop
     document.addEventListener('DOMContentLoaded', function() {
       const avatarStill = document.getElementById('avatar-still');
       const avatarMove = document.getElementById('avatar-move');
+      const micBtn = document.getElementById('micBtn');
+      const micVideo = document.getElementById('micVideo');
 
-      // Forza il caricamento esplicito
+      // iOS-compatible video initialization
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      
+      // Force explicit loading
       avatarStill.load();
       avatarMove.load();
+      if (micVideo) micVideo.load();
 
-      // Funzione per mostrare i video solo quando entrambi sono pronti
+      // Function to show videos when ready
       let readyCount = 0;
       function showVideosWhenReady() {
         readyCount++;
-        if (readyCount === 2) {
+        console.log('Video ready count:', readyCount);
+        if (readyCount >= 1) {
           avatarStill.style.visibility = 'visible';
           avatarMove.style.visibility = 'visible';
           avatarStill.style.opacity = '1';
           avatarStill.currentTime = 0;
-          avatarStill.play();
+          
+          // iOS-compatible play
+          const playPromise = avatarStill.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(e => {
+              console.log('Avatar play blocked (iOS autoplay policy):', e.message);
+              // This is normal on iOS - video will play on user interaction
+            });
+          }
         }
       }
-
       // Ascolta l'evento canplaythrough per entrambi i video
-      avatarStill.addEventListener('canplaythrough', showVideosWhenReady);
-      avatarMove.addEventListener('canplaythrough', showVideosWhenReady);
+      // Multiple event listeners for better compatibility
+avatarStill.addEventListener('canplaythrough', showVideosWhenReady);
+avatarStill.addEventListener('loadeddata', showVideosWhenReady);
+avatarMove.addEventListener('canplaythrough', showVideosWhenReady);
+avatarMove.addEventListener('loadeddata', showVideosWhenReady);
+
+// Fallback timeout if videos don't load
+setTimeout(() => {
+  if (readyCount === 0) {
+    console.log('Forcing avatar display after timeout');
+    showVideosWhenReady();
+  }
+}, 3000);
 
       // Forza la decodifica del primo frame di entrambi i video
       avatarStill.muted = true;
       avatarMove.muted = true;
       avatarStill.play().then(() => avatarStill.pause()).catch(() => {});
       avatarMove.play().then(() => avatarMove.pause()).catch(() => {});
+
+      if (avatarStill && avatarMove && micBtn) {
+        // iOS-compatible button interaction
+        function handleMicButtonClick() {
+          if (micVideo) {
+            micVideo.currentTime = 0;
+            const playPromise = micVideo.play();
+            if (playPromise !== undefined) {
+              playPromise.catch(e => {
+                console.log('Mic video play error:', e.message);
+              });
+            }
+          }
+          
+          // Initialize avatar videos on first interaction (iOS requirement)
+          if (isIOS && readyCount === 0) {
+            showVideosWhenReady();
+          }
+        }
+        
+        // Add both click and touch events for iOS compatibility
+        micBtn.addEventListener('click', handleMicButtonClick);
+        if (isIOS) {
+          micBtn.addEventListener('touchstart', function(e) {
+            e.preventDefault(); // Prevent double-tap zoom
+            handleMicButtonClick();
+          }, { passive: false });
+        }
+      }
     });
   </script>
 </body>
 </html>
+
