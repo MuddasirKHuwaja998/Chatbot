@@ -1049,11 +1049,165 @@ async function initializeHandsFreeFlow() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 }
 
+// --- Camera Video Analysis System (Microsoft Copilot Style) ---
+let cameraActive = false;
+let cameraStream = null;
+let analysisInterval = null;
+
+function initializeCameraSystem() {
+    const cameraIcon = document.getElementById('cameraIcon');
+    const cameraVideo = document.getElementById('cameraVideo');
+    const cameraCanvas = document.getElementById('cameraCanvas');
+    
+    if (!cameraIcon || !cameraVideo || !cameraCanvas) {
+        console.log('[CameraSystem]: Elements not found');
+        return;
+    }
+    
+    cameraIcon.addEventListener('click', toggleCameraAnalysis);
+    console.log('[CameraSystem]: Initialized successfully');
+}
+
+async function toggleCameraAnalysis() {
+    const cameraIcon = document.getElementById('cameraIcon');
+    
+    if (!cameraActive) {
+        try {
+            await startCameraAnalysis();
+            cameraIcon.classList.add('active');
+            cameraIcon.title = 'Analisi Video Attiva - Clicca per fermare';
+            console.log('[CameraSystem]: Analysis started');
+        } catch (error) {
+            console.error('[CameraSystem]: Error starting camera:', error);
+            updateStatus('Errore accesso camera. Verifica i permessi.');
+        }
+    } else {
+        stopCameraAnalysis();
+        cameraIcon.classList.remove('active');
+        cameraIcon.title = 'Analisi Video Real-Time (come Microsoft Copilot)';
+        console.log('[CameraSystem]: Analysis stopped');
+    }
+}
+
+async function startCameraAnalysis() {
+    const cameraVideo = document.getElementById('cameraVideo');
+    
+    try {
+        // Request camera access
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: 'environment' // Back camera preferred
+            },
+            audio: false
+        });
+        
+        cameraVideo.srcObject = cameraStream;
+        await cameraVideo.play();
+        
+        cameraActive = true;
+        
+        // Start analysis every 3 seconds to avoid overwhelming the API
+        analysisInterval = setInterval(captureAndAnalyze, 3000);
+        
+        updateStatus('Analisi video attiva - Inquadra oggetti per informazioni mediche');
+        
+    } catch (error) {
+        throw new Error(`Impossibile accedere alla camera: ${error.message}`);
+    }
+}
+
+function stopCameraAnalysis() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    
+    if (analysisInterval) {
+        clearInterval(analysisInterval);
+        analysisInterval = null;
+    }
+    
+    const cameraVideo = document.getElementById('cameraVideo');
+    if (cameraVideo.srcObject) {
+        cameraVideo.srcObject = null;
+    }
+    
+    cameraActive = false;
+    updateStatus('Analisi video interrotta');
+}
+
+async function captureAndAnalyze() {
+    if (!cameraActive || currentState !== 'IDLE') {
+        return; // Don't interfere with voice operations
+    }
+    
+    try {
+        const cameraVideo = document.getElementById('cameraVideo');
+        const cameraCanvas = document.getElementById('cameraCanvas');
+        const ctx = cameraCanvas.getContext('2d');
+        
+        // Set canvas size to match video
+        cameraCanvas.width = cameraVideo.videoWidth;
+        cameraCanvas.height = cameraVideo.videoHeight;
+        
+        // Draw current frame to canvas
+        ctx.drawImage(cameraVideo, 0, 0);
+        
+        // Convert to base64
+        const imageData = cameraCanvas.toDataURL('image/jpeg', 0.8);
+        
+        // Send to backend for analysis
+        await sendFrameForAnalysis(imageData);
+        
+    } catch (error) {
+        console.error('[CameraSystem]: Capture error:', error);
+    }
+}
+
+async function sendFrameForAnalysis(imageData) {
+    try {
+        updateStatus('Analizzando immagine...');
+        
+        const response = await fetch('/analyze_vision', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                image: imageData,
+                prompt: 'Analizza questa immagine dal punto di vista medico e audiologico per Otofarma. Fornisci informazioni utili sui dispositivi medici, farmaci o situazioni visibili.'
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.analysis) {
+            // Speak the analysis result
+            speakText(result.analysis);
+            console.log('[CameraSystem]: Analysis result:', result.analysis);
+        } else {
+            console.log('[CameraSystem]: No analysis received');
+        }
+        
+        updateStatus('Analisi video attiva - Inquadra oggetti per informazioni mediche');
+        
+    } catch (error) {
+        console.error('[CameraSystem]: Analysis error:', error);
+        updateStatus('Errore durante l\'analisi. Riprovo...');
+    }
+}
+
 // --- Professional Cross-Platform Initialization ---
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[OtoBot]: Application starting - Hands-free mode');
     console.log(`[OtoBot]: Device detected - iOS: ${isIOS}, Android: ${isAndroid}, Mobile: ${isMobile}`);
     initSiriEdgeAnimation();
     initializeHandsFreeFlow();
+    initializeCameraSystem(); // Initialize camera system
 });
-
