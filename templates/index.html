@@ -396,10 +396,16 @@
 
       // Function to show videos when ready
       let readyCount = 0;
+      let videosInitialized = false;
+      
       function showVideosWhenReady() {
+        if (videosInitialized) return; // Prevent multiple initializations
+        
         readyCount++;
         console.log('Video ready count:', readyCount);
-        if (readyCount >= 1) {
+        
+        if (readyCount >= 2) { // Wait for at least 2 events before showing
+          videosInitialized = true;
           avatarStill.style.visibility = 'visible';
           avatarMove.style.visibility = 'visible';
           avatarStill.style.opacity = '1';
@@ -413,19 +419,23 @@
               // This is normal on iOS - video will play on user interaction
             });
           }
+          console.log('Videos initialized successfully');
         }
       }
-      // Ascolta l'evento canplaythrough per entrambi i video
-      // Multiple event listeners for better compatibility
-avatarStill.addEventListener('canplaythrough', showVideosWhenReady);
-avatarStill.addEventListener('loadeddata', showVideosWhenReady);
-avatarMove.addEventListener('canplaythrough', showVideosWhenReady);
-avatarMove.addEventListener('loadeddata', showVideosWhenReady);
+      
+      // Add event listeners only once with proper cleanup
+      if (avatarStill && avatarMove) {
+        avatarStill.addEventListener('canplaythrough', showVideosWhenReady, { once: true });
+        avatarStill.addEventListener('loadeddata', showVideosWhenReady, { once: true });
+        avatarMove.addEventListener('canplaythrough', showVideosWhenReady, { once: true });
+        avatarMove.addEventListener('loadeddata', showVideosWhenReady, { once: true });
+      }
 
 // Fallback timeout if videos don't load
 setTimeout(() => {
-  if (readyCount === 0) {
+  if (!videosInitialized) {
     console.log('Forcing avatar display after timeout');
+    readyCount = 2; // Set to trigger threshold
     showVideosWhenReady();
   }
 }, 3000);
