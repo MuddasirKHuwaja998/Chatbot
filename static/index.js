@@ -39,6 +39,11 @@ let lastHotwordAt = 0;
 let hotwordUnavailable = false;
 let mediaSupport = null;
 
+// Visual Analysis State
+let visualModeActive = false;
+let cameraStream = null;
+let visualSessionId = null;
+
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 const speechRecognitionSupported = Boolean(SpeechRecognitionCtor);
 
@@ -1056,3 +1061,157 @@ document.addEventListener('DOMContentLoaded', function() {
     initSiriEdgeAnimation();
     initializeHandsFreeFlow();
 });
+
+// ================================
+// VISUAL ANALYSIS FUNCTIONS
+// ================================
+
+// Toggle Visual Mode
+async function toggleVisualMode() {
+    if (!visualModeActive) {
+        await activateVisualMode();
+    } else {
+        await closeVisualMode();
+    }
+}
+
+// Activate Visual Analysis Mode
+async function activateVisualMode() {
+    try {
+        const response = await fetch('/visual/activate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            visualModeActive = true;
+            visualSessionId = data.session_id;
+            
+            document.getElementById('cameraIcon').classList.add('active');
+            document.getElementById('visualOverlay').style.display = 'flex';
+            
+            await startCameraForVisual();
+            await speakWithGoogleTTS(data.message);
+            
+            console.log('Modalit� visiva attivata:', visualSessionId);
+        } else {
+            throw new Error(data.error || 'Errore attivazione modalit� visiva');
+        }
+    } catch (error) {
+        console.error('Visual mode activation error:', error);
+        await speakWithGoogleTTS('Errore nell\\'attivazione della modalit� visiva. Riprova.');
+    }
+}
+
+async function startCameraForVisual() {
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+        });
+        document.getElementById('videoPreview').srcObject = cameraStream;
+    } catch (error) {
+        console.error('Camera access error:', error);
+        await speakWithGoogleTTS('Impossibile accedere alla fotocamera. Controlla i permessi.');
+        throw error;
+    }
+}
+
+async function analyzeCurrentFrame() {
+    if (!visualModeActive || !cameraStream) {
+        await speakWithGoogleTTS('Modalit� visiva non attiva.');
+        return;
+    }
+    
+    try {
+        const loadingEl = document.getElementById('visualLoading');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        
+        loadingEl.style.display = 'block';
+        analyzeBtn.disabled = true;
+        analyzeBtn.textContent = ' Analizzando...';
+        
+        const canvas = document.getElementById('imageCapture');
+        const context = canvas.getContext('2d');
+        const video = document.getElementById('videoPreview');
+        
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL('image/jpeg', 0.8);
+        
+        const response = await fetch('/visual/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_data: imageData, message: 'Cosa vedi in questa immagine?' })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await speakWithGoogleTTS(data.formatted_response || data.analysis);
+            console.log('Analisi visiva completata:', data.analysis);
+        } else {
+            throw new Error(data.error || 'Errore nell\\'analisi dell\\'immagine');
+        }
+    } catch (error) {
+        console.error('Visual analysis error:', error);
+        await speakWithGoogleTTS('Errore nell\\'analisi dell\\'immagine. Riprova.');
+    } finally {
+        document.getElementById('visualLoading').style.display = 'none';
+        document.getElementById('analyzeBtn').disabled = false;
+        document.getElementById('analyzeBtn').textContent = ' Analizza Immagine';
+    }
+}
+
+async function closeVisualMode() {
+    try {
+        const response = await fetch('/visual/deactivate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            visualModeActive = false;
+            visualSessionId = null;
+            stopCameraStream();
+            
+            document.getElementById('cameraIcon').classList.remove('active');
+            document.getElementById('visualOverlay').style.display = 'none';
+            
+            await speakWithGoogleTTS(data.message);
+            console.log('Modalit� visiva disattivata');
+        }
+    } catch (error) {
+        console.error('Visual deactivation error:', error);
+        stopCameraStream();
+        document.getElementById('cameraIcon').classList.remove('active');
+        document.getElementById('visualOverlay').style.display = 'none';
+    }
+}
+
+function stopCameraStream() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    document.getElementById('videoPreview').srcObject = null;
+}
+
+function detectVisualCommands(transcript) {
+    const visualKeywords = ['attiva camera', 'modalit� visiva', 'voglio vedere', 'analizza immagine', 'guarda questo', 'cosa vedi', 'camera', 'video'];
+    const normalizedTranscript = transcript.toLowerCase();
+    
+    if (visualKeywords.some(keyword => normalizedTranscript.includes(keyword))) {
+        if (!visualModeActive) {
+            activateVisualMode();
+        } else {
+            analyzeCurrentFrame();
+        }
+        return true;
+    }
+    return false;
+}
+
+window.addEventListener('beforeunload', () => stopCameraStream());
