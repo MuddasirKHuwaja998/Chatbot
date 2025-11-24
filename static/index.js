@@ -917,6 +917,12 @@ function sendAudioForTranscription(audioBlob, fileName) {
 function handleTranscript(transcript) {
     updateStatus('🗣️ Elaborazione della richiesta...');
     
+    // Check for visual commands first
+    if (detectVisualCommands(transcript)) {
+        updateStatus('📷 Comando visivo riconosciuto!');
+        return Promise.resolve();
+    }
+    
     return fetch('/voice_activation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1063,7 +1069,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ================================
-// VISUAL ANALYSIS FUNCTIONS
+// VISUAL ANALYSIS FUNCTIONS - CLEAN VERSION
 // ================================
 
 // Toggle Visual Mode
@@ -1095,13 +1101,13 @@ async function activateVisualMode() {
             await startCameraForVisual();
             await speakWithGoogleTTS(data.message);
             
-            console.log('Modalit� visiva attivata:', visualSessionId);
+            console.log('Modalita visiva attivata:', visualSessionId);
         } else {
-            throw new Error(data.error || 'Errore attivazione modalit� visiva');
+            throw new Error(data.error || 'Errore attivazione modalita visiva');
         }
     } catch (error) {
         console.error('Visual mode activation error:', error);
-        await speakWithGoogleTTS('Errore nell\\'attivazione della modalit� visiva. Riprova.');
+        await speakWithGoogleTTS('Errore nella attivazione della modalita visiva. Riprova.');
     }
 }
 
@@ -1120,7 +1126,7 @@ async function startCameraForVisual() {
 
 async function analyzeCurrentFrame() {
     if (!visualModeActive || !cameraStream) {
-        await speakWithGoogleTTS('Modalit� visiva non attiva.');
+        await speakWithGoogleTTS('Modalita visiva non attiva.');
         return;
     }
     
@@ -1130,7 +1136,7 @@ async function analyzeCurrentFrame() {
         
         loadingEl.style.display = 'block';
         analyzeBtn.disabled = true;
-        analyzeBtn.textContent = ' Analizzando...';
+        analyzeBtn.textContent = 'Analizzando...';
         
         const canvas = document.getElementById('imageCapture');
         const context = canvas.getContext('2d');
@@ -1151,15 +1157,15 @@ async function analyzeCurrentFrame() {
             await speakWithGoogleTTS(data.formatted_response || data.analysis);
             console.log('Analisi visiva completata:', data.analysis);
         } else {
-            throw new Error(data.error || 'Errore nell\\'analisi dell\\'immagine');
+            throw new Error(data.error || 'Errore nella analisi della immagine');
         }
     } catch (error) {
         console.error('Visual analysis error:', error);
-        await speakWithGoogleTTS('Errore nell\\'analisi dell\\'immagine. Riprova.');
+        await speakWithGoogleTTS('Errore nella analisi della immagine. Riprova.');
     } finally {
         document.getElementById('visualLoading').style.display = 'none';
         document.getElementById('analyzeBtn').disabled = false;
-        document.getElementById('analyzeBtn').textContent = ' Analizza Immagine';
+        document.getElementById('analyzeBtn').textContent = 'Analizza Immagine';
     }
 }
 
@@ -1181,7 +1187,7 @@ async function closeVisualMode() {
             document.getElementById('visualOverlay').style.display = 'none';
             
             await speakWithGoogleTTS(data.message);
-            console.log('Modalit� visiva disattivata');
+            console.log('Modalita visiva disattivata');
         }
     } catch (error) {
         console.error('Visual deactivation error:', error);
@@ -1200,7 +1206,7 @@ function stopCameraStream() {
 }
 
 function detectVisualCommands(transcript) {
-    const visualKeywords = ['attiva camera', 'modalit� visiva', 'voglio vedere', 'analizza immagine', 'guarda questo', 'cosa vedi', 'camera', 'video'];
+    const visualKeywords = ['attiva camera', 'modalita visiva', 'voglio vedere', 'analizza immagine', 'guarda questo', 'cosa vedi', 'camera', 'video'];
     const normalizedTranscript = transcript.toLowerCase();
     
     if (visualKeywords.some(keyword => normalizedTranscript.includes(keyword))) {
