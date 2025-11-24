@@ -73,6 +73,53 @@
       pointer-events: none;
       isolation: isolate;
     }
+    
+    /* Visual Analysis Camera Icon - Professional Style */
+    .camera-icon {
+      position: fixed;
+      top: max(20px, env(safe-area-inset-top, 4px));
+      left: 20px;
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #27ae60, #2ecc71);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10001;
+      pointer-events: auto;
+      box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
+      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      border: 2px solid rgba(255, 255, 255, 0.9);
+    }
+    
+    .camera-icon:hover {
+      transform: scale(1.1) translateY(-2px);
+      box-shadow: 0 12px 35px rgba(46, 204, 113, 0.4);
+      background: linear-gradient(135deg, #229954, #27ae60);
+    }
+    
+    .camera-icon.active {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+    }
+    
+    .camera-icon.active:hover {
+      background: linear-gradient(135deg, #c0392b, #a93226);
+      box-shadow: 0 12px 35px rgba(231, 76, 60, 0.5);
+    }
+    
+    .camera-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: white;
+      transition: transform 0.2s ease;
+    }
+    
+    .camera-icon:hover svg {
+      transform: scale(1.1);
+    }
     .logo-bar {
       width: auto;
       display: flex;
@@ -221,6 +268,107 @@
       left: 0;
       top: 0;
     }
+    
+    /* Visual Analysis Components */
+    .visual-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 50000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .visual-container {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 90vw;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    }
+    
+    .visual-preview {
+      width: 100%;
+      max-width: 640px;
+      height: auto;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    
+    .visual-preview:hover {
+      transform: scale(1.02);
+    }
+    
+    .visual-controls {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .visual-btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 120px;
+    }
+    
+    .visual-btn.analyze {
+      background: linear-gradient(135deg, #27ae60, #2ecc71);
+      color: white;
+    }
+    
+    .visual-btn.analyze:hover {
+      background: linear-gradient(135deg, #229954, #27ae60);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
+    }
+    
+    .visual-btn.close {
+      background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+      color: white;
+    }
+    
+    .visual-btn.close:hover {
+      background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
+      transform: translateY(-2px);
+    }
+    
+    .visual-status {
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    .visual-loading {
+      display: none;
+      text-align: center;
+      color: #27ae60;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+    
+    .visual-hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -236,6 +384,31 @@
     <div class="logo-bar">
       <div class="logo-aura">
         <img src="/static/logo.png" alt="Otofarma Logo" />
+      </div>
+    </div>
+  </div>
+  
+  <!-- Visual Analysis Camera Icon -->
+  <div class="camera-icon" id="cameraIcon" onclick="toggleVisualMode()" title="Modalità Visiva">
+    <svg viewBox="0 0 24 24">
+      <path d="M12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,2L14.39,5.42C15.13,6.54 16.28,7.28 17.65,7.42L21.15,7.95C21.68,8.03 22.06,8.53 22,9.06L21.47,12.56C21.33,13.93 21.07,15.3 20.42,16.61L18,20C17.71,20.53 17.05,20.76 16.5,20.5L13,18.5C11.64,17.84 10.36,17.84 9,18.5L5.5,20.5C4.95,20.76 4.29,20.53 4,20L1.58,16.61C0.93,15.3 0.67,13.93 0.53,12.56L0,9.06C-0.06,8.53 0.32,8.03 0.85,7.95L4.35,7.42C5.72,7.28 6.87,6.54 7.61,5.42L10,2C10.34,1.42 11.16,1.42 12,2Z"/>
+    </svg>
+  </div>
+  
+  <!-- Visual Analysis Overlay -->
+  <div class="visual-overlay" id="visualOverlay">
+    <div class="visual-container">
+      <div class="visual-status" id="visualStatus">
+        🎥 Modalità Visiva Otofarma
+      </div>
+      <video class="visual-preview" id="videoPreview" autoplay playsinline muted></video>
+      <canvas class="visual-hidden" id="imageCapture" width="640" height="480"></canvas>
+      <div class="visual-loading" id="visualLoading">
+        🔍 Analizzando l'immagine...
+      </div>
+      <div class="visual-controls">
+        <button class="visual-btn analyze" id="analyzeBtn" onclick="analyzeCurrentFrame()">🔍 Analizza Immagine</button>
+        <button class="visual-btn close" onclick="closeVisualMode()">❌ Chiudi</button>
       </div>
     </div>
   </div>
