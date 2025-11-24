@@ -1,7 +1,7 @@
 // OtoBot Professional Italian Voice Assistant (Hands-free Hotword Flow)
 // Professional Enterprise Version: Windows/iOS/Android Compatible
 
-const HOTWORD = 'otobot';
+const HOTWORD = 'ciao';
 const HOTWORD_DEBOUNCE_MS = 2000;
 const HOTWORD_MATCH = HOTWORD.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const VAD_CONFIG = Object.freeze({
@@ -1206,18 +1206,18 @@ function stopCameraStream() {
 }
 
 function detectVisualCommands(transcript) {
-    const visualKeywords = ['attiva camera', 'modalita visiva', 'voglio vedere', 'analizza immagine', 'guarda questo', 'cosa vedi', 'camera', 'video'];
+    const activationKeywords = ['attiva camera', 'modalita visiva', 'camera'];
+    const analysisKeywords = ['analizza immagine', 'cosa vedi', 'guarda questo'];
     const normalizedTranscript = transcript.toLowerCase();
     
-    if (visualKeywords.some(keyword => normalizedTranscript.includes(keyword))) {
+    // Only activate camera with specific activation commands
+    if (activationKeywords.some(keyword => normalizedTranscript.includes(keyword))) {
         if (!visualModeActive) {
             activateVisualMode();
-        } else {
-            analyzeCurrentFrame();
+            return true;
         }
-        return true;
     }
-    return false;
-}
-
-window.addEventListener('beforeunload', () => stopCameraStream());
+    
+    // Only analyze if camera is active AND specific analysis command is given
+    if (visualModeActive && analysisKeywords.some(keyword => normalizedTranscript.includes(keyword))) {
+        analyzeCurrentFrame();
