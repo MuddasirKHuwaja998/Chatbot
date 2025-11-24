@@ -148,16 +148,6 @@ CORS(app)
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
-# OpenAI GPT-4V for Vision Analysis
-try:
-    from openai import OpenAI
-except ImportError:
-    raise ImportError("Install openai: pip install openai")
-
-import base64
-from io import BytesIO
-from PIL import Image
-
 try:
     import nltk
     nltk.download('punkt', quiet=True)
@@ -1762,36 +1752,6 @@ def initialize_gemini():
 # Initialize Gemini
 gemini_available = initialize_gemini()
 
-# ===== OPENAI GPT-4V VISION CONFIGURATION =====
-# SECURE: Using environment variable for API key (NO HARDCODED KEYS!)
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-
-def initialize_openai_vision():
-    """Initialize OpenAI client for vision analysis - SECURE & ROBUST"""
-    try:
-        if not OPENAI_API_KEY or OPENAI_API_KEY.strip() == "":
-            print("⚠️ OpenAI Vision disabled - Set OPENAI_API_KEY environment variable")
-            logger.warning("🔑 OpenAI Vision disabled - API key not found in environment")
-            return None
-        
-        # Validate API key format
-        if not OPENAI_API_KEY.startswith('sk-'):
-            print("⚠️ Invalid OpenAI API key format")
-            logger.error("❌ Invalid OpenAI API key format")
-            return None
-            
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        logger.info("🔑 OpenAI Vision initialized successfully - Ready for medical analysis")
-        print("[✓] OpenAI Vision ready for Otofarma medical analysis")
-        return client
-    except Exception as e:
-        print(f"OpenAI Vision initialization error: {e}")
-        logger.error(f"❌ OpenAI Vision initialization failed: {e}")
-        return None
-
-# Initialize OpenAI Vision
-openai_vision_client = initialize_openai_vision()
-
 def get_gemini_conversation(user_message):
     """Get natural conversation from Gemini - ALWAYS ITALIAN - ALWAYS OTOFARMA"""
     if not gemini_available:
@@ -2300,120 +2260,6 @@ def tts():
     )
 from google.cloud import speech
 
-
-# ===== VISION ANALYSIS ENDPOINT =====
-@app.route("/analyze_vision", methods=["POST"])
-def analyze_vision():
-    """Real-time vision analysis using OpenAI GPT-4V - Like Microsoft Copilot!"""
-    
-    if not openai_vision_client:
-        return jsonify({"error": "Vision service not available. Check OpenAI API key."}), 503
-    
-    try:
-        # Get image from request
-        if "image" not in request.files:
-            return jsonify({"error": "No image provided"}), 400
-        
-        image_file = request.files["image"]
-        
-        # Convert image to base64
-        image_bytes = image_file.read()
-        image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-        
-        # Get user question (optional)
-        user_question = request.form.get("question", "")
-        
-        # ENHANCED Otofarma medical-focused prompt - More intelligent and professional
-        base_prompt = """
-        Sei OtoBot, l'assistente AI medico specializzato di Otofarma Spa, azienda leader italiana nel settore audiologico.
-        
-        ANALIZZA ACCURATAMENTE L'IMMAGINE e fornisci una risposta professionale in italiano.
-        
-        COMPETENZE SPECIALISTICHE OTOFARMA:
-        • APPARECCHI ACUSTICI: Identifica modelli (ReSound, Phonak, Oticon), problemi tecnici, manutenzione
-        • ANATOMIA ORECCHIO: Analizza padiglione auricolare, condotto uditivo, membrana timpanica
-        • STRUMENTI MEDICI: Riconosci audiometri, otoscopi, timpanometri, sonde OAE
-        • PATOLOGIE VISIBILI: Cerume, infiammazioni, anomalie anatomiche
-        • CONSULENZA TECNICA: Problemi di adattamento, feedback acustico, manutenzione
-        
-        PROTOCOLLO RISPOSTA:
-        1. Saluta cordialmente l'utente
-        2. Descrivi cosa vedi con precisione medica
-        3. Fornisci consigli pratici specifici Otofarma
-        4. Suggerisci azioni appropriate (visita, pulizia, regolazione)
-        5. Mantieni tono professionale ma umano
-        6. Massimo 4 frasi concise e utili
-        
-        SICUREZZA: Se vedi condizioni preoccupanti, consiglia sempre visita specialistica Otofarma.
-        """
-        
-        if user_question:
-            prompt = f"{base_prompt}\n\nDOMANDA DELL'UTENTE: {user_question}\n\nRispondi alla domanda analizzando l'immagine:"
-        else:
-            prompt = f"{base_prompt}\n\nDescrivi cosa vedi nell'immagine e come posso aiutarti:"
-        
-        # Call OpenAI GPT-4V
-        response = openai_vision_client.chat.completions.create(
-            model="gpt-4o",  # GPT-4 with vision
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": prompt
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{image_base64}",
-                                "detail": "high"  # High detail for medical analysis
-                            }
-                        }
-                    ]
-                }
-            ],
-            max_tokens=500,
-            temperature=0.3  # Lower temperature for medical accuracy
-        )
-        
-        # Extract the response
-        vision_analysis = response.choices[0].message.content
-        
-        # Validate response quality
-        if not vision_analysis or len(vision_analysis.strip()) < 10:
-            raise Exception("Empty or invalid vision analysis response")
-        
-        # Log successful analysis
-        print(f"[✓] Vision Analysis: {vision_analysis[:100]}...")
-        logger.info(f"🔍 Vision analysis completed - {len(vision_analysis)} chars")
-        
-        # IMPORTANT: Return analysis that will work with existing voice system
-        return jsonify({
-            "reply": vision_analysis,  # Use 'reply' to match existing chat system
-            "voice": True,  # Enable voice response
-            "male_voice": True,  # Use existing Italian male voice
-            "vision_analysis": True  # Flag to indicate this is vision analysis
-        })
-        
-    except Exception as e:
-        error_msg = f"Vision analysis error: {str(e)}"
-        print(f"[❌] {error_msg}")
-        logger.error(f"❌ Vision analysis failed: {e}")
-        
-        # Professional Italian error responses
-        error_responses = [
-            "Mi dispiace, ho avuto difficoltà ad analizzare l'immagine. Puoi riprovare con un'inquadratura più chiara?",
-            "Non sono riuscito a elaborare l'immagine correttamente. Assicurati che la foto sia ben illuminata e riprova.",
-            "Sto avendo problemi tecnici con l'analisi visiva. Riprova tra qualche momento o contatta il supporto Otofarma."
-        ]
-        
-        return jsonify({
-            "reply": random.choice(error_responses),  # Use 'reply' for consistency
-            "voice": True,
-            "male_voice": True,
-            "error": True
-        }), 500
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe():
