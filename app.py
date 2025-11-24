@@ -1754,7 +1754,7 @@ def initialize_gemini():
     """Initialize Gemini AI"""
     try:
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
-        vertexai.init(project="speakai-467308", location="us-east4") # Changed location
+        vertexai.init(project="speakai-467308", location="us-east4")
         return True
     except Exception as e:
         print(f"Gemini initialization error: {e}")
@@ -1763,7 +1763,7 @@ def initialize_gemini():
 # Initialize Gemini
 gemini_available = initialize_gemini()
 
-# Visual Analysis Configuration - Professional Microsoft Copilot Style
+# Visual Analysis Configuration - Professional Style
 VISUAL_ANALYSIS_CONFIG = {
     "enabled": True,
     "continuous_monitoring": False,
@@ -1788,11 +1788,11 @@ visual_state = {
     "session_id": str(uuid.uuid4())
 }
 
-# Professional Visual Analysis Prompts - Microsoft Copilot Style
+# Professional Visual Analysis Prompts
 VISUAL_ANALYSIS_PROMPTS = {
-    "greeting": """Ciao! Sono {assistant_name}, il tuo assistente virtuale con capacità di visione di Otofarma Spa. 
+    "greeting": """Ciao! Sono OtoBot, il tuo assistente virtuale con capacità di visione di Otofarma Spa. 
 Posso vedere attraverso la tua fotocamera e aiutarti con qualsiasi cosa tu stia guardando o mostrando. 
-Come Microsoft Copilot, posso analizzare oggetti, leggere testi, identificare prodotti audiologici e molto altro!
+Posso analizzare oggetti, leggere testi, identificare prodotti audiologici e molto altro!
 Cosa posso vedere per te oggi?""",
     
     "system_prompt": """Sei OtoBot, l'assistente virtuale avanzato di Otofarma Spa con capacità di visione artificiale professionale.
@@ -1812,13 +1812,13 @@ CAPACITÀ DI VISIONE:
 - Analisi medica generale (non diagnostica)
 - Assistenza per problemi pratici
 
-STILE MICROSOFT COPILOT:
+STILE PROFESSIONALE:
 - "Posso vedere [descrizione dettagliata]. Come posso aiutarti?"
 - Sii proattivo nel suggerire assistenza
 - Identifica sempre chiaramente ciò che vedi
 - Offri soluzioni pratiche e professionali""",
     
-    "analysis_prompt": """Analizza questa immagine come un assistente professionale Microsoft Copilot per Otofarma Spa.
+    "analysis_prompt": """Analizza questa immagine come OtoBot, assistente professionale di Otofarma Spa.
 
 FOCUS ANALYSIS:
 1. Descrivi dettagliatamente ciò che vedi
@@ -1874,7 +1874,7 @@ def resize_image_for_analysis(image, max_size=(1920, 1080)):
         return image
 
 def analyze_image_with_openai(image_data, user_prompt=""):
-    """Analyze image using OpenAI Vision API - Microsoft Copilot Style"""
+    """Analyze image using OpenAI Vision API - Professional Style"""
     try:
         if not openai.api_key:
             logger.warning("OpenAI API key not configured")
@@ -1959,7 +1959,7 @@ Descrivi dettagliatamente:
 
 {user_prompt if user_prompt else ''}
 
-Rispondi in italiano, stile Microsoft Copilot professionale.
+Rispondi in italiano con stile professionale.
 """
         
         response = model.generate_content([analysis_prompt, image_bytes])
@@ -1974,7 +1974,7 @@ def get_visual_greeting():
     return VISUAL_ANALYSIS_PROMPTS["greeting"].format(assistant_name=ASSISTANT_NAME)
 
 def process_visual_query(image_data, user_message=""):
-    """Main visual processing function - Microsoft Copilot style"""
+    """Main visual processing function - Professional style"""
     try:
         # Resize image for optimal processing
         if isinstance(image_data, (bytes, str)):
@@ -2312,10 +2312,10 @@ def chat():
         print("Appointment booking: email sent", info)
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
     
-    # Check for visual mode activation requests - Microsoft Copilot Style
+    # Check for visual mode activation requests
     visual_keywords = ["camera", "video", "vedi", "guarda", "analizza", "mostra", "visual", "immagine", "foto", "vedere", "guardare", "fotocamera"]
     if any(keyword in user_message.lower() for keyword in visual_keywords):
-        visual_activation_response = "Perfetto! Attivando la modalità visiva avanzata di Otofarma. Ora posso vedere attraverso la tua fotocamera e analizzare tutto ciò che mi mostri, proprio come Microsoft Copilot. Premi il pulsante video per iniziare!"
+        visual_activation_response = "Perfetto! Attivando la modalità visiva avanzata di Otofarma. Ora posso vedere attraverso la tua fotocamera e analizzare tutto ciò che mi mostri. Premi il pulsante della camera per iniziare!"
         return jsonify({"reply": visual_activation_response, "voice": voice_mode, "male_voice": True, "suggest_visual": True})
     
     # 1. Check for assistant name activation
@@ -2498,7 +2498,7 @@ def chat():
         ]
     reply = fallback_mem.get_unique(fallback_messages)
     return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
-# VISUAL ANALYSIS API ENDPOINTS - Microsoft Copilot Style
+# VISUAL ANALYSIS API ENDPOINTS - Professional Style
 
 @app.route("/visual/activate", methods=["POST"])
 def activate_visual_mode():
@@ -2538,24 +2538,40 @@ def analyze_visual_input():
                 "error": "Modalità visiva non attiva. Attivala prima di procedere."
             }), 400
         
-        # Handle different input types
-        user_message = request.form.get("message", "")
-        
-        if "image" in request.files:
-            # Image file upload
-            image_file = request.files["image"]
-            image_data = image_file.read()
-        elif "image_data" in request.form:
-            # Base64 image data
-            image_data = request.form["image_data"]
-            if image_data.startswith("data:image"):
-                image_data = image_data.split(",")[1]
-            image_data = base64.b64decode(image_data)
+        # Handle JSON data from JavaScript
+        data = request.get_json()
+        if data:
+            user_message = data.get("message", "")
+            image_data = data.get("image_data", "")
+            
+            if image_data:
+                if image_data.startswith("data:image"):
+                    image_data = image_data.split(",")[1]
+                image_data = base64.b64decode(image_data)
+            else:
+                return jsonify({
+                    "success": False,
+                    "error": "Nessuna immagine fornita per l'analisi"
+                }), 400
         else:
-            return jsonify({
-                "success": False,
-                "error": "Nessuna immagine fornita per l'analisi"
-            }), 400
+            # Handle form data as fallback
+            user_message = request.form.get("message", "")
+            
+            if "image" in request.files:
+                # Image file upload
+                image_file = request.files["image"]
+                image_data = image_file.read()
+            elif "image_data" in request.form:
+                # Base64 image data
+                image_data = request.form["image_data"]
+                if image_data.startswith("data:image"):
+                    image_data = image_data.split(",")[1]
+                image_data = base64.b64decode(image_data)
+            else:
+                return jsonify({
+                    "success": False,
+                    "error": "Nessuna immagine fornita per l'analisi"
+                }), 400
         
         # Process visual analysis
         analysis_result = process_visual_query(image_data, user_message)
