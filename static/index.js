@@ -1,7 +1,7 @@
 // OtoBot Professional Italian Voice Assistant (Hands-free Hotword Flow)
 // Professional Enterprise Version: Windows/iOS/Android Compatible
 
-const HOTWORD = 'ciao';
+const HOTWORD = 'otobot';
 const HOTWORD_DEBOUNCE_MS = 2000;
 const HOTWORD_MATCH = HOTWORD.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const VAD_CONFIG = Object.freeze({
@@ -38,11 +38,6 @@ let recognitionAutoRestart = false;
 let lastHotwordAt = 0;
 let hotwordUnavailable = false;
 let mediaSupport = null;
-
-// Visual Analysis State
-let visualModeActive = false;
-let cameraStream = null;
-let visualSessionId = null;
 
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 const speechRecognitionSupported = Boolean(SpeechRecognitionCtor);
@@ -917,12 +912,6 @@ function sendAudioForTranscription(audioBlob, fileName) {
 function handleTranscript(transcript) {
     updateStatus('🗣️ Elaborazione della richiesta...');
     
-    // Check for visual commands first
-    if (detectVisualCommands(transcript)) {
-        updateStatus('📷 Comando visivo riconosciuto!');
-        return Promise.resolve();
-    }
-    
     return fetch('/voice_activation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1067,157 +1056,3 @@ document.addEventListener('DOMContentLoaded', function() {
     initSiriEdgeAnimation();
     initializeHandsFreeFlow();
 });
-
-// ================================
-// VISUAL ANALYSIS FUNCTIONS - CLEAN VERSION
-// ================================
-
-// Toggle Visual Mode
-async function toggleVisualMode() {
-    if (!visualModeActive) {
-        await activateVisualMode();
-    } else {
-        await closeVisualMode();
-    }
-}
-
-// Activate Visual Analysis Mode
-async function activateVisualMode() {
-    try {
-        const response = await fetch('/visual/activate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            visualModeActive = true;
-            visualSessionId = data.session_id;
-            
-            document.getElementById('cameraIcon').classList.add('active');
-            document.getElementById('visualOverlay').style.display = 'flex';
-            
-            await startCameraForVisual();
-            await speakWithGoogleTTS(data.message);
-            
-            console.log('Modalita visiva attivata:', visualSessionId);
-        } else {
-            throw new Error(data.error || 'Errore attivazione modalita visiva');
-        }
-    } catch (error) {
-        console.error('Visual mode activation error:', error);
-        await speakWithGoogleTTS('Errore nella attivazione della modalita visiva. Riprova.');
-    }
-}
-
-async function startCameraForVisual() {
-    try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
-        });
-        document.getElementById('videoPreview').srcObject = cameraStream;
-    } catch (error) {
-        console.error('Camera access error:', error);
-        await speakWithGoogleTTS('Impossibile accedere alla fotocamera. Controlla i permessi.');
-        throw error;
-    }
-}
-
-async function analyzeCurrentFrame() {
-    if (!visualModeActive || !cameraStream) {
-        await speakWithGoogleTTS('Modalita visiva non attiva.');
-        return;
-    }
-    
-    try {
-        const loadingEl = document.getElementById('visualLoading');
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        
-        loadingEl.style.display = 'block';
-        analyzeBtn.disabled = true;
-        analyzeBtn.textContent = 'Analizzando...';
-        
-        const canvas = document.getElementById('imageCapture');
-        const context = canvas.getContext('2d');
-        const video = document.getElementById('videoPreview');
-        
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
-        
-        const response = await fetch('/visual/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image_data: imageData, message: 'Cosa vedi in questa immagine?' })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            await speakWithGoogleTTS(data.formatted_response || data.analysis);
-            console.log('Analisi visiva completata:', data.analysis);
-        } else {
-            throw new Error(data.error || 'Errore nella analisi della immagine');
-        }
-    } catch (error) {
-        console.error('Visual analysis error:', error);
-        await speakWithGoogleTTS('Errore nella analisi della immagine. Riprova.');
-    } finally {
-        document.getElementById('visualLoading').style.display = 'none';
-        document.getElementById('analyzeBtn').disabled = false;
-        document.getElementById('analyzeBtn').textContent = 'Analizza Immagine';
-    }
-}
-
-async function closeVisualMode() {
-    try {
-        const response = await fetch('/visual/deactivate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            visualModeActive = false;
-            visualSessionId = null;
-            stopCameraStream();
-            
-            document.getElementById('cameraIcon').classList.remove('active');
-            document.getElementById('visualOverlay').style.display = 'none';
-            
-            await speakWithGoogleTTS(data.message);
-            console.log('Modalita visiva disattivata');
-        }
-    } catch (error) {
-        console.error('Visual deactivation error:', error);
-        stopCameraStream();
-        document.getElementById('cameraIcon').classList.remove('active');
-        document.getElementById('visualOverlay').style.display = 'none';
-    }
-}
-
-function stopCameraStream() {
-    if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null;
-    }
-    document.getElementById('videoPreview').srcObject = null;
-}
-
-function detectVisualCommands(transcript) {
-    const activationKeywords = ['attiva camera', 'modalita visiva', 'camera'];
-    const analysisKeywords = ['analizza immagine', 'cosa vedi', 'guarda questo'];
-    const normalizedTranscript = transcript.toLowerCase();
-    
-    // Only activate camera with specific activation commands
-    if (activationKeywords.some(keyword => normalizedTranscript.includes(keyword))) {
-        if (!visualModeActive) {
-            activateVisualMode();
-            return true;
-        }
-    }
-    
-    // Only analyze if camera is active AND specific analysis command is given
-    if (visualModeActive && analysisKeywords.some(keyword => normalizedTranscript.includes(keyword))) {
-        analyzeCurrentFrame();
