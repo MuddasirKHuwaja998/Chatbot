@@ -1,7 +1,7 @@
 // OtoBot Professional Italian Voice Assistant (Hands-free Hotword Flow)
 // Professional Enterprise Version: Windows/iOS/Android Compatible
 
-const HOTWORD = 'otobot';
+const HOTWORD = 'Ciao';
 const HOTWORD_DEBOUNCE_MS = 2000;
 const HOTWORD_MATCH = HOTWORD.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const VAD_CONFIG = Object.freeze({
@@ -1056,3 +1056,4 @@ document.addEventListener('DOMContentLoaded', function() {
     initSiriEdgeAnimation();
     initializeHandsFreeFlow();
 });
+
