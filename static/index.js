@@ -2,12 +2,14 @@
 // Professional Enterprise Version: Windows/iOS/Android Compatible
 
 const HOTWORD = 'ciao';
-const HOTWORD_DEBOUNCE_MS = 2000;
+// Reduced debounce to react faster while still avoiding obvious duplicates
+const HOTWORD_DEBOUNCE_MS = 900;
 const HOTWORD_MATCH = HOTWORD.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const VAD_CONFIG = Object.freeze({
     silenceThreshold: 0.012,
-    minSpeechMs: 700,
-    silenceHoldMs: 950
+    // Accept shorter utterances and reduce silent-hold wait so recording stops earlier
+    minSpeechMs: 300,
+    silenceHoldMs: 450
 });
 
 const VoiceState = Object.freeze({
@@ -531,13 +533,12 @@ function speakWithGoogleTTS(text) {
                 playPromise.then(() => {
                     console.log('[OtoBot]: Audio playback started successfully');
                     
-                    setTimeout(() => {
-                        if (!videoInitialized) {
-                            initializeVideos().then(() => showMoveZloop());
-                        } else {
-                            showMoveZloop();
-                        }
-                    }, 1000);
+                    // Start avatar move immediately (no artificial 1s delay)
+                    if (!videoInitialized) {
+                        initializeVideos().then(() => showMoveZloop());
+                    } else {
+                        showMoveZloop();
+                    }
                 }).catch(error => {
                     console.log('[OtoBot Error]: Audio play blocked:', error.message);
                     clearTimeout(safetyTimer);
