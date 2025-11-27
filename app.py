@@ -46,6 +46,69 @@ def init_db():
     conn.close()
 
 init_db()
+import threading
+import time
+
+# Google credentials file (kept as environment or default filename)
+GOOGLE_CREDENTIALS = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or "speakai-467308-fb5a36feacef.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_CREDENTIALS
+
+# Reuse Google clients to avoid per-request startup/auth overhead
+TTS_CLIENT = None
+SPEECH_CLIENT = None
+
+# Simple in-memory cache for TTS audio: key -> {audio: bytes, ts: timestamp}
+TTS_CACHE = {}
+TTS_CACHE_LOCK = threading.Lock()
+TTS_CACHE_TTL = 60 * 60  # 1 hour default TTL for cached audio
+PENDING_TTS = set()
+
+try:
+    TTS_CLIENT = texttospeech.TextToSpeechClient()
+except Exception as e:
+    logger.warning(f"Could not initialize TextToSpeechClient at startup: {e}")
+
+try:
+    SPEECH_CLIENT = speech.SpeechClient()
+except Exception as e:
+    logger.warning(f"Could not initialize SpeechClient at startup: {e}")
+
+def synth_text_to_mp3(text, voice_name="it-IT-Chirp3-HD-Enceladus"):
+    """Synthesize given text to MP3 bytes using the pooled TTS client."""
+    if not TTS_CLIENT:
+        # lazy create if previous init failed
+        try:
+            client = texttospeech.TextToSpeechClient()
+        except Exception:
+            raise
+    else:
+        client = TTS_CLIENT
+
+    formatted_text = format_numbers_for_speech(text)
+    synthesis_input = texttospeech.SynthesisInput(text=formatted_text)
+    voice = texttospeech.VoiceSelectionParams(language_code="it-IT", name=voice_name)
+    audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
+
+    response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
+    return response.audio_content
+
+def cache_tts_background(text):
+    key = text.strip()
+    with TTS_CACHE_LOCK:
+        if key in TTS_CACHE:
+            return
+        PENDING_TTS.add(key)
+
+    try:
+        audio = synth_text_to_mp3(text)
+        with TTS_CACHE_LOCK:
+            TTS_CACHE[key] = {"audio": audio, "ts": time.time()}
+    except Exception as e:
+        logger.warning(f"Background TTS synth failed: {e}")
+    finally:
+        with TTS_CACHE_LOCK:
+            PENDING_TTS.discard(key)
+
 def save_appointment_to_db(name, phone, date):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -2124,6 +2187,12 @@ def chat():
     reply = match_yaml_qa_ai(user_message_corr)
     if reply:
         print(f"Found YAML answer: {reply[:100]}...")
+        # Start background generation of TTS audio for KB replies so /tts can serve it quickly
+        try:
+            t = threading.Thread(target=cache_tts_background, args=(reply,), daemon=True)
+            t.start()
+        except Exception as e:
+            logger.warning(f"Failed to start background TTS cache thread: {e}")
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
 
     # 8. Enhanced Pharmacy-specific queries for Voice Assistant
@@ -2226,38 +2295,57 @@ def chat():
 def tts():
     data = request.json
     text = data.get("text", "")
-    
+
     # Format numbers for speech BEFORE TTS
     formatted_text = format_numbers_for_speech(text)
-    
-    voice_name = "it-IT-Chirp3-HD-Enceladus"  # Premium Chirp3 - Warm & Natural Male Italian Voice
+    key = formatted_text.strip()
 
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
+    # Try cache first
+    with TTS_CACHE_LOCK:
+        entry = TTS_CACHE.get(key)
+        if entry and (time.time() - entry.get("ts", 0) < TTS_CACHE_TTL):
+            audio_bytes = entry["audio"]
+            return (
+                audio_bytes,
+                200,
+                {
+                    "Content-Type": "audio/mpeg",
+                    "Content-Disposition": "inline; filename=output.mp3"
+                }
+            )
 
-    client = texttospeech.TextToSpeechClient()
-    synthesis_input = texttospeech.SynthesisInput(text=formatted_text)
-    voice = texttospeech.VoiceSelectionParams(
-        language_code="it-IT",
-        name=voice_name
-    )
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
-    )
+    # If generation is pending, wait briefly for it to complete (optimistic)
+    wait_start = time.time()
+    while True:
+        with TTS_CACHE_LOCK:
+            if key in TTS_CACHE:
+                audio_bytes = TTS_CACHE[key]["audio"]
+                return (
+                    audio_bytes,
+                    200,
+                    {"Content-Type": "audio/mpeg", "Content-Disposition": "inline; filename=output.mp3"}
+                )
+            pending = key in PENDING_TTS
+        if not pending:
+            break
+        if time.time() - wait_start > 2.0:  # wait up to 2s for background generation
+            break
+        time.sleep(0.1)
 
-    response = client.synthesize_speech(
-        input=synthesis_input,
-        voice=voice,
-        audio_config=audio_config
-    )
+    # Cache miss or not ready: synthesize now using pooled client (or lazy create)
+    try:
+        audio_bytes = synth_text_to_mp3(formatted_text)
+        with TTS_CACHE_LOCK:
+            TTS_CACHE[key] = {"audio": audio_bytes, "ts": time.time()}
 
-    return (
-        response.audio_content,
-        200,
-        {
-            "Content-Type": "audio/mpeg",
-            "Content-Disposition": "inline; filename=output.mp3"
-        }
-    )
+        return (
+            audio_bytes,
+            200,
+            {"Content-Type": "audio/mpeg", "Content-Disposition": "inline; filename=output.mp3"}
+        )
+    except Exception as e:
+        logger.error(f"TTS synthesis failed: {e}")
+        return jsonify({"error": "TTS error"}), 500
 from google.cloud import speech
 
 
@@ -2269,9 +2357,15 @@ def transcribe():
     audio_file = request.files["audio"]
     audio_bytes = audio_file.read()
 
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speakai-467308-fb5a36feacef.json"
-
-    client = speech.SpeechClient()
+    # use pooled SPEECH_CLIENT when available
+    if SPEECH_CLIENT:
+        client = SPEECH_CLIENT
+    else:
+        try:
+            client = speech.SpeechClient()
+        except Exception as e:
+            logger.error(f"Could not create SpeechClient: {e}")
+            return jsonify({"error": "Speech client init failed"}), 500
     audio = speech.RecognitionAudio(content=audio_bytes)
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
