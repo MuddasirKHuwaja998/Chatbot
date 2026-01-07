@@ -2032,9 +2032,18 @@ def voice_activation():
         return jsonify({
             "activated": True,
             "reply": get_assistant_introduction(),
-            "voice": True
+            "voice": True,
+            "intent": "greeting"
         })
-    
+    # Pharmacy intent detection
+    user_message_corr = correct_spelling(user_message)
+    if is_pharmacy_question(user_message_corr):
+        return jsonify({
+            "activated": True,
+            "reply": "Ecco le informazioni sulle farmacie Otofarma. Dimmi la città che ti interessa!",
+            "voice": True,
+            "intent": "pharmacy"
+        })
     return jsonify({"activated": False})
 
 @app.route("/chat", methods=["POST"])
@@ -2106,7 +2115,12 @@ def chat():
         return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
         # 1. Check for assistant name activation
     if detect_assistant_name(user_message):
-        return jsonify({"reply": handle_voice_activation_greeting(), "voice": voice_mode, "male_voice": True})
+        return jsonify({
+            "reply": handle_voice_activation_greeting(),
+            "voice": voice_mode,
+            "male_voice": True,
+            "intent": "greeting"
+        })
 
     # 2. Enhanced conversation handling with Gemini
     if should_use_gemini_for_conversation(user_message):
@@ -2199,17 +2213,14 @@ def chat():
     if is_pharmacy_question(user_message_corr):
         print(f"🏥 Pharmacy question detected: {user_message_corr}")
         found_cities = extract_city_from_query(user_message_corr)
-        
         if found_cities:
             city = found_cities[0]
             print(f"🏙️ City found: {city}")
             ph_list = pharmacies_by_city(city)
-            
             if ph_list:
                 reply = format_pharmacies_list(ph_list, city, user_message_corr)
                 print(f"✅ Found {len(ph_list)} pharmacies in {city}")
             else:
-                # Enhanced fallback for no pharmacies found
                 reply = (
                     f"Mi dispiace, non ho trovato farmacie Otofarma specificamente a {city}. "
                     f"Tuttavia, Otofarma ha una vasta rete di farmacie affiliate in tutta Italia. "
@@ -2219,7 +2230,6 @@ def chat():
                 )
                 print(f"❌ No pharmacies found in {city}")
         else:
-            # No city found - provide general guidance with examples
             city_examples = get_available_cities_sample()
             reply = (
                 "Per aiutarti a trovare una farmacia Otofarma, potresti specificare la città "
@@ -2229,8 +2239,7 @@ def chat():
                 "specializzati in apparecchi acustici e servizi audiologici."
             )
             print("🤔 No city detected in pharmacy query")
-            
-        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True})
+        return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True, "intent": "pharmacy"})
 
     # 9. Fallback responses
         # 8.5. Gemini AI fallback for questions not covered by YAML or app logic
@@ -2300,56 +2309,55 @@ def tts():
     formatted_text = format_numbers_for_speech(text)
     key = formatted_text.strip()
 
-    # Try cache first
-    with TTS_CACHE_LOCK:
-        entry = TTS_CACHE.get(key)
-        if entry and (time.time() - entry.get("ts", 0) < TTS_CACHE_TTL):
-            audio_bytes = entry["audio"]
-            return (
-                audio_bytes,
-                200,
-                {
-                    "Content-Type": "audio/mpeg",
-                    "Content-Disposition": "inline; filename=output.mp3"
-                }
-            )
+    # 9. Fallback responses
+    # 8.5. Gemini AI fallback for questions not covered by YAML or app logic
+    print("Trying Gemini fallback...")
+    if gemini_available:
+        gemini_reply = get_gemini_conversation(user_message_corr)
+        if gemini_reply:
+            print(f"Gemini fallback response generated: {gemini_reply[:50]}...")
+            return jsonify({"reply": gemini_reply, "voice": voice_mode, "male_voice": True, "intent": "other"})
+        else:
+            print("Gemini returned empty response")
+    else:
+        print("Gemini not available - check initialization")
 
-    # If generation is pending, wait briefly for it to complete (optimistic)
-    wait_start = time.time()
-    while True:
-        with TTS_CACHE_LOCK:
-            if key in TTS_CACHE:
-                audio_bytes = TTS_CACHE[key]["audio"]
-                return (
-                    audio_bytes,
-                    200,
-                    {"Content-Type": "audio/mpeg", "Content-Disposition": "inline; filename=output.mp3"}
-                )
-            pending = key in PENDING_TTS
-        if not pending:
+    fallback_messages = [
+        "Mi dispiace, sto avendo difficoltà a comprendere la tua richiesta. Potresti riformulare la domanda? Posso aiutarti con informazioni su Otofarma, apparecchi acustici, servizi audiologici e molto altro!",
+        "Non sono riuscito a trovare una risposta soddisfacente. Se vuoi, puoi essere più specifico o chiedere su argomenti come apparecchi acustici, farmacie Otofarma, o servizi di consulenza.",
+        "La tua richiesta è interessante, ma non dispongo di dettagli specifici al momento. Posso aiutarti con tutto ciò che riguarda Otofarma: prodotti, servizi, e assistenza audiologica!",
+        "Al momento non trovo la risposta che cerchi. Ti invito a riformulare la domanda o a chiedere su temi come apparecchi acustici, prenotazione visite, o localizzazione farmacie.",
+        "Posso offrirti il massimo supporto possibile! Puoi essere più dettagliato nella tua richiesta o chiedere informazioni su servizi Otofarma, prodotti audiologici, o farmacie?"
+    ]
+    # Improved professional fallback with keyword mention
+    user_kw = ""
+    user_words = re.findall(r'\w+', normalize(user_message_corr))
+    for w in user_words:
+        if w not in {"ciao", "salve", "buongiorno", "buonasera", "buonanotte", "come", "va", "stai", "sei", "sono", "grazie", "bot", "otobot", "otofarma", "assistente"} and len(w) > 3:
+            user_kw = w
             break
-        if time.time() - wait_start > 2.0:  # wait up to 2s for background generation
-            break
-        time.sleep(0.1)
 
-    # Cache miss or not ready: synthesize now using pooled client (or lazy create)
-    try:
-        audio_bytes = synth_text_to_mp3(formatted_text)
-        with TTS_CACHE_LOCK:
-            TTS_CACHE[key] = {"audio": audio_bytes, "ts": time.time()}
-
-        return (
-            audio_bytes,
-            200,
-            {"Content-Type": "audio/mpeg", "Content-Disposition": "inline; filename=output.mp3"}
-        )
-    except Exception as e:
-        logger.error(f"TTS synthesis failed: {e}")
-        return jsonify({"error": "TTS error"}), 500
-from google.cloud import speech
-
-
-@app.route("/transcribe", methods=["POST"])
+    if user_kw:
+        fallback_messages = [
+            f"Mi dispiace, non ho ancora conoscenze specifiche su '{user_kw}'. Ti consiglio di contattare direttamente il nostro team di esperti Otofarma o riformulare la domanda. Posso comunque aiutarti con altri argomenti!",
+            f"Non dispongo di informazioni dettagliate su '{user_kw}' al momento, ma posso aiutarti con apparecchi acustici, servizi audiologici, farmacie e molto altro ancora!",
+            f"Al momento non ho dati specifici su '{user_kw}', ma posso assisterti con informazioni su prodotti Otofarma, servizi di consulenza audiologica, o localizzazione delle nostre farmacie.",
+            f"Non ho una risposta precisa su '{user_kw}', ma il nostro team di specialisti Otofarma sarà felice di aiutarti. Nel frattempo, posso assisterti con altri argomenti!",
+            f"Mi scuso, non ho trovato dettagli su '{user_kw}'. Tuttavia, posso aiutarti con apparecchi acustici, servizi audiologici, e tutto ciò che riguarda il mondo Otofarma!"
+        ]
+    else:
+        fallback_messages = [
+            "Al momento non dispongo di una risposta precisa alla tua richiesta, ma sono qui per aiutarti su qualsiasi altro tema riguardante Otofarma.",
+            "Mi scuso, non sono riuscito a trovare una risposta soddisfacente. Se desideri, puoi riformulare la domanda o chiedere su un altro argomento.",
+            "Domanda interessante! Tuttavia, non ho informazioni puntuali su questo punto. Sono a disposizione per altre domande.",
+            "La tua richiesta è stata ricevuta, ma non dispongo di dettagli specifici. Puoi fornire ulteriori informazioni o chiedere altro?",
+            "Non trovo una risposta adeguata in questo momento. Ti invito a riformulare o a chiedere su altri temi.",
+            "Mi dispiace, non ho trovato la risposta richiesta. Se vuoi puoi essere più dettagliato oppure chiedere su altri servizi Otofarma.",
+            "Se hai bisogno di informazioni su servizi, apparecchi acustici o farmacie, chiedimi pure senza esitare.",
+            "Sono qui per offrirti il massimo supporto: puoi essere più specifico nella tua richiesta?"
+        ]
+    reply = fallback_mem.get_unique(fallback_messages)
+    return jsonify({"reply": reply, "voice": voice_mode, "male_voice": True, "intent": "other"})
 def transcribe():
     if "audio" not in request.files:
         return jsonify({"error": "No audio file provided"}), 400
