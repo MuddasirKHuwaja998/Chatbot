@@ -1,41 +1,3 @@
-# Google Cloud Speech-to-Text import (if not already present)
-from google.cloud import speech
-
-# /transcribe endpoint for speech-to-text
-@app.route("/transcribe", methods=["POST"])
-def transcribe():
-    if "audio" not in request.files:
-        return jsonify({"error": "No audio file provided"}), 400
-
-    audio_file = request.files["audio"]
-    audio_bytes = audio_file.read()
-
-    # Use pooled SPEECH_CLIENT if available
-    try:
-        client = SPEECH_CLIENT if 'SPEECH_CLIENT' in globals() and SPEECH_CLIENT else speech.SpeechClient()
-    except Exception as e:
-        if 'logger' in globals():
-            logger.error(f"Could not create SpeechClient: {e}")
-        return jsonify({"error": "Speech client init failed"}), 500
-
-    audio = speech.RecognitionAudio(content=audio_bytes)
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
-        sample_rate_hertz=48000,
-        language_code="it-IT",
-        enable_automatic_punctuation=True
-    )
-
-    try:
-        response = client.recognize(config=config, audio=audio)
-        transcript = ""
-        for result in response.results:
-            transcript += result.alternatives[0].transcript
-        return jsonify({"transcript": transcript})
-    except Exception as e:
-        if 'logger' in globals():
-            logger.error(f"Speech recognition failed: {e}")
-        return jsonify({"error": "Speech recognition failed"}), 500
 import os
 import re
 import yaml
@@ -244,6 +206,44 @@ except ImportError:
     raise ImportError("Install flask-cors: pip install flask-cors")
 app = Flask(__name__)
 CORS(app)
+# Google Cloud Speech-to-Text import (if not already present)
+from google.cloud import speech
+
+# /transcribe endpoint for speech-to-text
+@app.route("/transcribe", methods=["POST"])
+def transcribe():
+    if "audio" not in request.files:
+        return jsonify({"error": "No audio file provided"}), 400
+
+    audio_file = request.files["audio"]
+    audio_bytes = audio_file.read()
+
+    # Use pooled SPEECH_CLIENT if available
+    try:
+        client = SPEECH_CLIENT if 'SPEECH_CLIENT' in globals() and SPEECH_CLIENT else speech.SpeechClient()
+    except Exception as e:
+        if 'logger' in globals():
+            logger.error(f"Could not create SpeechClient: {e}")
+        return jsonify({"error": "Speech client init failed"}), 500
+
+    audio = speech.RecognitionAudio(content=audio_bytes)
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
+        sample_rate_hertz=48000,
+        language_code="it-IT",
+        enable_automatic_punctuation=True
+    )
+
+    try:
+        response = client.recognize(config=config, audio=audio)
+        transcript = ""
+        for result in response.results:
+            transcript += result.alternatives[0].transcript
+        return jsonify({"transcript": transcript})
+    except Exception as e:
+        if 'logger' in globals():
+            logger.error(f"Speech recognition failed: {e}")
+        return jsonify({"error": "Speech recognition failed"}), 500
     
 # Add these new imports for Gemini API
 import vertexai
