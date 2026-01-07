@@ -257,7 +257,9 @@
       "/static/bg.png",
       "/static/logo.png",
       "/static/stillZloop.webm",
-      "/static/moveZloop.webm"
+      "/static/greetZloop.webm",
+      "/static/pharmacyZloop.webm",
+      "/static/otherZloop.webm"
     ];
     preloadUrls.forEach(url => {
       if (url.endsWith('.png')) {
@@ -276,41 +278,55 @@
   <div class="center-image">
     <div class="avatar-fade" style="position:relative;width:100%;height:100%;">
       <video id="avatar-still" src="/static/stillZloop.webm" autoplay loop muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;"></video>
-      <video id="avatar-move" src="/static/moveZloop.webm" muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;" ></video>
+      <video id="avatar-greet" src="/static/greetZloop.webm" muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;"></video>
+      <video id="avatar-pharmacy" src="/static/pharmacyZloop.webm" muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;"></video>
+      <video id="avatar-other" src="/static/otherZloop.webm" muted playsinline preload="auto" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;visibility:hidden;"></video>
     </div>
   </div>
   <script>
     // Nuova logica avatar: loop video stillZloop e sincronizza moveZloop quando entrambi sono pronti
     document.addEventListener('DOMContentLoaded', function() {
       const avatarStill = document.getElementById('avatar-still');
-      const avatarMove = document.getElementById('avatar-move');
+      const avatarGreet = document.getElementById('avatar-greet');
+      const avatarPharmacy = document.getElementById('avatar-pharmacy');
+      const avatarOther = document.getElementById('avatar-other');
 
       // Forza il caricamento esplicito
       avatarStill.load();
-      avatarMove.load();
+      avatarGreet.load();
+      avatarPharmacy.load();
+      avatarOther.load();
 
-      // Funzione per mostrare i video solo quando entrambi sono pronti
+      // Funzione per mostrare i video solo quando tutti sono pronti
       let readyCount = 0;
       function showVideosWhenReady() {
         readyCount++;
-        if (readyCount === 2) {
+        if (readyCount === 4) {
           avatarStill.style.visibility = 'visible';
-          avatarMove.style.visibility = 'visible';
+          avatarGreet.style.visibility = 'visible';
+          avatarPharmacy.style.visibility = 'visible';
+          avatarOther.style.visibility = 'visible';
           avatarStill.style.opacity = '1';
           avatarStill.currentTime = 0;
           avatarStill.play();
         }
       }
 
-      // Ascolta l'evento canplaythrough per entrambi i video
+      // Ascolta l'evento canplaythrough per tutti i video
       avatarStill.addEventListener('canplaythrough', showVideosWhenReady);
-      avatarMove.addEventListener('canplaythrough', showVideosWhenReady);
+      avatarGreet.addEventListener('canplaythrough', showVideosWhenReady);
+      avatarPharmacy.addEventListener('canplaythrough', showVideosWhenReady);
+      avatarOther.addEventListener('canplaythrough', showVideosWhenReady);
 
-      // Forza la decodifica del primo frame di entrambi i video
+      // Forza la decodifica del primo frame di tutti i video
       avatarStill.muted = true;
-      avatarMove.muted = true;
+      avatarGreet.muted = true;
+      avatarPharmacy.muted = true;
+      avatarOther.muted = true;
       avatarStill.play().then(() => avatarStill.pause()).catch(() => {});
-      avatarMove.play().then(() => avatarMove.pause()).catch(() => {});
+      avatarGreet.play().then(() => avatarGreet.pause()).catch(() => {});
+      avatarPharmacy.play().then(() => avatarPharmacy.pause()).catch(() => {});
+      avatarOther.play().then(() => avatarOther.pause()).catch(() => {});
     });
   </script>
 </body>
