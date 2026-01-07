@@ -217,6 +217,7 @@ def transcribe():
 
     audio_file = request.files["audio"]
     audio_bytes = audio_file.read()
+    print(f"[Transcribe Debug] Received audio_bytes length: {len(audio_bytes)}, type: {type(audio_bytes)}")
 
     # Use pooled SPEECH_CLIENT if available
     try:
@@ -236,11 +237,15 @@ def transcribe():
 
     try:
         response = client.recognize(config=config, audio=audio)
+        print(f"[Transcribe Debug] Google API response: {response}")
         transcript = ""
         for result in response.results:
             transcript += result.alternatives[0].transcript
+        if not transcript:
+            print("[Transcribe Debug] Transcript is empty!")
         return jsonify({"transcript": transcript})
     except Exception as e:
+        print(f"[Transcribe Debug] Exception: {e}")
         if 'logger' in globals():
             logger.error(f"Speech recognition failed: {e}")
         return jsonify({"error": "Speech recognition failed"}), 500
