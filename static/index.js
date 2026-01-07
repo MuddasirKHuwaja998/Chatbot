@@ -398,87 +398,91 @@ function hideUnsupportedNotice() {
 
 // --- Voice Synthesis via Backend Google TTS ---
 // --- Cross-Platform Video Control (iOS/Android/Windows Compatible) ---
+
+// --- Multi-Intent Video Control ---
 function initializeVideos() {
     return new Promise((resolve) => {
         const avatarStill = document.getElementById('avatar-still');
-        const avatarMove = document.getElementById('avatar-move');
-        
-        if (avatarStill) {
-            avatarStill.muted = true;
-            avatarStill.playsInline = true;
-            avatarStill.preload = 'metadata';
-            
-            if (isIOS || isMobile) {
-                avatarStill.load();
+        const avatarGreet = document.getElementById('avatar-greet');
+        const avatarPharmacy = document.getElementById('avatar-pharmacy');
+        const avatarOther = document.getElementById('avatar-other');
+
+        [avatarStill, avatarGreet, avatarPharmacy, avatarOther].forEach(video => {
+            if (video) {
+                video.muted = true;
+                video.playsInline = true;
+                video.preload = 'metadata';
+                if (isIOS || isMobile) {
+                    video.load();
+                }
             }
-        }
-        
-        if (avatarMove) {
-            avatarMove.muted = true;
-            avatarMove.playsInline = true;
-            avatarMove.preload = 'metadata';
-            
-            if (isIOS || isMobile) {
-                avatarMove.load();
-            }
-        }
-        
+        });
         videoInitialized = true;
         console.log('[OtoBot]: Videos initialized for cross-platform compatibility');
         resolve();
     });
 }
 
-function showMoveZloop() {
+function showIntentVideo(intent) {
     const avatarStill = document.getElementById('avatar-still');
-    const avatarMove = document.getElementById('avatar-move');
-    
-    if (!avatarStill || !avatarMove) return;
-    
-    try {
+    const avatarGreet = document.getElementById('avatar-greet');
+    const avatarPharmacy = document.getElementById('avatar-pharmacy');
+    const avatarOther = document.getElementById('avatar-other');
+
+    // Hide all intent videos
+    [avatarGreet, avatarPharmacy, avatarOther].forEach(v => {
+        if (v) {
+            v.pause();
+            v.style.opacity = '0';
+        }
+    });
+    if (avatarStill) {
         avatarStill.pause();
         avatarStill.style.opacity = '0';
-        
-        avatarMove.loop = true;
-        avatarMove.style.opacity = '1';
-        avatarMove.currentTime = 0;
-        
-        const playPromise = avatarMove.play();
+    }
+
+    let videoToShow = null;
+    if (intent === 'greeting') {
+        videoToShow = avatarGreet;
+    } else if (intent === 'pharmacy') {
+        videoToShow = avatarPharmacy;
+    } else {
+        videoToShow = avatarOther;
+    }
+    if (videoToShow) {
+        videoToShow.loop = true;
+        videoToShow.currentTime = 0;
+        videoToShow.style.opacity = '1';
+        const playPromise = videoToShow.play();
         if (playPromise !== undefined) {
             playPromise.catch(error => {
-                console.log('[OtoBot Warning]: Avatar move video play blocked:', error.message);
-                avatarStill.style.opacity = '1';
-                avatarMove.style.opacity = '0';
+                console.log('[OtoBot Warning]: Intent video play blocked:', error.message);
+                if (avatarStill) {
+                    avatarStill.style.opacity = '1';
+                    avatarStill.play().catch(()=>{});
+                }
             });
         }
-    } catch (error) {
-        console.log('[OtoBot Error]: Video control error:', error.message);
-        if (avatarStill) avatarStill.style.opacity = '1';
     }
 }
 
-function endMoveZloop() {
+function endIntentVideo() {
     const avatarStill = document.getElementById('avatar-still');
-    const avatarMove = document.getElementById('avatar-move');
-    
-    if (!avatarStill || !avatarMove) return;
-    
-    try {
-        avatarMove.loop = false;
-        avatarMove.pause();
-        avatarMove.style.opacity = '0';
-        
+    const avatarGreet = document.getElementById('avatar-greet');
+    const avatarPharmacy = document.getElementById('avatar-pharmacy');
+    const avatarOther = document.getElementById('avatar-other');
+
+    [avatarGreet, avatarPharmacy, avatarOther].forEach(v => {
+        if (v) {
+            v.loop = false;
+            v.pause();
+            v.style.opacity = '0';
+        }
+    });
+    if (avatarStill) {
         avatarStill.currentTime = 0;
         avatarStill.style.opacity = '1';
-        
-        const playPromise = avatarStill.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(error => {
-                console.log('[OtoBot Warning]: Avatar still video play blocked:', error.message);
-            });
-        }
-    } catch (error) {
-        console.log('[OtoBot Error]: Video end control error:', error.message);
+        avatarStill.play().catch(()=>{});
     }
 }
 
@@ -500,12 +504,20 @@ function initializeAudioContext() {
     }
 }
 
-function speakWithGoogleTTS(text) {
+
+// --- Speak with Google TTS and play correct intent video ---
+function speakWithGoogleTTS(text, intent) {
     pauseHotwordRecognition();
     setVoiceState(VoiceState.PLAYING);
     updateStatus('🔊 Riproduzione risposta...');
     isPlaying = true;
-    
+
+    if (!videoInitialized) {
+        initializeVideos().then(() => showIntentVideo(intent));
+    } else {
+        showIntentVideo(intent);
+    }
+
     return initializeAudioContext().then(() => {
         return fetch('/tts', {
             method: 'POST',
@@ -516,48 +528,41 @@ function speakWithGoogleTTS(text) {
     .then(blob => {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
-        
+
         if (isIOS || isMobile) {
             audio.preload = 'auto';
             audio.load();
         }
-        
+
         return new Promise((resolve, reject) => {
             let safetyTimer = setTimeout(() => {
-                endMoveZloop();
+                endIntentVideo();
                 console.log('[OtoBot]: Safety timer triggered - ending avatar animation');
             }, 120000);
-            
+
             const playPromise = audio.play();
             if (playPromise !== undefined) {
                 playPromise.then(() => {
                     console.log('[OtoBot]: Audio playback started successfully');
-                    
-                    // Start avatar move immediately (no artificial 1s delay)
-                    if (!videoInitialized) {
-                        initializeVideos().then(() => showMoveZloop());
-                    } else {
-                        showMoveZloop();
-                    }
                 }).catch(error => {
                     console.log('[OtoBot Error]: Audio play blocked:', error.message);
                     clearTimeout(safetyTimer);
-                    endMoveZloop();
+                    endIntentVideo();
                     isPlaying = false;
                     reject(error);
                 });
             }
-            
+
             audio.onended = function() {
                 clearTimeout(safetyTimer);
-                endMoveZloop();
+                endIntentVideo();
                 isPlaying = false;
                 resolve();
             };
-            
+
             audio.onerror = function(error) {
                 clearTimeout(safetyTimer);
-                endMoveZloop();
+                endIntentVideo();
                 isPlaying = false;
                 reject(error);
             };
@@ -910,9 +915,10 @@ function sendAudioForTranscription(audioBlob, fileName) {
     });
 }
 
+
 function handleTranscript(transcript) {
     updateStatus('🗣️ Elaborazione della richiesta...');
-    
+
     return fetch('/voice_activation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -922,7 +928,9 @@ function handleTranscript(transcript) {
     .then(activationData => {
         if (activationData.activated && activationData.reply) {
             updateStatus('✅ OtoBot attivato! Riproduzione risposta...');
-            return speakWithGoogleTTS(activationData.reply);
+            // Use intent if provided, else fallback to 'other'
+            const intent = activationData.intent || 'other';
+            return speakWithGoogleTTS(activationData.reply, intent);
         }
         return sendChatRequest(transcript);
     })
@@ -931,6 +939,7 @@ function handleTranscript(transcript) {
         return sendChatRequest(transcript);
     });
 }
+
 
 function sendChatRequest(message) {
     return fetch('/chat', {
@@ -950,7 +959,8 @@ function sendChatRequest(message) {
     .then(chatData => {
         if (chatData.reply && chatData.reply.trim().length > 0) {
             updateStatus('✅ Riproduzione risposta...');
-            return speakWithGoogleTTS(chatData.reply);
+            const intent = chatData.intent || 'other';
+            return speakWithGoogleTTS(chatData.reply, intent);
         }
         updateStatus('❌ Nessuna risposta trovata.');
         return Promise.resolve();
